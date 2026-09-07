@@ -1,8 +1,27 @@
+import { kebabCase } from 'lodash-es'
 import {
   currentSemester,
   registrationsCollection,
 } from '../../src/lib/data/collections'
+import courses from '../../src/lib/data/courses.json'
 import { prepareDocForCompare } from '../support/utils'
+
+/**
+ * The seed fills the math and science courses from the current semester's
+ * catalog (`seededCourse` in scripts/seedLib.ts), and those names differ
+ * between the halves of the year - `Mathematics 1a` in fall, `1b` in spring.
+ * Deriving the expected values from the same catalog is what keeps this table
+ * from having to be retyped at every rollover.
+ */
+const offeredCourses = courses.filter(
+  (course) =>
+    course.semester ===
+    (currentSemester.startsWith('Fall') ? 'fall' : 'spring'),
+)
+const seededCourse = (track: string) =>
+  kebabCase(offeredCourses.find((course) => course.track === track)!.name)
+const MATH_COURSE = seededCourse('math')
+const SCIENCE_COURSE = seededCourse('science')
 
 describe('Section G: Pre-Registrations Directory', () => {
   beforeEach(() => {
@@ -110,8 +129,8 @@ describe('Section G: Pre-Registrations Directory', () => {
               '4',
               'scratch-1',
               'engineering-1',
-              'mathematics-1-b',
-              'environmental-science-b',
+              MATH_COURSE,
+              SCIENCE_COURSE,
               'No',
             ],
             [
@@ -126,8 +145,8 @@ describe('Section G: Pre-Registrations Directory', () => {
               '1',
               'scratch-1',
               'engineering-1',
-              'mathematics-1-b',
-              'environmental-science-b',
+              MATH_COURSE,
+              SCIENCE_COURSE,
               'Yes',
             ],
             [
@@ -142,8 +161,8 @@ describe('Section G: Pre-Registrations Directory', () => {
               '2',
               'python-1',
               'engineering-1',
-              'mathematics-1-b',
-              'environmental-science-b',
+              MATH_COURSE,
+              SCIENCE_COURSE,
               'No',
             ],
             [
@@ -158,8 +177,8 @@ describe('Section G: Pre-Registrations Directory', () => {
               '5',
               'scratch-1',
               'engineering-1',
-              'mathematics-1-b',
-              'environmental-science-b',
+              MATH_COURSE,
+              SCIENCE_COURSE,
               'Yes',
             ],
             [
@@ -174,8 +193,8 @@ describe('Section G: Pre-Registrations Directory', () => {
               '6',
               'python-1',
               'engineering-1',
-              'mathematics-1-b',
-              'environmental-science-b',
+              MATH_COURSE,
+              SCIENCE_COURSE,
               'No',
             ],
           ])

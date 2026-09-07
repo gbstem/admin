@@ -25,6 +25,32 @@ import {
   subRequestsCollection,
 } from '../src/lib/data/collections'
 import collectionsList from '../src/lib/data/collectionsList.json'
+import courses from '../src/lib/data/courses.json'
+
+/**
+ * A course this semester actually offers, by track and position in the
+ * catalog.
+ *
+ * The seed used to hardcode `Mathematics 1b` and `Environmental Science B` -
+ * spring names, while `currentSemester` has said `Fall26` all along - so the
+ * registrations it wrote named courses that neither site listed as an option,
+ * and the edit form had nothing to select. Reading the catalog keeps the seed
+ * honest through the next rollover instead of hardcoding the other half's
+ * mistake.
+ */
+const offeredCourses = courses.filter(
+  (course) =>
+    course.semester ===
+    (currentSemester.startsWith('Fall') ? 'fall' : 'spring'),
+)
+export const seededCourse = (track: string, index = 0): string => {
+  const name = offeredCourses.filter((course) => course.track === track)[index]
+    ?.name
+  if (!name) {
+    throw new Error(`No course #${index} on the ${track} track this semester`)
+  }
+  return name
+}
 
 function validateClass(data: any, id: string) {
   try {
@@ -405,9 +431,9 @@ export async function seedEmulator(): Promise<void> {
     },
     program: {
       csCourse: 'Scratch 1',
-      mathCourse: 'Mathematics 1b',
+      mathCourse: seededCourse('math'),
       engineeringCourse: 'Engineering 1',
-      scienceCourse: 'Environmental Science B',
+      scienceCourse: seededCourse('science'),
       reason: 'Loves computers and building things.',
       inPerson: false,
     },
@@ -458,9 +484,9 @@ export async function seedEmulator(): Promise<void> {
     },
     program: {
       csCourse: 'Python 1',
-      mathCourse: 'Mathematics 1b',
+      mathCourse: seededCourse('math'),
       engineeringCourse: 'Engineering 1',
-      scienceCourse: 'Environmental Science B',
+      scienceCourse: seededCourse('science'),
       reason: 'Excited to learn programming.',
       inPerson: false,
     },
@@ -664,9 +690,9 @@ export async function seedEmulator(): Promise<void> {
       },
       program: {
         csCourse: courses[i % courses.length],
-        mathCourse: 'Mathematics 1b',
+        mathCourse: seededCourse('math'),
         engineeringCourse: 'Engineering 1',
-        scienceCourse: 'Environmental Science B',
+        scienceCourse: seededCourse('science'),
         reason: 'Interest in STEM fields.',
         inPerson: inPerson,
       },

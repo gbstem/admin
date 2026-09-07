@@ -162,7 +162,11 @@ Most collections are scoped under a semester document: `semesters/{semesterId}/{
 
 A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `interviewTimeRequests`, `instructorClasses`, `confirmations`, `checkIns`, `users`, `tokens`, `mail`, `announcements`.
 
-The current semester's key dates (`classesStart`, `registrationsDue`, etc.) aren't in Firestore at all — every read site only ever needs the _current_ semester's dates, never a past one, so they're static data in [`semesterDates.json`](src/lib/data/semesterDates.json), re-exported as `semesterDates` from `collections.ts`. `__tests__/collections.test.ts` validates every field is a well-formed `MM/DD/YY` date whose year matches `currentSemester`. The portal and website repos each keep a verbatim copy of this same file (see [Adding a New Semester](#adding-a-new-semester) for the paths and the copy step) — it is the one piece of semester configuration shared across all three repos.
+The current semester's key dates (`classesStart`, `registrationsDue`, etc.) aren't in Firestore at all — every read site only ever needs the _current_ semester's dates, never a past one, so they're static data in [`semesterDates.json`](src/lib/data/semesterDates.json), re-exported as `semesterDates` from `collections.ts`. `__tests__/collections.test.ts` validates every field is a well-formed `MM/DD/YY` date whose year matches `currentSemester`. The portal and website repos each keep a verbatim copy of this same file (see [Adding a New Semester](#adding-a-new-semester) for the paths and the copy step).
+
+The course catalog works the same way. [`courses.json`](src/lib/data/courses.json) lists every course gbSTEM offers, in both halves of the year — `id` (its page on curriculum.gbstem.org, and a **case-sensitive** URL segment), `track`, `name` (the display string, and the exact value stored on class, registration and application documents), and `semester`. `data/index.ts` slices it to the current half using `currentSemester`, not the wall clock, so the catalog and the collection paths can't disagree. Portal keeps a verbatim copy and builds every curriculum link from it as `/{track}/{id}`; the curriculum repo keeps one too, where `__tests__/courses.test.ts` fails if the catalog and its `tracks.ts` stop agreeing about which courses exist.
+
+So two files are copied by hand across repos at a rollover, and both are copied — never retyped, never edited in the destination.
 
 Every semesterized document also carries a `semester` field (e.g. `"Spring26"`), stamped on write via the `withSemester(...)` helper in `collections.ts`. This lets the shared, cross-semester Algolia index for each collection type (one index total, covering every semester) filter results down to a single semester.
 
@@ -183,18 +187,27 @@ Admins can browse a past semester's data via the `?semester=<id>` URL param on t
 
 Transitioning gbSTEM to a new semester (e.g., from `Spring26` to `Fall26`) is a small, code-only change: no Firestore console work at all, no index creation, and no Algolia or security rules changes, since those are keyed by collection type rather than per-semester (see [Firestore Schema](#firestore-schema) above).
 
-**Three repos are involved**, because this repo's [`semesterDates.json`](src/lib/data/semesterDates.json) is the single source of truth for the semester's key dates: **admin** (where you edit it), **portal**, and **website** (the public marketing site, which reads it to decide whether registration and instructor applications are open, and to print the dates on the home page and FAQ). The portal and website each hold a _verbatim copy_ of the file — same JSON, same `MM/DD/YY` string format, just a different path in each repo — so the three sites can never advertise different dates. Copy, don't retype:
+**Four repos are involved**, because this repo holds the single source of truth for two files the others copy: [`semesterDates.json`](src/lib/data/semesterDates.json) (the semester's key dates) and [`courses.json`](src/lib/data/courses.json) (the course catalog). The repos are **admin** (where you edit both), **portal**, **website** (the public marketing site, which reads the dates to decide whether registration and instructor applications are open, and to print them on the home page and FAQ), and **curriculum** (which needs the catalog so its pages and gbSTEM's offerings stay in step). Each destination holds a _verbatim copy_ — same JSON, just a different path — so the sites can never advertise different dates or different courses. Copy, don't retype:
 
-| Repo    | Path to `semesterDates.json`                                 |
-| ------- | ------------------------------------------------------------ |
-| admin   | `src/lib/data/semesterDates.json` (the original — edit here) |
-| portal  | `src/lib/data/semesterDates.json`                            |
-| website | `lib/semesterDates.json`                                     |
+| Repo       | `semesterDates.json`                                         | `courses.json`                             |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------ |
+| admin      | `src/lib/data/semesterDates.json` (the original — edit here) | `src/lib/data/courses.json` (the original) |
+| portal     | `src/lib/data/semesterDates.json`                            | `src/lib/data/courses.json`                |
+| website    | `lib/semesterDates.json`                                     | — (doesn't need it)                        |
+| curriculum | — (doesn't need it)                                          | `app/data/courses.json`                    |
 
 1. In **both the admin and portal repos**, update the `suffix` constant at the top of `src/lib/data/collections.ts` (e.g., `const suffix = 'Fall26'`). The website repo has no `suffix` — it has no Firestore access at all, and only ever needs the dates.
 2. In the **admin repo**:
    - Add `{ "id": "Fall26", "name": "Fall 2026" }` to the **top** of [`collectionsList.json`](src/lib/data/collectionsList.json), so it's selected by default and appears first in the past-semester dropdown.
-   - Review and update course catalog data in [`springCourses.json`](src/lib/data/springCourses.json) or [`fallCourses.json`](src/lib/data/fallCourses.json), then copy the updated file to the portal repository's `src/lib/data/` directory. (The website doesn't need this one.)
+   - Review and update the course catalog in [`courses.json`](src/lib/data/courses.json). You only need to touch the entries whose `semester` matches the half you're rolling into — adding a course means adding **both** its fall and spring entries, each with the `id` of its page in the curriculum repo. Then copy the file to the portal and curriculum repositories per the table above. (The website doesn't need this one.)
+
+     ```bash
+     cp src/lib/data/courses.json ../portal/src/lib/data/courses.json
+     cp src/lib/data/courses.json ../curriculum/app/data/courses.json
+     ```
+
+     A course whose `id` has no page in the curriculum repo will fail that repo's `__tests__/courses.test.ts` rather than silently becoming a dead "Curriculum" button in an instructor's dashboard — so add the page there in the same rollover.
+
    - Update every field in [`semesterDates.json`](src/lib/data/semesterDates.json) to the new semester's actual dates (`MM/DD/YY`, matching the new suffix's year), then copy the updated file to **both** the portal repository's `src/lib/data/` directory **and** the website repository's `lib/` directory, per the table above:
 
      ```bash
@@ -202,9 +215,9 @@ Transitioning gbSTEM to a new semester (e.g., from `Spring26` to `Fall26`) is a 
      cp src/lib/data/semesterDates.json ../website/lib/semesterDates.json
      ```
 
-     Never hand-edit the portal or website copy: the next rollover overwrites it, and a copy that has drifted is exactly the bug this shared file exists to prevent.
-3. Run `yarn lint && yarn test` in **all three repos** to verify the changes (this will fail loudly for errors like a malformed date, incorrect year in `semesterDates.json`, or other format issues — the website's `__tests__/constants.test.ts` re-checks the copied file's shape the same way this repo's `__tests__/collections.test.ts` does).
-4. Create a PR for all three repos and merge each to `main` for the Vercel auto-deployment to update the live apps.
+     Never hand-edit a copy in portal, website or curriculum: the next rollover overwrites it, and a copy that has drifted is exactly the bug these shared files exist to prevent. It has happened — portal's old `springCourses.json` was hand-edited in place and silently became a duplicate of its own fall file, so portal offered no spring courses at all while the seed still wrote spring names.
+3. Run `yarn lint && yarn test` in **all four repos** to verify the changes (this will fail loudly for errors like a malformed date, incorrect year in `semesterDates.json`, or a course with no page in the curriculum repo — the website's `__tests__/constants.test.ts` re-checks the copied dates the same way this repo's `__tests__/collections.test.ts` does, and curriculum's `__tests__/courses.test.ts` re-checks the copied catalog).
+4. Create a PR for each repo you changed and merge each to `main` for the Vercel auto-deployment to update the live apps. Merge curriculum's first if you added a course, so the pages exist before portal starts linking to them.
 5. Load the deployed public site's [home page](https://www.gbstem.org/) and [FAQ](https://www.gbstem.org/faq) and confirm the registration/application copy, links, and dates match the new semester. Those sections switch between "open" and "closed" wording purely from the dates in the JSON, so a wrong date there is visible to families and prospective instructors immediately.
 
 That's it — the new semester's subcollections (`semesters/Fall26/applications`, etc.) spring into existence automatically on first write.

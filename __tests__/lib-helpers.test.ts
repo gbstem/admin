@@ -174,32 +174,69 @@ import '../src/lib/data/types/Student'
 
 // Import collections
 import '../src/lib/data/collections'
+import { currentSemester } from '../src/lib/data/collections'
+import courses from '../src/lib/data/courses.json'
+import {
+  coursesJson,
+  csCoursesJson,
+  engineeringCoursesJson,
+  mathCoursesJson,
+  scienceCoursesJson,
+} from '../src/lib/data/index'
 
 describe('data/index', () => {
-  it('loads fall courses when month is >= 7', () => {
-    jest.isolateModules(() => {
-      const mockDate = new Date('2026-10-15T12:00:00Z')
-      const spy = jest
-        .spyOn(global, 'Date')
-        .mockImplementation(() => mockDate as any)
-
-      const data = require('../src/lib/data/index')
-      expect(data.coursesJson.length).toBeGreaterThan(0)
-      spy.mockRestore()
-    })
+  // These used to mock `Date` to October and March to exercise a wall-clock
+  // switch. The catalog now follows `currentSemester` instead, so the clock
+  // proves nothing - what matters is that the offered slice matches the
+  // semester every collection path is already scoped to.
+  it('offers the half of the catalog matching currentSemester', () => {
+    const expected = currentSemester.startsWith('Fall') ? 'fall' : 'spring'
+    expect(coursesJson.length).toBeGreaterThan(0)
+    expect(coursesJson.every((course) => course.semester === expected)).toBe(
+      true,
+    )
   })
 
-  it('loads spring courses when month is < 7', () => {
-    jest.isolateModules(() => {
-      const mockDate = new Date('2026-03-15T12:00:00Z')
-      const spy = jest
-        .spyOn(global, 'Date')
-        .mockImplementation(() => mockDate as any)
+  it('offers the same courses in both halves of the year', () => {
+    // Every course runs in both semesters - a fall `a`/`A` and a spring
+    // `b`/`B` - so a course present in one half and not the other means an
+    // entry was added to the catalog without its counterpart.
+    const fall = courses.filter((c) => c.semester === 'fall')
+    const spring = courses.filter((c) => c.semester === 'spring')
+    expect(fall.length).toBe(spring.length)
+    expect(coursesJson.length).toBe(fall.length)
+  })
 
-      const data = require('../src/lib/data/index')
-      expect(data.coursesJson.length).toBeGreaterThan(0)
-      spy.mockRestore()
-    })
+  it('names each offered course exactly once', () => {
+    // The name is what lands on a class document and what portal looks a
+    // curriculum link up by; two courses sharing one within a semester would
+    // make that lookup ambiguous.
+    const names = coursesJson.map((course) => course.name)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
+  it('gives every course a unique curriculum id', () => {
+    const ids = courses.map((course) => course.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('files every course under one of the four tracks', () => {
+    const tracks = ['cs', 'math', 'engineering', 'science']
+    expect(courses.filter((c) => !tracks.includes(c.track))).toEqual([])
+  })
+
+  it('puts every offered course in exactly one track dropdown', () => {
+    // The four filtered lists back the registration form's four selects, each
+    // with a sentinel "not interested" entry ahead of the real courses.
+    const lists = [
+      csCoursesJson,
+      mathCoursesJson,
+      engineeringCoursesJson,
+      scienceCoursesJson,
+    ]
+    const listed = lists.flatMap((list) => list.slice(1))
+    expect(listed.length).toBe(coursesJson.length)
+    lists.forEach((list) => expect(list[0].name).toMatch(/not interested/))
   })
 })
 

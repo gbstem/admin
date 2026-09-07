@@ -1,0 +1,218 @@
+[
+  {
+    "id": "scratch1A",
+    "track": "cs",
+    "name": "Scratch 1",
+    "semester": "fall"
+  },
+  {
+    "id": "scratch1B",
+    "track": "cs",
+    "name": "Scratch 1",
+    "semester": "spring"
+  },
+  {
+    "id": "scratch2A",
+    "track": "cs",
+    "name": "Scratch 2",
+    "semester": "fall"
+  },
+  {
+    "id": "scratch2B",
+    "track": "cs",
+    "name": "Scratch 2",
+    "semester": "spring"
+  },
+  {
+    "id": "scratch3A",
+    "track": "cs",
+    "name": "Scratch 3",
+    "semester": "fall"
+  },
+  {
+    "id": "scratch3B",
+    "track": "cs",
+    "name": "Scratch 3",
+    "semester": "spring"
+  },
+  {
+    "id": "python1A",
+    "track": "cs",
+    "name": "Python 1",
+    "semester": "fall"
+  },
+  {
+    "id": "python1B",
+    "track": "cs",
+    "name": "Python 1",
+    "semester": "spring"
+  },
+  {
+    "id": "python2A",
+    "track": "cs",
+    "name": "Python 2",
+    "semester": "fall"
+  },
+  {
+    "id": "python2B",
+    "track": "cs",
+    "name": "Python 2",
+    "semester": "spring"
+  },
+  {
+    "id": "python3A",
+    "track": "cs",
+    "name": "Python 3",
+    "semester": "fall"
+  },
+  {
+    "id": "python3B",
+    "track": "cs",
+    "name": "Python 3",
+    "semester": "spring"
+  },
+  {
+    "id": "webdevA",
+    "track": "cs",
+    "name": "Web Development",
+    "semester": "fall"
+  },
+  {
+    "id": "webdevB",
+    "track": "cs",
+    "name": "Web Development",
+    "semester": "spring"
+  },
+  {
+    "id": "math1A",
+    "track": "math",
+    "name": "Mathematics 1a",
+    "semester": "fall"
+  },
+  {
+    "id": "math1B",
+    "track": "math",
+    "name": "Mathematics 1b",
+    "semester": "spring"
+  },
+  {
+    "id": "math2A",
+    "track": "math",
+    "name": "Mathematics 2a",
+    "semester": "fall"
+  },
+  {
+    "id": "math2B",
+    "track": "math",
+    "name": "Mathematics 2b",
+    "semester": "spring"
+  },
+  {
+    "id": "math3A",
+    "track": "math",
+    "name": "Mathematics 3a",
+    "semester": "fall"
+  },
+  {
+    "id": "math3B",
+    "track": "math",
+    "name": "Mathematics 3b",
+    "semester": "spring"
+  },
+  {
+    "id": "math4A",
+    "track": "math",
+    "name": "Mathematics 4a",
+    "semester": "fall"
+  },
+  {
+    "id": "math4B",
+    "track": "math",
+    "name": "Mathematics 4b",
+    "semester": "spring"
+  },
+  {
+    "id": "math5A",
+    "track": "math",
+    "name": "Mathematics 5a",
+    "semester": "fall"
+  },
+  {
+    "id": "math5B",
+    "track": "math",
+    "name": "Mathematics 5b",
+    "semester": "spring"
+  },
+  {
+    "id": "engineering1A",
+    "track": "engineering",
+    "name": "Engineering 1",
+    "semester": "fall"
+  },
+  {
+    "id": "engineering1B",
+    "track": "engineering",
+    "name": "Engineering 1",
+    "semester": "spring"
+  },
+  {
+    "id": "engineering2A",
+    "track": "engineering",
+    "name": "Engineering 2",
+    "semester": "fall"
+  },
+  {
+    "id": "engineering2B",
+    "track": "engineering",
+    "name": "Engineering 2",
+    "semester": "spring"
+  },
+  {
+    "id": "engineering3A",
+    "track": "engineering",
+    "name": "Engineering 3",
+    "semester": "fall"
+  },
+  {
+    "id": "engineering3B",
+    "track": "engineering",
+    "name": "Engineering 3",
+    "semester": "spring"
+  },
+  {
+    "id": "legoroboticsA",
+    "track": "engineering",
+    "name": "Lego Robotics Competition",
+    "semester": "fall"
+  },
+  {
+    "id": "legoroboticsB",
+    "track": "engineering",
+    "name": "Lego Robotics Competition",
+    "semester": "spring"
+  },
+  {
+    "id": "environmentalA",
+    "track": "science",
+    "name": "Environmental Science A",
+    "semester": "fall"
+  },
+  {
+    "id": "environmentalB",
+    "track": "science",
+    "name": "Environmental Science B",
+    "semester": "spring"
+  },
+  {
+    "id": "physicsA",
+    "track": "science",
+    "name": "Physics A",
+    "semester": "fall"
+  },
+  {
+    "id": "physicsB",
+    "track": "science",
+    "name": "Physics B",
+    "semester": "spring"
+  }
+]
