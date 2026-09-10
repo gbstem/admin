@@ -74,8 +74,15 @@ beforeAll(async () => {
   })
 })
 
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+  jest.spyOn(console, 'warn').mockImplementation(() => {})
+})
+
 afterAll(async () => {
-  await testEnv.cleanup()
+  await testEnv?.cleanup()
+  ;(console.error as any).mockRestore?.()
+  ;(console.warn as any).mockRestore?.()
 })
 
 beforeEach(async () => {
@@ -1048,7 +1055,7 @@ describe('interviewTimeRequests - applicants create; admins/reviewers manage', (
   })
 })
 
-describe('subRequests - staff read/create; instructors and admins manage', () => {
+describe('subRequests - staff read; instructors create; instructors and admins manage', () => {
   it('lets an instructor read, create, update, and delete subRequests', async () => {
     const db = as(UIDS.accepted, 'instructor')
     await assertSucceeds(
@@ -1066,7 +1073,7 @@ describe('subRequests - staff read/create; instructors and admins manage', () =>
     await assertSucceeds(deleteDoc(doc(db, 'subRequests/sub-1')))
   })
 
-  it('lets a reviewer read and create subRequests, but not update or delete', async () => {
+  it('lets a reviewer read subRequests, but not create, update, or delete', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'subRequests/sub-1'), {
         course: 'Python 1',
@@ -1074,7 +1081,7 @@ describe('subRequests - staff read/create; instructors and admins manage', () =>
     })
     const db = as(UIDS.reviewer, 'reviewer')
     await assertSucceeds(getDoc(doc(db, 'subRequests/sub-1')))
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, 'subRequests/sub-rev'), {
         course: 'Math',
       }),

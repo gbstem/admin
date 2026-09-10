@@ -32,6 +32,7 @@ const config: Config = {
   // Rules evaluation goes over the wire to the emulator; the default 5s is
   // tight for the first test in a file, which also uploads the ruleset.
   testTimeout: 20000,
+  globalSetup: '<rootDir>/__tests__/rules/globalSetup.ts',
 }
 
 export default config
