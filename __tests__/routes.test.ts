@@ -88,6 +88,16 @@ const mockAdminAuth = {
   generatePasswordResetLink: jest.fn().mockResolvedValue('http://link'),
 }
 
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+  jest.spyOn(console, 'warn').mockImplementation(() => {})
+})
+
+afterAll(() => {
+  ;(console.error as any).mockRestore?.()
+  ;(console.warn as any).mockRestore?.()
+})
+
 const mockDoc = (id = 'id123') => ({
   id,
   exists: true,
@@ -230,19 +240,19 @@ jest.mock('firebase/firestore', () => ({
 jest.mock('firebase/storage', () => ({ getStorage: jest.fn() }))
 
 // Import routes
-import { currentSemester } from '../src/lib/data/collections'
 import { verifyToken } from '$lib/server/firebase'
 import { handle } from '../src/hooks.server'
+import { currentSemester } from '../src/lib/data/collections'
 import { load as emailVerifiedLayoutLoad } from '../src/routes/(signedIn)/(emailVerified)/+layout.server'
+import { load as announcementsLoad } from '../src/routes/(signedIn)/(emailVerified)/announcements/+page.server'
 import { load as applicationsLoad } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
 import { load as classesLoad } from '../src/routes/(signedIn)/(emailVerified)/classes/+page.server'
 import { load as instructorFeedbackLoad } from '../src/routes/(signedIn)/(emailVerified)/instructor-feedback/+page.server'
 import { load as registrationsLoad } from '../src/routes/(signedIn)/(emailVerified)/registrations/+page.server'
-import { load as studentsLoad } from '../src/routes/(signedIn)/(emailVerified)/students/+page.server'
-import { load as tokensLoad } from '../src/routes/(signedIn)/(emailVerified)/tokens/+page.server'
 import { load as studentFeedbackLoad } from '../src/routes/(signedIn)/(emailVerified)/student-feedback/+page.server'
+import { load as studentsLoad } from '../src/routes/(signedIn)/(emailVerified)/students/+page.server'
 import { load as subRequestsLoad } from '../src/routes/(signedIn)/(emailVerified)/sub-requests/+page.server'
-import { load as announcementsLoad } from '../src/routes/(signedIn)/(emailVerified)/announcements/+page.server'
+import { load as tokensLoad } from '../src/routes/(signedIn)/(emailVerified)/tokens/+page.server'
 import { load as signedInLayoutLoad } from '../src/routes/(signedIn)/+layout.server'
 import { load as signedOutLayoutLoad } from '../src/routes/(signedOut)/+layout.server'
 import {
@@ -255,6 +265,7 @@ import {
   POST as authPOST,
 } from '../src/routes/api/auth/+server'
 
+import MailService from '@sendgrid/mail'
 import { POST as actionPOST } from '../src/routes/api/action/+server'
 import { POST as assignInterviewPOST } from '../src/routes/api/assignInterview/+server'
 import { POST as decisionPOST } from '../src/routes/api/decision/+server'
@@ -262,7 +273,6 @@ import { POST as enrollPOST } from '../src/routes/api/enroll/+server'
 import { POST as remindInstructorPOST } from '../src/routes/api/remindInstructor/+server'
 import { POST as remindStudentsPOST } from '../src/routes/api/remindStudents/+server'
 import { POST as scheduleInterviewPOST } from '../src/routes/api/scheduleInterview/+server'
-import MailService from '@sendgrid/mail'
 
 describe('routes load tests', () => {
   beforeEach(() => {

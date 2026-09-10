@@ -202,7 +202,7 @@ It is granted at signup, before any interview — so it says nothing about wheth
 - in `firestore.rules`, `isAcceptedInstructor(semesterId)` (accepted) or `isTeachingInstructor(semesterId)` (accepted **or** substitute, for the roster a substitute needs to cover a session)
 - on the server, `isAcceptedInstructor(uid)` in portal's [`instructorDirectory.ts`](https://github.com/gbstem/portal/blob/main/src/lib/server/instructorDirectory.ts)
 
-`isStaff()` deliberately does _not_ check it, because applicants need it to book an interview. Read it as "anyone with a reason to be in the instructor UI", not as "staff".
+`isInstructorOrApplicant()` deliberately does _not_ check it, because applicants need it to book an interview. Read it as "anyone with a reason to be in the instructor UI", not as "staff".
 
 Three top-level collections — `instructorClasses`, `subRequests` and `interviewTimeRequests` — are still gated on the bare role, because they have no `semesterId` in scope and a decision lookup there would need the current semester hardcoded in the rules file, which every rollover would then have to remember to change. They carry `TODO(phase-2)` comments; the planned instructor-role split (`instructor-applicant` / `instructor` / `instructor-substitute`) is what lets them be gated without that.
 

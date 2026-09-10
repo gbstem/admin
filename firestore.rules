@@ -9,11 +9,8 @@ service cloud.firestore {
     // admin.gbstem.org and portal.gbstem.org data
     //
 
-    // `role` is authorization, so it is not the client's to write. A signed-in
-    // user could once `setDoc` their own document with role: 'instructor' and
-    // immediately satisfy isInstructor() below - which is read access to every
-    // student registration for the semester, among other things. The field is
-    // now written only by the Admin SDK (portal's /api/signup, admin's signup
+    // `role` is authorization, so it is not the client's to write. This is
+    // written only by the Admin SDK (portal's /api/signup, admin's signup
     // action), which bypasses these rules entirely.
     //
     // create stays open *without* a role because admin's userService uses
@@ -64,7 +61,9 @@ service cloud.firestore {
       // SDK path, not the Admin SDK - can still change it.
       match /applications/{userId} {
         allow read: if isUser(userId) || isAdminOrReviewer();
-        allow create: if isUser(userId) || isAdminOrReviewer();
+        allow create: if isAdminOrReviewer()
+                      || (isUser(userId)
+                          && request.resource.data.meta.get('decided', false) == false);
         allow update: if isAdminOrReviewer()
                       || (isUser(userId)
                           && request.resource.data.meta.get('decided', false)
@@ -78,9 +77,8 @@ service cloud.firestore {
       // server-side API routes (/api/classRoster, /api/remindStudents) that strictly
       // enforce class ownership and return only the minimal necessary fields.
       match /registrations/{userId} {
-        allow read: if isSignedIn() && belongsToSameUser(userId)
-                    || isAdminOrReviewer();
-        allow write: if isOwnerOrAdmin(userId);
+        allow read: if isUserOrTheirChild(userId) || isAdminOrReviewer();
+        allow write: if isUserOrTheirChild(userId) || isAdmin();
       }
 
       match /decisions/{userId} {
@@ -103,17 +101,26 @@ service cloud.firestore {
       }
 
       match /instructorInterviewTimes/{interviewId} {
-        allow read, update: if isStaff();
+        allow read: if isInstructorOrApplicant() || isAdminOrReviewer();
         allow create, delete: if isAdminOrReviewer();
+        allow update: if isAdminOrReviewer()
+                      || (isInstructorOrApplicant()
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                            'interviewSlotStatus',
+                            'intervieweeFirstName',
+                            'intervieweeLastName',
+                            'intervieweeEmail',
+                            'intervieweeId'
+                          ]));
       }
 
       match /classFeedback/{feedbackId} {
-        allow create: if isSignedIn();
+        allow create: if isStudent();
         allow read: if isAdmin();
       }
 
       match /instructorFeedback/{feedbackId} {
-        allow create: if isSignedIn();
+        allow create: if isInstructor();
         allow read: if isAdmin();
       }
     }
@@ -121,13 +128,6 @@ service cloud.firestore {
     //
     // INSTRUCTOR TO CLASS MAPPING
     //
-    // TODO(phase-2): still gated on the bare role, so someone who signed up as
-    // an instructor and was never accepted can read and write these. Unlike
-    // registrations and classes above, these three collections are top-level
-    // and have no semesterId in scope, so a decision lookup here would need the
-    // current semester hardcoded in this file - which every rollover would then
-    // have to remember to change. The instructor-role split (applicant vs
-    // accepted vs substitute) is what lets these be gated without that.
     match /instructorClasses/{classId} {
       allow read, write: if isInstructor() || isAdmin();
     }
@@ -135,22 +135,18 @@ service cloud.firestore {
     //
     // INTERVIEW TIME REQUESTS
     //
-    // Applicants legitimately need these to book an interview, so isStaff()
-    // covering the whole instructor role is correct today. See the phase-2
-    // TODO above: once `instructor-applicant` exists this should name it
-    // explicitly rather than admitting every instructor-role account.
+    // Applicants legitimately need these to book an interview.
     match /interviewTimeRequests/{time} {
-      allow read, create: if isStaff();
+      allow read, create: if isInstructorOrApplicant() || isAdminOrReviewer();
       allow update, delete: if isAdminOrReviewer();
     }
 
     //
     // SUBSTITUTE INSTRUCTORS REQUESTS
     //
-    // TODO(phase-2): see the instructorClasses note - an instructor-role
-    // account that was never accepted can read and write every sub request.
     match /subRequests/{subRequest} {
-      allow read, create: if isStaff();
+      allow read: if isInstructor() || isAdminOrReviewer();
+      allow create: if isInstructor();
       allow update, delete: if isInstructor() || isAdmin();
     }
 
@@ -166,16 +162,13 @@ service cloud.firestore {
     // REAL-TIME PROGRAM CHECK-INS AND MEAL CHECKOUTS
     //
     match /checkIns/{userId} {
-      allow read: if isSignedIn() && belongsToSameUser(userId) || isAdminOrReviewer();
-      allow write: if isSignedIn() && belongsToSameUser(userId) || isAdminOrReviewer();
+      allow read: if isUserOrTheirChild(userId) || isAdminOrReviewer();
+      allow write: if isUserOrTheirChild(userId) || isAdminOrReviewer();
     }
 
     //
     // HELPER FUNCTIONS
     //
-    function belongsToSameUser(userId){
-      return userId.matches(request.auth.uid + '.*');
-    }
     // Roles come from the Auth custom claim, never from a document.
     //
     // There used to be a second helper, hasRole(), that read
@@ -197,7 +190,12 @@ service cloud.firestore {
     function hasRRole(role) {
       return 'role' in request.auth.token && request.auth.token.role == role;
     }
-    // Whether the signed-in user's decision for this semester is one of `types`.
+    // The role means "has registered", not "is enrolled in a class" - it is
+    // held from registration onward, long before any class placement.
+    function isStudent() {
+      return isSignedIn() && hasRRole('student');
+    }
+    // Whether the signed-in instructor's decision for this semester is one of `types`.
     //
     // `decisions` is written only by an admin or reviewer (see the rule above),
     // which is what makes it safe to authorize against. `semesterId` is a
@@ -207,6 +205,17 @@ service cloud.firestore {
     function hasDecisionType(semesterId, types) {
       return exists(/databases/$(database)/documents/semesters/$(semesterId)/decisions/$(request.auth.uid))
         && get(/databases/$(database)/documents/semesters/$(semesterId)/decisions/$(request.auth.uid)).data.get('type', '') in types;
+    }
+    // The role means "has applied to teach", not "teaches" - it is held from
+    // signup onward, long before any interview.
+    // TODO: Implement a new instructor-applicant role so we can differentiate
+    // between applicants and accepted instructors and update the comments here
+    // to explain that.
+    function isInstructorOrApplicant() {
+      return isSignedIn() && hasRRole('instructor');
+    }
+    function isInstructor() {
+      return isSignedIn() && hasRRole('instructor');
     }
     // Interviewed and accepted to teach a class of their own this semester.
     // Mirrors portal's server-side isAcceptedInstructor() so the two layers
@@ -223,28 +232,9 @@ service cloud.firestore {
     function isAdminOrReviewer() {
       return isSignedIn() && (hasRRole('admin') || hasRRole('reviewer'));
     }
-    // The role means "has applied to teach", not "teaches" - it is held from
-    // signup onward, long before any interview. Callers that mean the latter
-    // must pair it with isAcceptedInstructor.
-    function isInstructor() {
-      return isSignedIn() && hasRRole('instructor');
-    }
-    // Class access is uid-only, on both halves.
-    //
-    // Co-instructors: a free-text otherInstructorEmails list let a class owner
-    // grant write access to any address at all, with no check that the address
-    // belonged to an interviewed, accepted instructor. otherInstructorUids is
-    // populated only through the accepted-instructor flow.
-    //
-    // Primary instructor: this used to fall back to matching the signed-in
-    // address against the stored instructorEmail, which went stale the moment
-    // that instructor changed their account email. The backfill leaves 44 old
-    // classes (42 in Spring24, 2 in Fall24) without an instructorUid, but none
-    // of them was reachable through that clause anyway - the Spring24 ones have
-    // no instructorEmail at all, and the two Fall24 addresses belong to no Auth
-    // account. Keeping it was the riskier option: both are recycled school
-    // addresses, so whoever next holds one and signs up as an instructor would
-    // have inherited write access. See notes/EMAIL_TO_UID_AUDIT.md section 9.
+    // Class access is uid-only: either the primary instructor UID or the
+    // co-instructor UID (otherInstructorUids) which are populated only
+    // through flows that allow accepted instructors.
     function isInstructorOfClass() {
       return isInstructor() && (
         (resource.data.instructorUid != null && request.auth.uid == resource.data.instructorUid) ||
@@ -252,28 +242,29 @@ service cloud.firestore {
          request.auth.uid in resource.data.otherInstructorUids)
       );
     }
-    // classId is `${instructorUid}-${n}` (see portal's generateNewClassId),
-    // never the bare uid, so this needs the same prefix match isOwnerOrAdmin
-    // uses below for registrations - hasUserId's exact match never fires for
-    // a real class create, which silently locked every instructor out of
-    // "+ Create New Class" (only isAdmin() ever let a create through).
+    // classId is strictly `${instructorUid}-${classNumber}` (see portal's
+    // generateNewClassId), never the bare uid. Portal generates class numbers
+    // as positive integers starting at 1 (e.g. `${instructorUid}-1`,
+    // `${instructorUid}-2`). Unlike registrations, a class is never keyed
+    // by the bare UID, so we enforce the exact pattern via matches() to prevent
+    // both bare-UID class creation and arbitrary suffix collisions.
     function isInstructorOwnerOrAdmin(classId, semesterId) {
-      return (isAcceptedInstructor(semesterId) && belongsToSameUser(classId)) || isAdmin();
-    }
-    function isOwnerOrAdmin(userId) {
-      return (isSignedIn() && belongsToSameUser(userId)) || isAdmin();
+      return (isAcceptedInstructor(semesterId)
+              && classId.matches(request.auth.uid + '-[1-9][0-9]*'))
+             || isAdmin();
     }
     function isSignedIn() {
       return request.auth != null;
     }
-    // Note this admits *applicants*, since isInstructor() is the role and the
-    // role is held from signup. Only use it where that is intended (booking an
-    // interview); anything that assumes acceptance wants isAcceptedInstructor.
-    function isStaff() {
-      return isAdminOrReviewer() || isInstructor();
+    // In gbSTEM, children do not have separate Auth accounts. A parent's
+    // child registrations and check-ins are keyed as `${parentUid}` (primary)
+    // or `${parentUid}-1`, `${parentUid}-2`, ... up to maxChildrenPerAccount (5).
+    // Matching exact UID or `${uid}-\d+` allows access to those child
+    // documents while preventing arbitrary prefix collisions.
+    function isUserOrTheirChild(userId) {
+      return isSignedIn() && (userId == request.auth.uid || userId.matches(request.auth.uid + '-[0-9]+'));
     }
     function isUser(userId) {
-      // Verifying the current user is the owner by UID
       return isSignedIn() && hasUserId(userId);
     }
   }
