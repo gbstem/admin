@@ -239,17 +239,17 @@ describe("users/{uid} - the role field is not the client's to write", () => {
 
 describe("applications/{uid} - meta.decided is not the applicant's to write", () => {
   it('lets an applicant read their own application', async () => {
-    const db = as(UIDS.student, 'student')
+    const db = as(UIDS.student, 'instructor')
     await assertSucceeds(getDoc(doc(db, applications, UIDS.student)))
   })
 
   it("refuses reading another applicant's application", async () => {
-    const db = as(UIDS.otherStudent, 'student')
+    const db = as(UIDS.otherStudent, 'instructor')
     await assertFails(getDoc(doc(db, applications, UIDS.student)))
   })
 
   it('lets an applicant edit an unrelated field', async () => {
-    const db = as(UIDS.student, 'student')
+    const db = as(UIDS.student, 'instructor')
     await assertSucceeds(
       updateDoc(doc(db, applications, UIDS.student), {
         personal: { firstName: 'Augusta', email: 'ada@example.com' },
@@ -261,7 +261,7 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
     // The fixture seeds meta.decided: true - this is the exploit
     // applicationService.loadApplicationDetails documents: setting it back
     // to false stops the admin UI from loading the decision doc at all.
-    const db = as(UIDS.student, 'student')
+    const db = as(UIDS.student, 'instructor')
     await assertFails(
       updateDoc(doc(db, applications, UIDS.student), {
         meta: { uid: UIDS.student, submitted: true, decided: false },
@@ -270,7 +270,7 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
   })
 
   it('refuses meta.decided smuggled in alongside a legitimate field change', async () => {
-    const db = as(UIDS.student, 'student')
+    const db = as(UIDS.student, 'instructor')
     await assertFails(
       updateDoc(doc(db, applications, UIDS.student), {
         personal: { firstName: 'Augusta', email: 'ada@example.com' },
@@ -301,7 +301,7 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
   })
 
   it('lets an applicant create their own application', async () => {
-    const db = as(UIDS.undecided, 'student')
+    const db = as(UIDS.undecided, 'instructor')
     await assertSucceeds(
       setDoc(doc(db, applications, UIDS.undecided), {
         personal: { firstName: 'Grace', email: 'grace@example.com' },
@@ -311,7 +311,7 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
   })
 
   it('lets an applicant create an application with decided omitted', async () => {
-    const db = as(UIDS.undecided, 'student')
+    const db = as(UIDS.undecided, 'instructor')
     await assertSucceeds(
       setDoc(doc(db, applications, UIDS.undecided), {
         personal: { firstName: 'Grace', email: 'grace@example.com' },
@@ -321,7 +321,7 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
   })
 
   it('refuses an applicant creating an application with decided: true', async () => {
-    const db = as(UIDS.undecided, 'student')
+    const db = as(UIDS.undecided, 'instructor')
     await assertFails(
       setDoc(doc(db, applications, UIDS.undecided), {
         personal: { firstName: 'Grace', email: 'grace@example.com' },
@@ -351,12 +351,12 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
   })
 
   it('lets an applicant delete their own application', async () => {
-    const db = as(UIDS.student, 'student')
+    const db = as(UIDS.student, 'instructor')
     await assertSucceeds(deleteDoc(doc(db, applications, UIDS.student)))
   })
 
   it("refuses an applicant deleting another applicant's application", async () => {
-    const db = as(UIDS.otherStudent, 'student')
+    const db = as(UIDS.otherStudent, 'instructor')
     await assertFails(deleteDoc(doc(db, applications, UIDS.student)))
   })
 

@@ -178,6 +178,26 @@ That same script also stamps a class's **primary** `instructorUid`, which was ad
 
 [Composite indexes](firestore.indexes.json) and [security rules](firestore.rules) are keyed by **collection ID**, not by full path, so they automatically cover `semesters/{any semesterId}/{type}` — a new semester needs neither of these touched.
 
+### Deploying rules and indexes
+
+Neither file ships with the app: Vercel deploys the code, and the rules and indexes go to the `gbstem-core` Firebase project separately. `.firebaserc` only names the `demo-gbstem` emulator project, so always name production explicitly.
+
+**`firestore.rules` is deployed by hand.** Admin, portal and curriculum share one Firestore database, so production runs a single rules file: this one plus the curriculum repo's `firestore.rules` (its `curriculum` and `curriculum_versions` matches). Publishing this file alone would drop those.
+
+1. Wait until the code that depends on the change is live. A rule tightened before the code that stopped needing it ships breaks production.
+2. Copy the `match` blocks from curriculum's `firestore.rules` into this file's `match /databases/{database}/documents` block, in a scratch copy.
+3. Paste the result into the Firebase console (**Firestore Database → Rules** for `gbstem-core`) and publish.
+
+**`firestore.indexes.json` is deployed with the Firebase CLI**, from this repo's root after merging:
+
+```bash
+firebase login                                              # once per machine
+firebase firestore:indexes --project gbstem-core --pretty   # what production has now
+firebase deploy --only firestore:indexes --project gbstem-core
+```
+
+Deploy indexes **before** the code that queries them: a query whose index doesn't exist yet fails outright until the index finishes building. If the CLI offers to delete indexes that production has but this file doesn't, decline unless you've confirmed nothing uses them — they may have been created in the console.
+
 Admins can browse a past semester's data via the `?semester=<id>` URL param on the Applications and Registrations pages (see `CollectionFilter.svelte`), validated against [`collectionsList.json`](src/lib/data/collectionsList.json) before being used to build a Firestore path.
 
 > [!NOTE]
