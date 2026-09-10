@@ -137,6 +137,10 @@ await studentService.enrollStudent(studentData, selectedClass, studentId)
 
 instead of constructing a raw `updateDoc(doc(db, classesCollection, classId), { students: arrayUnion(studentId) })` call inline, mixed in with template markup and UI state.
 
+Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` (see `__tests__/subRequestService.test.ts`).
+
+TODO: the other `+page.server.ts` loads (`applications`, `registrations`, `classes`, `students`, `tokens`, `announcements`, `instructor-feedback`, `student-feedback`) still query `adminDb` inline. Move each one into a `src/lib/server/*Service.ts` when you next touch it.
+
 **Why this matters, especially for a small, rotating volunteer team:**
 
 - **Testability without a real database.** Our Jest tests shouldn't need an internet connection or a live Firestore/emulator instance to run — that would make the whole test suite slow, flaky, and dependent on specific data existing. By funneling every Firestore call through a service function, a test can "mock" (fake) the `firebase/firestore` module — see any `__tests__/*Service.test.ts` file — and check that our code calls the database correctly, _including what happens when a write fails_ (permission denied, network error, missing document), all in milliseconds, with nothing real running.
