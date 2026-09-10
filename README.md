@@ -199,12 +199,16 @@ So: **never authorize against a document the subject of the authorization can wr
 
 It is granted at signup, before any interview — so it says nothing about whether someone was accepted. What says that is `semesters/{id}/decisions/{uid}.type`, which only an admin or reviewer can write. Anything that assumes acceptance must check it:
 
-- in `firestore.rules`, `isAcceptedInstructor(semesterId)` (accepted) or `isTeachingInstructor(semesterId)` (accepted **or** substitute, for the roster a substitute needs to cover a session)
-- on the server, `isAcceptedInstructor(uid)` in portal's [`instructorDirectory.ts`](https://github.com/gbstem/portal/blob/main/src/lib/server/instructorDirectory.ts)
+- in `firestore.rules`, `isAcceptedInstructor(semesterId)`
+- on the server, `isAcceptedInstructor(uid)` in portal's [`instructorDirectory.ts`](https://github.com/gbstem/portal/blob/main/src/lib/server/instructorDirectory.ts), or `canSubstitute(uid)` (accepted **or** substitute) for covering another instructor's session
 
-`isInstructorOrApplicant()` deliberately does _not_ check it, because applicants need it to book an interview. Read it as "anyone with a reason to be in the instructor UI", not as "staff".
+**No rule lets one instructor read or change another instructor's data.** A rule granting that to "any instructor" can't tell whose data it is, so each of those actions is a portal API route that checks with the Admin SDK instead:
 
-Three top-level collections — `instructorClasses`, `subRequests` and `interviewTimeRequests` — are still gated on the bare role, because they have no `semesterId` in scope and a decision lookup there would need the current semester hardcoded in the rules file, which every rollover would then have to remember to change. They carry `TODO(phase-2)` comments; the planned instructor-role split (`instructor-applicant` / `instructor` / `instructor-substitute`) is what lets them be gated without that.
+- `/api/classDetails` saves a class, checking ownership and every added co-instructor, and keeps the server-only `instructorClasses` mapping in step in the same transaction
+- `/api/substitute` lists the sessions needing cover and claims one in a transaction; otherwise a `subRequests` document is readable and editable only by the people it belongs to — whoever filed it, the class's instructor of record, and its substitute
+- `/api/interview` lists open interview slots and books one in a transaction; otherwise `instructorInterviewTimes` is admin/reviewer-only
+
+When a feature needs cross-instructor access, add a route like these rather than widening a rule.
 
 ### Changing what a role can do
 
