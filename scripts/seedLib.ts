@@ -1289,7 +1289,16 @@ export async function seedEmulator(): Promise<void> {
     await db.collection('tokens').doc(id).set(tokenData)
   }
 
-  // Create Mock Sub-Requests (30 records)
+  // Create Mock Sub-Requests (30 records), one session on each of the 30 days
+  // before now. The admin sub-requests log only reads sessions from
+  // registrationsOpen on (see src/lib/server/subRequestService.ts), so when
+  // now is less than 30 days past that - e.g. just after a semester rollover -
+  // the window shifts later to keep every record visible to e2e.
+  const newestSubRequestTime = Math.max(
+    Date.now(),
+    new Date(semesterDates.registrationsOpen).getTime() +
+      30 * 24 * 60 * 60 * 1000,
+  )
   console.log(`Seeding 30 mock sub-requests in "${subRequestsCollection}"...`)
   for (let i = 0; i < 30; i++) {
     const id = `sub-req-fake-${i}`
@@ -1301,7 +1310,7 @@ export async function seedEmulator(): Promise<void> {
         classNumber: (i % 4) + 1,
         course: courses[i % courses.length],
         dateOfClass: admin.firestore.Timestamp.fromDate(
-          new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000),
+          new Date(newestSubRequestTime - (30 - i) * 24 * 60 * 60 * 1000),
         ),
         originalInstructorEmail: `instructor-fake-${i}@gbstem.org`,
         subInstructorId: i % 3 !== 0 ? `sub-inst-id-${i}` : '',

@@ -48,7 +48,8 @@ Schemas live in `src/lib/components/forms/schemas.ts` (also reused by `scripts/s
 ## Firestore access
 
 - `src/lib/client/firebase.ts` → client SDK, used in `.svelte` components/forms, gated by `firestore.rules`.
-- `src/lib/server/firebase.ts` → Admin SDK, used only in `hooks.server.ts` and `src/routes/api/*/+server.ts`.
+- `src/lib/server/firebase.ts` → Admin SDK, used in `hooks.server.ts`, `src/routes/api/*/+server.ts`, and `+page.server.ts` loads.
+- `+page.server.ts` Firestore queries belong in a server-side DAL module, `src/lib/server/<name>Service.ts` (see `subRequestService.ts`), not inline in the load. Most loads predate that and still query `adminDb` directly; see the TODO in README's [Code Organization](README.md#code-organization-helpers-services-and-where-new-code-should-go).
 - API routes: guard with `verifyAdmin(locals)` / `verifyAuthenticated(locals)` and wrap the body in `try { ... } catch (err) { throw handleApiError(err) }` (both from `src/lib/server/apiHelpers.ts`).
 
 ## Roles come from the Auth claim, never from a document
