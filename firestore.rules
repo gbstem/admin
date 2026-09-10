@@ -60,15 +60,15 @@ service cloud.firestore {
       // unchanged, but admin/reviewer - who set it through this same client
       // SDK path, not the Admin SDK - can still change it.
       match /applications/{userId} {
-        allow read: if isUser(userId) || isAdminOrReviewer();
+        allow read: if isInstructorUser(userId) || isAdminOrReviewer();
         allow create: if isAdminOrReviewer()
-                      || (isUser(userId)
+                      || (isInstructorUser(userId)
                           && request.resource.data.meta.get('decided', false) == false);
         allow update: if isAdminOrReviewer()
-                      || (isUser(userId)
+                      || (isInstructorUser(userId)
                           && request.resource.data.meta.get('decided', false)
                              == resource.data.meta.get('decided', false));
-        allow delete: if isUser(userId) || isAdminOrReviewer();
+        allow delete: if isInstructorUser(userId) || isAdminOrReviewer();
       }
 
       // A registration is a minor's date of birth, race, phone number, school
@@ -77,12 +77,12 @@ service cloud.firestore {
       // server-side API routes (/api/classRoster, /api/remindStudents) that strictly
       // enforce class ownership and return only the minimal necessary fields.
       match /registrations/{userId} {
-        allow read: if isUserOrTheirChild(userId) || isAdminOrReviewer();
-        allow write: if isUserOrTheirChild(userId) || isAdmin();
+        allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
+        allow write: if isStudentUserOrTheirChild(userId) || isAdmin();
       }
 
       match /decisions/{userId} {
-        allow read: if isUser(userId);
+        allow read: if isInstructorUser(userId);
         allow read, write: if isAdminOrReviewer();
       }
 
@@ -188,16 +188,16 @@ service cloud.firestore {
     // PARENT / GUARDIAN CONFIRMATIONS
     //
     match /confirmations/{userId} {
-      allow read: if isUser(userId) || isAdminOrReviewer();
-      allow write: if isUser(userId) || isAdmin();
+      allow read: if isStudentUser(userId) || isAdminOrReviewer();
+      allow write: if isStudentUser(userId) || isAdmin();
     }
 
     //
     // REAL-TIME PROGRAM CHECK-INS AND MEAL CHECKOUTS
     //
     match /checkIns/{userId} {
-      allow read: if isUserOrTheirChild(userId) || isAdminOrReviewer();
-      allow write: if isUserOrTheirChild(userId) || isAdminOrReviewer();
+      allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
+      allow write: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
     }
 
     //
@@ -289,11 +289,17 @@ service cloud.firestore {
     // or `${parentUid}-1`, `${parentUid}-2`, ... up to maxChildrenPerAccount (5).
     // Matching exact UID or `${uid}-\d+` allows access to those child
     // documents while preventing arbitrary prefix collisions.
-    function isUserOrTheirChild(userId) {
-      return isSignedIn() && (userId == request.auth.uid || userId.matches(request.auth.uid + '-[0-9]+'));
-    }
     function isUser(userId) {
       return isSignedIn() && hasUserId(userId);
+    }
+    function isInstructorUser(userId) {
+      return isUser(userId) && isInstructor();
+    }
+    function isStudentUser(userId) {
+      return isUser(userId) && isStudent();
+    }
+    function isStudentUserOrTheirChild(userId) {
+      return isStudent() && (userId == request.auth.uid || userId.matches(request.auth.uid + '-[0-9]+'));
     }
   }
 }
