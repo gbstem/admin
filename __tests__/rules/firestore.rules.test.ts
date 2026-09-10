@@ -4,7 +4,18 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getCountFromServer,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
@@ -516,54 +527,47 @@ describe('registrations - instructors never read directly; client access restric
 })
 
 describe('classes - teaching requires having been accepted to teach', () => {
-  it('lets an accepted instructor create a class under their own uid', async () => {
-    const db = as(UIDS.accepted, 'instructor')
+  it('lets an admin create a class', async () => {
+    const db = as(UIDS.admin, 'admin')
     await assertSucceeds(
       setDoc(doc(db, classes, `${UIDS.accepted}-2`), { course: 'Python 1' }),
     )
   })
 
-  it('refuses a class create by an instructor awaiting an interview', async () => {
-    const db = as(UIDS.interviewing, 'instructor')
+  // Creation goes through portal's /api/classDetails.
+  it('refuses an accepted instructor creating a class, even under their own uid', async () => {
+    const db = as(UIDS.accepted, 'instructor')
     await assertFails(
-      setDoc(doc(db, classes, `${UIDS.interviewing}-1`), {
-        course: 'Python 1',
+      setDoc(doc(db, classes, `${UIDS.accepted}-2`), { course: 'Python 1' }),
+    )
+  })
+
+  it("lets an accepted instructor update their own class's sessions", async () => {
+    const db = as(UIDS.accepted, 'instructor')
+    await assertSucceeds(
+      updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
+        meetingTimes: [new Date('2026-10-05T16:00:00.000Z')],
+        feedbackCompleted: [false],
+        classStatuses: ['ClassInFuture'],
+        completedClassDates: [],
       }),
     )
   })
 
-  it("refuses a class create under another instructor's uid", async () => {
+  // Details, co-instructors and ownership go through /api/classDetails,
+  // which checks every added co-instructor is an accepted instructor.
+  it("refuses an instructor changing their class's details, co-instructors or owner", async () => {
     const db = as(UIDS.accepted, 'instructor')
+    const ref = doc(db, classes, `${UIDS.accepted}-1`)
     await assertFails(
-      setDoc(doc(db, classes, `${UIDS.substitute}-1`), { course: 'Python 1' }),
+      updateDoc(ref, { meetingLink: 'https://teams.example/join' }),
     )
-  })
-
-  it('refuses a class create with a bare uid (no class number suffix)', async () => {
-    const db = as(UIDS.accepted, 'instructor')
+    await assertFails(updateDoc(ref, { otherInstructorUids: [UIDS.rejected] }))
+    await assertFails(updateDoc(ref, { instructorUid: UIDS.rejected }))
     await assertFails(
-      setDoc(doc(db, classes, UIDS.accepted), { course: 'Python 1' }),
-    )
-  })
-
-  it('refuses a class create with an invalid or non-numeric class id suffix', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertFails(
-      setDoc(doc(db, classes, `${UIDS.accepted}-abc`), { course: 'Python 1' }),
-    )
-    await assertFails(
-      setDoc(doc(db, classes, `${UIDS.accepted}_1`), { course: 'Python 1' }),
-    )
-    await assertFails(
-      setDoc(doc(db, classes, `${UIDS.accepted}-0`), { course: 'Python 1' }),
-    )
-  })
-
-  it('lets an accepted instructor update their own class', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
-      updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
-        meetingLink: 'https://teams.example/join',
+      updateDoc(ref, {
+        classStatuses: ['ClassInFuture'],
+        meetingLink: 'https://evil.example/join',
       }),
     )
   })
@@ -572,7 +576,17 @@ describe('classes - teaching requires having been accepted to teach', () => {
     const db = as(UIDS.substitute, 'instructor')
     await assertFails(
       updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
-        meetingLink: 'https://evil.example/join',
+        classStatuses: ['ClassInFuture'],
+      }),
+    )
+  })
+
+  it('lets an admin update any class field', async () => {
+    const db = as(UIDS.admin, 'admin')
+    await assertSucceeds(
+      updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
+        meetingLink: 'https://teams.example/join',
+        otherInstructorUids: [UIDS.substitute],
       }),
     )
   })
@@ -594,7 +608,7 @@ describe('classes - teaching requires having been accepted to teach', () => {
     const db = as(UIDS.substitute, 'instructor')
     await assertSucceeds(
       updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
-        meetingLink: 'https://teams.example/join',
+        classStatuses: ['FeedbackIncomplete'],
       }),
     )
   })
@@ -640,7 +654,7 @@ describe('classes - legacy documents', () => {
     const db = as(UIDS.accepted, 'instructor')
     await assertSucceeds(
       updateDoc(doc(db, classes, `${UIDS.accepted}-9`), {
-        meetingLink: 'https://teams.example/join',
+        classStatuses: ['FeedbackIncomplete'],
       }),
     )
   })
@@ -658,38 +672,34 @@ describe('mail - the trigger-email queue is server-only', () => {
   })
 })
 
-describe('instructorInterviewTimes - instructors only update booking fields; admins/reviewers can update all', () => {
-  it('lets an instructor book a slot by updating allowed booking fields', async () => {
-    const db = as(UIDS.undecided, 'instructor')
-    await assertSucceeds(
-      updateDoc(doc(db, interviewTimes, 'slot-1'), {
-        interviewSlotStatus: 'pending',
-        intervieweeFirstName: 'Grace',
-        intervieweeLastName: 'Hopper',
-        intervieweeEmail: 'grace@example.com',
-        intervieweeId: UIDS.undecided,
-      }),
-    )
+describe('instructorInterviewTimes - admins and reviewers only; applicants book through the API', () => {
+  // Portal's /api/interview lists open slots and books one in a transaction.
+  it('refuses an applicant or an accepted instructor reading, listing or booking a slot', async () => {
+    for (const uid of [UIDS.undecided, UIDS.accepted]) {
+      const db = as(uid, 'instructor')
+      await assertFails(getDoc(doc(db, interviewTimes, 'slot-1')))
+      await assertFails(getDocs(collection(db, interviewTimes)))
+      await assertFails(
+        updateDoc(doc(db, interviewTimes, 'slot-1'), {
+          interviewSlotStatus: 'pending',
+          intervieweeFirstName: 'Grace',
+          intervieweeLastName: 'Hopper',
+          intervieweeEmail: 'grace@example.com',
+          intervieweeId: uid,
+        }),
+      )
+    }
   })
 
-  it('refuses an instructor updating meetingLink or date', async () => {
-    const db = as(UIDS.undecided, 'instructor')
-    await assertFails(
-      updateDoc(doc(db, interviewTimes, 'slot-1'), {
-        meetingLink: 'https://attacker.example/zoom',
-      }),
-    )
-  })
-
-  it('refuses an instructor smuggling meetingLink alongside allowed booking fields', async () => {
-    const db = as(UIDS.undecided, 'instructor')
-    await assertFails(
-      updateDoc(doc(db, interviewTimes, 'slot-1'), {
-        interviewSlotStatus: 'pending',
-        intervieweeFirstName: 'Grace',
-        meetingLink: 'https://attacker.example/zoom',
-      }),
-    )
+  it('lets an admin or reviewer read and list slots', async () => {
+    for (const [uid, role] of [
+      [UIDS.admin, 'admin'],
+      [UIDS.reviewer, 'reviewer'],
+    ]) {
+      const db = as(uid, role)
+      await assertSucceeds(getDoc(doc(db, interviewTimes, 'slot-1')))
+      await assertSucceeds(getDocs(collection(db, interviewTimes)))
+    }
   })
 
   it('lets an admin update any field including meetingLink', async () => {
@@ -935,178 +945,397 @@ describe('decisions - applicant read access; admin/reviewer write access', () =>
   })
 })
 
-describe('instructorClasses - instructor and admin mapping', () => {
-  it('lets an instructor read and write instructorClasses', async () => {
+describe('instructorClasses - server-only class mapping', () => {
+  // Keyed by instructor uid; only portal's /api/classDetails (Admin SDK)
+  // reads or writes it.
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'instructorClasses', UIDS.accepted),
+        {
+          classIds: [`${UIDS.accepted}-1`],
+        },
+      )
+    })
+  })
+
+  it('refuses an instructor reading or writing even their own mapping', async () => {
     const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
-      setDoc(doc(db, 'instructorClasses/class-1'), {
-        instructorUid: UIDS.accepted,
-      }),
-    )
-    await assertSucceeds(getDoc(doc(db, 'instructorClasses/class-1')))
-  })
-
-  it('lets an admin read and write instructorClasses', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
-      setDoc(doc(db, 'instructorClasses/class-2'), {
-        instructorUid: UIDS.accepted,
-      }),
-    )
-    await assertSucceeds(getDoc(doc(db, 'instructorClasses/class-2')))
-  })
-
-  it('refuses a student reading or writing instructorClasses', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(db, 'instructorClasses/class-1')))
+    const ref = doc(db, 'instructorClasses', UIDS.accepted)
+    await assertFails(getDoc(ref))
+    await assertFails(setDoc(ref, { classIds: [`${UIDS.accepted}-2`] }))
     await assertFails(
-      setDoc(doc(db, 'instructorClasses/class-3'), {
-        instructorUid: UIDS.student,
+      setDoc(doc(db, 'instructorClasses', UIDS.substitute), {
+        classIds: [`${UIDS.accepted}-1`],
       }),
     )
   })
 
-  it('refuses a reviewer reading or writing instructorClasses', async () => {
-    const db = as(UIDS.reviewer, 'reviewer')
-    await assertFails(getDoc(doc(db, 'instructorClasses/class-1')))
+  it('refuses an admin or reviewer reading or writing a mapping', async () => {
+    for (const [uid, role] of [
+      [UIDS.admin, 'admin'],
+      [UIDS.reviewer, 'reviewer'],
+    ]) {
+      const db = as(uid, role)
+      const ref = doc(db, 'instructorClasses', UIDS.accepted)
+      await assertFails(getDoc(ref))
+      await assertFails(setDoc(ref, { classIds: [] }))
+    }
+  })
+
+  it('refuses a student or an unauthenticated user', async () => {
+    const student = as(UIDS.student, 'student')
+    await assertFails(getDoc(doc(student, 'instructorClasses', UIDS.accepted)))
+    const anonymous = testEnv.unauthenticatedContext().firestore()
     await assertFails(
-      setDoc(doc(db, 'instructorClasses/class-3'), {
-        instructorUid: UIDS.reviewer,
-      }),
+      getDoc(doc(anonymous, 'instructorClasses', UIDS.accepted)),
     )
-  })
-
-  it('refuses an unauthenticated user', async () => {
-    const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(getDoc(doc(db, 'instructorClasses/class-1')))
   })
 })
 
-describe('interviewTimeRequests - applicants create; admins/reviewers manage', () => {
-  it('lets an instructor applicant read and create interviewTimeRequests', async () => {
+describe('interviewTimeRequests - applicants create their own; admins/reviewers manage', () => {
+  // Keyed `${uid}-${requestedDate}` - see portal's
+  // interviewService.requestInterviewSlot.
+  const requestId = (uid: string) => `${uid}-2026-10-05T14:00`
+  const request = (uid: string) => ({
+    uid,
+    firstName: 'Timmy',
+    lastName: 'Tester',
+    email: 'applicant@example.com',
+    date: new Date('2026-10-05T14:00:00.000Z'),
+  })
+
+  async function seedRequest(uid: string) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'interviewTimeRequests', requestId(uid)),
+        request(uid),
+      )
+    })
+  }
+
+  it('lets an instructor applicant create their own request', async () => {
     const db = as(UIDS.undecided, 'instructor')
     await assertSucceeds(
-      setDoc(doc(db, 'interviewTimeRequests/req-1'), {
-        date: '2026-10-05T14:00:00.000Z',
-        uid: UIDS.undecided,
-      }),
+      setDoc(
+        doc(db, 'interviewTimeRequests', requestId(UIDS.undecided)),
+        request(UIDS.undecided),
+      ),
     )
-    await assertSucceeds(getDoc(doc(db, 'interviewTimeRequests/req-1')))
   })
 
-  it('refuses an instructor applicant updating or deleting interviewTimeRequests', async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'interviewTimeRequests/req-1'), {
-        date: '2026-10-05T14:00:00.000Z',
-      })
-    })
+  it('refuses creating a request keyed under another uid', async () => {
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
-      updateDoc(doc(db, 'interviewTimeRequests/req-1'), {
-        date: '2026-10-06T14:00:00.000Z',
-      }),
+      setDoc(
+        doc(db, 'interviewTimeRequests', requestId(UIDS.interviewing)),
+        request(UIDS.undecided),
+      ),
     )
-    await assertFails(deleteDoc(doc(db, 'interviewTimeRequests/req-1')))
   })
 
-  it('lets an admin update and delete interviewTimeRequests', async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'interviewTimeRequests/req-1'), {
-        date: '2026-10-05T14:00:00.000Z',
-      })
-    })
+  it("refuses a request whose uid field isn't the caller's", async () => {
+    const db = as(UIDS.undecided, 'instructor')
+    await assertFails(
+      setDoc(
+        doc(db, 'interviewTimeRequests', requestId(UIDS.undecided)),
+        request(UIDS.interviewing),
+      ),
+    )
+  })
+
+  it('refuses an instructor applicant reading any request, even their own', async () => {
+    await seedRequest(UIDS.undecided)
+    await seedRequest(UIDS.interviewing)
+    const db = as(UIDS.undecided, 'instructor')
+    await assertFails(
+      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))),
+    )
+    await assertFails(
+      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.interviewing))),
+    )
+  })
+
+  it('refuses an instructor applicant updating or deleting their own request', async () => {
+    await seedRequest(UIDS.undecided)
+    const db = as(UIDS.undecided, 'instructor')
+    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    await assertFails(
+      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
+    )
+    await assertFails(deleteDoc(ref))
+  })
+
+  it('lets an admin read, update and delete requests', async () => {
+    await seedRequest(UIDS.undecided)
     const db = as(UIDS.admin, 'admin')
+    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    await assertSucceeds(getDoc(ref))
     await assertSucceeds(
-      updateDoc(doc(db, 'interviewTimeRequests/req-1'), {
-        date: '2026-10-06T14:00:00.000Z',
-      }),
+      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
     )
-    await assertSucceeds(deleteDoc(doc(db, 'interviewTimeRequests/req-1')))
+    await assertSucceeds(deleteDoc(ref))
   })
 
-  it('lets a reviewer update and delete interviewTimeRequests', async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'interviewTimeRequests/req-1'), {
-        date: '2026-10-05T14:00:00.000Z',
-      })
-    })
+  it('lets a reviewer read, update and delete requests', async () => {
+    await seedRequest(UIDS.undecided)
     const db = as(UIDS.reviewer, 'reviewer')
+    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    await assertSucceeds(getDoc(ref))
     await assertSucceeds(
-      updateDoc(doc(db, 'interviewTimeRequests/req-1'), {
-        date: '2026-10-06T14:00:00.000Z',
-      }),
+      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
     )
-    await assertSucceeds(deleteDoc(doc(db, 'interviewTimeRequests/req-1')))
+    await assertSucceeds(deleteDoc(ref))
   })
 
-  it('refuses a student reading or creating interviewTimeRequests', async () => {
+  it("refuses a student reading another user's request", async () => {
+    await seedRequest(UIDS.undecided)
     const db = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(db, 'interviewTimeRequests/req-1')))
     await assertFails(
-      setDoc(doc(db, 'interviewTimeRequests/req-2'), {
-        date: '2026-10-05T14:00:00.000Z',
-      }),
+      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))),
     )
   })
 
   it('refuses an unauthenticated user', async () => {
+    await seedRequest(UIDS.undecided)
     const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(getDoc(doc(db, 'interviewTimeRequests/req-1')))
+    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    await assertFails(getDoc(ref))
+    await assertFails(setDoc(ref, request(UIDS.undecided)))
   })
 })
 
-describe('subRequests - staff read; instructors create; instructors and admins manage', () => {
-  it('lets an instructor read, create, update, and delete subRequests', async () => {
+describe("subRequests - a request's own people; open requests and claims go through the API", () => {
+  // Keyed `${classId}---${classNumber}`, like portal's subRequestDocId.
+  const REQUEST_ID = `${UIDS.accepted}-1---2`
+
+  const subRequest = (overrides: Record<string, unknown> = {}) => ({
+    id: `${UIDS.accepted}-1`,
+    classNumber: 2,
+    course: 'Python 1',
+    dateOfClass: new Date('2026-10-05T20:00:00.000Z'),
+    notes: 'Loops.',
+    link: 'https://zoom.example/1',
+    originalInstructorEmail: 'accepted@example.com',
+    originalInstructorUid: UIDS.accepted,
+    requestedByUid: UIDS.accepted,
+    subInstructorId: '',
+    subInstructorFirstName: '',
+    subInstructorEmail: '',
+    subRequestStatus: 'SubstituteNeeded',
+    ...overrides,
+  })
+
+  async function seed(
+    overrides: Record<string, unknown> = {},
+    id: string = REQUEST_ID,
+  ) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'subRequests', id),
+        subRequest(overrides),
+      )
+    })
+  }
+
+  it('lets an instructor file a request for their own class', async () => {
     const db = as(UIDS.accepted, 'instructor')
     await assertSucceeds(
-      setDoc(doc(db, 'subRequests/sub-1'), {
-        course: 'Python 1',
-        instructorUid: UIDS.accepted,
-      }),
+      setDoc(doc(db, 'subRequests', REQUEST_ID), subRequest()),
     )
-    await assertSucceeds(getDoc(doc(db, 'subRequests/sub-1')))
+  })
+
+  it("lets a co-instructor file one naming the class's instructor of record", async () => {
+    const db = as(UIDS.substitute, 'instructor')
     await assertSucceeds(
-      updateDoc(doc(db, 'subRequests/sub-1'), {
-        status: 'claimed',
-      }),
+      setDoc(
+        doc(db, 'subRequests', REQUEST_ID),
+        subRequest({ requestedByUid: UIDS.substitute }),
+      ),
     )
-    await assertSucceeds(deleteDoc(doc(db, 'subRequests/sub-1')))
   })
 
-  it('lets a reviewer read subRequests, but not create, update, or delete', async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'subRequests/sub-1'), {
-        course: 'Python 1',
-      })
+  it("refuses filing a request in somebody else's name", async () => {
+    const db = as(UIDS.rejected, 'instructor')
+    await assertFails(setDoc(doc(db, 'subRequests', REQUEST_ID), subRequest()))
+  })
+
+  // A closed-out request counts toward the named substitute's community
+  // service hours, so one can't be created already claimed.
+  it('refuses filing a request that is already claimed or closed out', async () => {
+    const db = as(UIDS.accepted, 'instructor')
+    await assertFails(
+      setDoc(
+        doc(db, 'subRequests', REQUEST_ID),
+        subRequest({
+          subInstructorId: UIDS.accepted,
+          subRequestStatus: 'NoSubstituteNeeded',
+        }),
+      ),
+    )
+    await assertFails(
+      setDoc(
+        doc(db, 'subRequests', REQUEST_ID),
+        subRequest({ subRequestStatus: 'SubstituteFound' }),
+      ),
+    )
+  })
+
+  it('lets the requester and the instructor of record read it, edit its date and notes, and cancel it', async () => {
+    await seed({ requestedByUid: UIDS.substitute })
+    for (const uid of [UIDS.substitute, UIDS.accepted]) {
+      const db = as(uid, 'instructor')
+      const ref = doc(db, 'subRequests', REQUEST_ID)
+      await assertSucceeds(getDoc(ref))
+      await assertSucceeds(
+        updateDoc(ref, {
+          notes: `Edited by ${uid}.`,
+          dateOfClass: new Date('2026-10-06T20:00:00.000Z'),
+        }),
+      )
+    }
+    await assertSucceeds(
+      deleteDoc(
+        doc(as(UIDS.accepted, 'instructor'), 'subRequests', REQUEST_ID),
+      ),
+    )
+  })
+
+  it('refuses the requester changing who covers it, its status or its session', async () => {
+    await seed()
+    const ref = doc(as(UIDS.accepted, 'instructor'), 'subRequests', REQUEST_ID)
+    await assertFails(
+      updateDoc(ref, {
+        subInstructorId: UIDS.accepted,
+        subRequestStatus: 'SubstituteFound',
+      }),
+    )
+    await assertFails(
+      updateDoc(ref, { subRequestStatus: 'NoSubstituteNeeded' }),
+    )
+    await assertFails(updateDoc(ref, { classNumber: 3 }))
+    await assertFails(updateDoc(ref, { requestedByUid: UIDS.rejected }))
+  })
+
+  it('lets the substitute read the session they cover, but not change or cancel it', async () => {
+    await seed({
+      subInstructorId: UIDS.substitute,
+      subRequestStatus: 'SubstituteFound',
     })
-    const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(getDoc(doc(db, 'subRequests/sub-1')))
-    await assertFails(
-      setDoc(doc(db, 'subRequests/sub-rev'), {
-        course: 'Math',
-      }),
+    const ref = doc(
+      as(UIDS.substitute, 'instructor'),
+      'subRequests',
+      REQUEST_ID,
     )
-    await assertFails(
-      updateDoc(doc(db, 'subRequests/sub-1'), {
-        status: 'claimed',
-      }),
-    )
-    await assertFails(deleteDoc(doc(db, 'subRequests/sub-1')))
+    await assertSucceeds(getDoc(ref))
+    await assertFails(updateDoc(ref, { notes: 'Not mine to edit.' }))
+    await assertFails(deleteDoc(ref))
   })
 
-  it('refuses a student reading or creating subRequests', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(db, 'subRequests/sub-1')))
+  // Claiming goes through portal's /api/substitute, in a transaction.
+  it('refuses any other instructor reading, claiming or cancelling a request', async () => {
+    await seed()
+    const ref = doc(
+      as(UIDS.substitute, 'instructor'),
+      'subRequests',
+      REQUEST_ID,
+    )
+    await assertFails(getDoc(ref))
     await assertFails(
-      setDoc(doc(db, 'subRequests/sub-stu'), {
-        course: 'Art',
+      updateDoc(ref, {
+        subInstructorId: UIDS.substitute,
+        subRequestStatus: 'SubstituteFound',
       }),
+    )
+    await assertFails(deleteDoc(ref))
+  })
+
+  it("lets an instructor query their own requests and cover, but not everyone's", async () => {
+    await seed()
+    await seed(
+      { requestedByUid: UIDS.rejected, originalInstructorUid: UIDS.rejected },
+      'other-1---1',
+    )
+    await seed(
+      {
+        requestedByUid: UIDS.rejected,
+        originalInstructorUid: UIDS.rejected,
+        subInstructorId: UIDS.accepted,
+        subRequestStatus: 'NoSubstituteNeeded',
+      },
+      'other-1---2',
+    )
+    const requests = collection(as(UIDS.accepted, 'instructor'), 'subRequests')
+
+    await assertSucceeds(
+      getDocs(query(requests, where('requestedByUid', '==', UIDS.accepted))),
+    )
+    await assertSucceeds(
+      getDocs(
+        query(requests, where('originalInstructorUid', '==', UIDS.accepted)),
+      ),
+    )
+    await assertSucceeds(
+      getDocs(
+        query(
+          requests,
+          where('subInstructorId', '==', UIDS.accepted),
+          where('subRequestStatus', 'in', [
+            'SubstituteFound',
+            'SubstituteFeedbackNeeded',
+          ]),
+        ),
+      ),
+    )
+    await assertSucceeds(
+      getCountFromServer(
+        query(
+          requests,
+          where('subInstructorId', '==', UIDS.accepted),
+          where('subRequestStatus', '==', 'NoSubstituteNeeded'),
+        ),
+      ),
+    )
+    await assertFails(getDocs(requests))
+    await assertFails(
+      getDocs(
+        query(requests, where('subRequestStatus', '==', 'SubstituteNeeded')),
+      ),
     )
   })
 
-  it('refuses an unauthenticated user', async () => {
-    const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(getDoc(doc(db, 'subRequests/sub-1')))
+  it('lets a reviewer read any request, and only an admin manage one', async () => {
+    await seed()
+    const reviewer = as(UIDS.reviewer, 'reviewer')
+    await assertSucceeds(getDoc(doc(reviewer, 'subRequests', REQUEST_ID)))
+    await assertSucceeds(getDocs(collection(reviewer, 'subRequests')))
+    await assertFails(
+      updateDoc(doc(reviewer, 'subRequests', REQUEST_ID), { notes: 'x' }),
+    )
+    await assertFails(deleteDoc(doc(reviewer, 'subRequests', REQUEST_ID)))
+
+    const admin = as(UIDS.admin, 'admin')
+    await assertSucceeds(
+      updateDoc(doc(admin, 'subRequests', REQUEST_ID), {
+        subRequestStatus: 'NoSubstituteNeeded',
+      }),
+    )
+    await assertSucceeds(deleteDoc(doc(admin, 'subRequests', REQUEST_ID)))
+  })
+
+  it('refuses a student or an unauthenticated user', async () => {
+    await seed()
+    await assertFails(
+      getDoc(doc(as(UIDS.student, 'student'), 'subRequests', REQUEST_ID)),
+    )
+    await assertFails(
+      setDoc(
+        doc(as(UIDS.student, 'student'), 'subRequests', 'student-1---1'),
+        subRequest({ requestedByUid: UIDS.rejected }),
+      ),
+    )
+    const anonymous = testEnv.unauthenticatedContext().firestore()
+    await assertFails(getDoc(doc(anonymous, 'subRequests', REQUEST_ID)))
   })
 })
 
