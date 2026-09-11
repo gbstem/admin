@@ -124,6 +124,7 @@ export default defineConfig({
           interviewerUid?: string
           meetingLink: string
           semester?: string
+          intervieweeId?: string
         }) {
           if (getApps().length === 0) {
             initializeApp({
@@ -142,8 +143,8 @@ export default defineConfig({
               intervieweeFirstName: '',
               intervieweeLastName: '',
               intervieweeEmail: '',
-              intervieweeId: '',
-              interviewSlotStatus: 'available',
+              intervieweeId: slot.intervieweeId ?? '',
+              interviewSlotStatus: slot.intervieweeId ? 'pending' : 'available',
               meetingLink: slot.meetingLink,
               semester: slot.semester ?? '',
             })
@@ -174,6 +175,61 @@ export default defineConfig({
               consumers: token.consumers,
               expires: Timestamp.fromDate(new Date(token.expiresAt)),
             })
+          return null
+        },
+        // Admin SDK access bypasses firestore.rules (unlike a plain cy.request() against the
+        // Firestore REST API, which enforces them and 403s for an unauthenticated caller) -
+        // needed for tests asserting server-side document state directly, such as confirming a
+        // doc was actually deleted rather than just reflected in optimistic UI state.
+        async checkFirestoreDocExists(docPath: string) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          const doc = await getFirestore().doc(docPath).get()
+          return doc.exists
+        },
+        // Admin SDK read, bypassing firestore.rules - for asserting on a
+        // server-only collection that no client token can read at all.
+        async readFirestoreDoc(docPath: string) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          const doc = await getFirestore().doc(docPath).get()
+          return doc.exists ? doc.data() : null
+        },
+        // Admin SDK delete, bypassing firestore.rules - for clearing a document
+        // an earlier test in the same spec left where the next one needs
+        // nothing.
+        async deleteFirestoreDoc(docPath: string) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          await getFirestore().doc(docPath).delete()
+          return null
+        },
+        // Admin SDK merge-write, bypassing firestore.rules - lets a spec put a
+        // seeded doc into a state the app itself would never write (e.g. a
+        // class or registration owned by the account under test), to
+        // exercise a blocked-deletion path directly.
+        async mergeFirestoreDoc({
+          docPath,
+          data,
+        }: {
+          docPath: string
+          data: Record<string, unknown>
+        }) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          await getFirestore().doc(docPath).set(data, { merge: true })
           return null
         },
       })

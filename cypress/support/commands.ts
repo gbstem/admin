@@ -364,6 +364,7 @@ Cypress.Commands.add(
     interviewerUid?: string
     meetingLink: string
     semester?: string
+    intervieweeId?: string
   }) => {
     return cy.task('setInterviewSlot', slot)
   },

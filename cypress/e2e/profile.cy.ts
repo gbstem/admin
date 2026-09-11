@@ -1,3 +1,6 @@
+import { interviewTimesCollection } from '../../src/lib/data/collections'
+import { generateDateHash } from '../support/utils'
+
 describe('Section L: Profile and Account Customization', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -182,5 +185,126 @@ describe('Section L: Profile and Account Customization', () => {
         cy.get('input[name="new-password"]').should('have.value', '')
         cy.get('input[name="confirm-password"]').should('have.value', '')
       })
+  })
+})
+
+// A separate describe: the block above's beforeEach signs in as the seeded
+// demo admin before every test, which would redirect a plain cy.visit of
+// /signup away to /profile since (signedOut) refuses an already-signed-in
+// session. These tests need a fresh, signed-out browser instead.
+describe('Section L: Account Deletion Eligibility', () => {
+  beforeEach(() => {
+    Cypress.on('uncaught:exception', (err) => {
+      if (
+        err.message.includes('Connection failed') ||
+        err.message.includes('Firebase')
+      ) {
+        return false
+      }
+      return true
+    })
+  })
+
+  it('Test Case 22: Blocked From Deleting An Account With A Future Scheduled Interview', () => {
+    const emailPrefix = generateDateHash('delete-blocked-reviewer')
+    const email = `${emailPrefix}@gbstem.org`
+
+    cy.visit('/signup?token=demo-reviewer-token')
+    cy.get('h1').should('contain', 'Sign up')
+    cy.get('input[name="first-name"]').should('be.visible')
+    cy.waitForFormHydration()
+    cy.fillInput('input[name="first-name"]', 'Blocked')
+    cy.fillInput('input[name="last-name"]', 'Reviewer')
+    cy.fillInput('input[name="email"]', email)
+    cy.fillInput('input[name="password"]', 'penguin')
+    cy.fillInput('input[name="confirm-password"]', 'penguin')
+    cy.get('button[type="submit"]').click()
+    cy.url().should('include', '/profile')
+
+    // Close the "please verify your email" dialog that blocks the page.
+    cy.get('[role="dialog"]').find('button').contains('Close').click({
+      force: true,
+    })
+    cy.get('[role="dialog"]').should('not.exist')
+
+    cy.task('getFirestoreUserId', email).then((uid) => {
+      expect(uid).to.be.a('string')
+      cy.setInterviewSlot({
+        collectionPath: interviewTimesCollection,
+        id: `future-booked-slot-${emailPrefix}`,
+        date: '2028-05-01T09:00',
+        interviewerName: 'Blocked Reviewer',
+        interviewerEmail: email,
+        interviewerUid: uid as string,
+        intervieweeId: 'some-applicant-uid',
+        meetingLink: 'https://zoom.us/j/1111111111',
+      })
+
+      cy.contains('button', 'Delete account').click()
+      cy.get('[role="dialog"]').should('contain', "Can't delete account")
+      cy.get('[role="dialog"]').should('contain', 'scheduled interview')
+      // The password-confirmation dialog never opens.
+      cy.get('[role="dialog"]')
+        .find('input[type="password"]')
+        .should('not.exist')
+      cy.get('[role="dialog"]').contains('button', 'Close').click({
+        force: true,
+      })
+      cy.get('[role="dialog"]').should('not.exist')
+
+      // The account was never touched.
+      cy.task('getFirestoreUserId', email).should('eq', uid)
+    })
+  })
+
+  it('Test Case 22b: Deleting An Eligible Account Clears Its Open Interview Slots', () => {
+    const emailPrefix = generateDateHash('delete-eligible-reviewer')
+    const email = `${emailPrefix}@gbstem.org`
+    const slotId = `open-slot-${emailPrefix}`
+
+    cy.visit('/signup?token=demo-reviewer-token')
+    cy.get('h1').should('contain', 'Sign up')
+    cy.get('input[name="first-name"]').should('be.visible')
+    cy.waitForFormHydration()
+    cy.fillInput('input[name="first-name"]', 'Eligible')
+    cy.fillInput('input[name="last-name"]', 'Reviewer')
+    cy.fillInput('input[name="email"]', email)
+    cy.fillInput('input[name="password"]', 'penguin')
+    cy.fillInput('input[name="confirm-password"]', 'penguin')
+    cy.get('button[type="submit"]').click()
+    cy.url().should('include', '/profile')
+
+    cy.get('[role="dialog"]').find('button').contains('Close').click({
+      force: true,
+    })
+    cy.get('[role="dialog"]').should('not.exist')
+
+    cy.task('getFirestoreUserId', email).then((uid) => {
+      expect(uid).to.be.a('string')
+      cy.setInterviewSlot({
+        collectionPath: interviewTimesCollection,
+        id: slotId,
+        date: '2028-05-01T09:00',
+        interviewerName: 'Eligible Reviewer',
+        interviewerEmail: email,
+        interviewerUid: uid as string,
+        meetingLink: 'https://zoom.us/j/2222222222',
+      })
+
+      const slotPath = `${interviewTimesCollection}/${slotId}`
+      cy.task('checkFirestoreDocExists', slotPath).should('eq', true)
+
+      cy.contains('button', 'Delete account').click()
+      cy.get('[role="dialog"]').should('contain', 'Delete account')
+      cy.get('[role="dialog"]').find('input[type="password"]').type('penguin')
+      cy.get('[role="dialog"]').contains('button', 'Delete').click({
+        force: true,
+      })
+      cy.url().should('include', '/signin', { timeout: 10000 })
+
+      cy.task('checkFirestoreDocExists', slotPath).should('eq', false)
+      cy.task('checkFirestoreDocExists', `users/${uid}`).should('eq', false)
+      cy.task('getFirestoreUserId', email).should('eq', null)
+    })
   })
 })
