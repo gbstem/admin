@@ -21,8 +21,10 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { cloneDeep } from 'lodash-es'
 
@@ -201,23 +203,29 @@ export const studentService = {
   },
 
   /**
-   * Enrolls a student into a class and triggers enrollment email API.
+   * Enrolls a student into a class, then sends the enrollment email.
+   *
+   * The class's `students` and the registration's `classes` have to agree -
+   * the roster, capacity and reminders read one side, the family's view reads
+   * the other - so both are written in one batch. They used to be two
+   * sequential updates, and a failure between them (a reviewer, say, who may
+   * write classes but not registrations) left the student on one and not the
+   * other. Portal's /api/enroll keeps the same pair in a transaction.
    */
   async enrollStudent(
     studentData: Student,
     selectedClass: ClassData,
     studentId: string,
   ): Promise<void> {
-    const classDocRef = doc(db, classesCollection, selectedClass.id)
-    await updateDoc(classDocRef, {
+    const batch = writeBatch(db)
+    batch.update(doc(db, classesCollection, selectedClass.id), {
       students: arrayUnion(studentId),
     })
-
-    const registrationDocRef = doc(db, registrationsCollection, studentId)
-    await updateDoc(registrationDocRef, {
+    batch.update(doc(db, registrationsCollection, studentId), {
       classes: arrayUnion(selectedClass.id),
       enrolled: true,
     })
+    await batch.commit()
 
     const payload = buildEnrollApiPayload(studentData, selectedClass)
     const res = await fetch('/api/enroll', {
@@ -234,23 +242,30 @@ export const studentService = {
   },
 
   /**
-   * Drops a student from a class and updates registration status.
+   * Drops a student from a class: off the class's `students`, and the class
+   * off their registration, with `enrolled` saying whether any class is left.
+   *
+   * One transaction, because `enrolled` is computed from the registration as
+   * it stands. This used to be three writes and a read between them, so a
+   * concurrent enrollment could land after the read and leave `enrolled`
+   * false on a student who is in a class.
    */
   async dropStudentFromClass(
     classId: string,
     studentId: string,
   ): Promise<void> {
     const classDocRef = doc(db, classesCollection, classId)
-    await updateDoc(classDocRef, {
-      students: arrayRemove(studentId),
-    })
-
     const registrationDocRef = doc(db, registrationsCollection, studentId)
-    await updateDoc(registrationDocRef, { classes: arrayRemove(classId) })
-    const regSnap = await getDoc(registrationDocRef)
-    const remainingClasses = (regSnap?.data?.()?.classes || []) as string[]
-    await updateDoc(registrationDocRef, {
-      enrolled: remainingClasses.length > 0,
+    await runTransaction(db, async (transaction) => {
+      const registrationSnap = await transaction.get(registrationDocRef)
+      const remainingClasses = (
+        (registrationSnap.data()?.classes ?? []) as string[]
+      ).filter((id) => id !== classId)
+      transaction.update(classDocRef, { students: arrayRemove(studentId) })
+      transaction.update(registrationDocRef, {
+        classes: remainingClasses,
+        enrolled: remainingClasses.length > 0,
+      })
     })
   },
 

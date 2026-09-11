@@ -15,13 +15,47 @@ import {
   createDefaultInterviewValues,
   normalizeInterviewData,
 } from '$lib/helpers/application'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import {
+  doc,
+  getDoc,
+  setDoc,
+  writeBatch,
+  type WriteBatch,
+} from 'firebase/firestore'
 import { cloneDeep } from 'lodash-es'
 
 export interface ApplicationLoadResult {
   values: Data.Application<'client'>
   decision: Data.Decision | null
   interview: Data.Interview
+}
+
+/** Firestore's cap on writes in one batch. */
+const MAX_BATCH_WRITES = 500
+
+/**
+ * Queues an application's decision document and its `meta.decided` flag on
+ * one batch. The flag is what tells the admin UI a decision document exists
+ * (see loadApplicationDetails), so the two land together or not at all: a
+ * decision without the flag is never loaded, and the flag without a decision
+ * loads nothing. They used to be two sequential writes.
+ */
+function queueDecision(
+  batch: WriteBatch,
+  decisionPath: { collection: string; id: string },
+  payload: Record<string, unknown>,
+  appCollection: string,
+  { merge }: { merge: boolean },
+) {
+  const decisionRef = doc(db, decisionPath.collection, decisionPath.id)
+  if (merge) {
+    batch.set(decisionRef, payload, { merge: true })
+  } else {
+    batch.set(decisionRef, payload)
+  }
+  batch.update(doc(db, appCollection, decisionPath.id), {
+    'meta.decided': true,
+  })
 }
 
 function getDecisionsCollection(viewedSemester?: string): string {
@@ -100,16 +134,15 @@ export const applicationService = {
     interview: Data.Interview,
     viewedSemester?: string,
   ): Promise<void> {
-    const decColl = getDecisionsCollection(viewedSemester)
-    const decisionDocRef = doc(db, decColl, appId)
-    await setDoc(
-      decisionDocRef,
+    const batch = writeBatch(db)
+    queueDecision(
+      batch,
+      { collection: getDecisionsCollection(viewedSemester), id: appId },
       withSemester(buildNotesPayload(interview), viewedSemester),
+      appCollection,
       { merge: true },
     )
-    await updateDoc(doc(db, appCollection, appId), {
-      'meta.decided': true,
-    })
+    await batch.commit()
   },
 
   /**
@@ -122,19 +155,18 @@ export const applicationService = {
     currentDecision: Data.Decision | null,
     viewedSemester?: string,
   ): Promise<void> {
-    const decColl = getDecisionsCollection(viewedSemester)
-    const decisionDocRef = doc(db, decColl, appId)
-    await setDoc(
-      decisionDocRef,
+    const batch = writeBatch(db)
+    queueDecision(
+      batch,
+      { collection: getDecisionsCollection(viewedSemester), id: appId },
       withSemester(
         buildLikelyDecisionPayload(newLikelyDecision, currentDecision),
         viewedSemester,
       ),
+      appCollection,
       { merge: true },
     )
-    await updateDoc(doc(db, appCollection, appId), {
-      'meta.decided': true,
-    })
+    await batch.commit()
   },
 
   /**
@@ -155,16 +187,15 @@ export const applicationService = {
       instructorOrientationDate,
     )
     const updatedInterview = { ...interview, type: newDecision }
-    const decColl = getDecisionsCollection(viewedSemester)
-    const decisionDocRef = doc(db, decColl, appId)
-
-    await setDoc(
-      decisionDocRef,
+    const batch = writeBatch(db)
+    queueDecision(
+      batch,
+      { collection: getDecisionsCollection(viewedSemester), id: appId },
       withSemester(buildFullDecisionPayload(updatedInterview), viewedSemester),
+      appCollection,
+      { merge: false },
     )
-    await updateDoc(doc(db, appCollection, appId), {
-      'meta.decided': true,
-    })
+    await batch.commit()
 
     try {
       // Re-fetch the application to make sure we don't get stale data from
@@ -244,6 +275,11 @@ export const applicationService = {
   /**
    * Bulk-assigns a decision to multiple applications, links each to its decision document,
    * and sends decision or interview notification emails.
+   *
+   * Every decision and its `meta.decided` flag are written in one batch before
+   * any email goes out, so a failure writes nothing and emails nobody. A
+   * selection past Firestore's per-batch limit is committed in chunks, each
+   * atomic on its own.
    */
   async bulkSetDecision(
     applicationIds: string[],
@@ -257,17 +293,24 @@ export const applicationService = {
       ? calculateInterviewDeadline(new Date(), instructorOrientationDate)
       : ''
 
+    // Two writes per application: its decision and its `meta.decided`.
+    const perBatch = MAX_BATCH_WRITES / 2
+    for (let start = 0; start < applicationIds.length; start += perBatch) {
+      const batch = writeBatch(db)
+      for (const id of applicationIds.slice(start, start + perBatch)) {
+        queueDecision(
+          batch,
+          { collection: decisionsColl, id },
+          withSemester({ type: decision }, viewedSemester),
+          appCollection,
+          { merge: false },
+        )
+      }
+      await batch.commit()
+    }
+
     await Promise.all(
       applicationIds.map(async (id) => {
-        const decisionDocRef = doc(db, decisionsColl, id)
-        await setDoc(
-          decisionDocRef,
-          withSemester({ type: decision }, viewedSemester),
-        )
-        await updateDoc(doc(db, appCollection, id), {
-          'meta.decided': true,
-        })
-
         try {
           const appSnap = await getDoc(doc(db, appCollection, id))
           if (appSnap.exists()) {

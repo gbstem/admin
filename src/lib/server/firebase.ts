@@ -5,6 +5,7 @@ import {
   FIREBASE_PRIVATE_KEY,
   FIREBASE_PROJECT_ID,
 } from '$env/static/private'
+import { tokenRejection } from '$lib/helpers/signupTokens'
 import { cleanEnvVar } from '$lib/utils'
 
 // Copy and clean emulator environment variables to process.env so firebase-admin can detect them
@@ -153,13 +154,12 @@ export async function verifyToken(
       throw 'fake'
     }
     const tokenData = tokenDoc.data() as Data.Token<'server'>
-    if (tokenData.expires.toDate() <= new Date()) {
-      throw 'expired'
-    }
-    // even if `consumable`, allows for 2 consumers as race condition
-    // it's alright though
-    if (tokenData.consumable && tokenData.consumers.length >= 1) {
-      throw 'consumed'
+    // An early check, for the signup page to reject a stale link up front.
+    // Two signups can both pass it; accountService's recordNewAccount checks
+    // again inside the transaction that consumes the token.
+    const rejection = tokenRejection(tokenData, new Date())
+    if (rejection) {
+      throw rejection
     }
     return tokenData
   } catch (err) {

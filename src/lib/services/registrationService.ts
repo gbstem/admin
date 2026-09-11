@@ -5,7 +5,7 @@ import {
   semesterIdFromPath,
   withSemester,
 } from '$lib/data/collections'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, runTransaction, setDoc } from 'firebase/firestore'
 
 /**
  * The field groups the admin edit form owns, each `Partial` because the write is a
@@ -72,12 +72,17 @@ export const registrationService = {
    */
   async toggleBypassAgeLimits(registrationId: string): Promise<void> {
     const registrationDocRef = doc(db, registrationsCollection, registrationId)
-    const snap = await getDoc(registrationDocRef)
-    if (!snap.exists()) {
-      return
-    }
-    await updateDoc(registrationDocRef, {
-      'agreements.bypassAgeLimits': !snap.data().agreements.bypassAgeLimits,
+    // A transaction, since the new value is the old one flipped: two admins
+    // toggling at once would otherwise both read the same value and both
+    // write its opposite.
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(registrationDocRef)
+      if (!snap.exists()) {
+        return
+      }
+      transaction.update(registrationDocRef, {
+        'agreements.bypassAgeLimits': !snap.data().agreements.bypassAgeLimits,
+      })
     })
   },
 }

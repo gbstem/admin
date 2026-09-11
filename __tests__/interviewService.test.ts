@@ -2,19 +2,22 @@ import { interviewService } from '$lib/services/interviewService'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 
+const mockBatch = { set: jest.fn(), update: jest.fn(), commit: jest.fn() }
+
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),
   query: jest.fn(() => ({})),
   getDocs: jest.fn(),
-  setDoc: jest.fn(),
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
+  writeBatch: jest.fn(() => mockBatch),
 }))
 
 describe('interviewService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockBatch.commit.mockReset().mockResolvedValue(undefined)
     global.fetch = jest.fn() as jest.Mock
   })
 
@@ -91,20 +94,18 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('createOrAssignInterviewSlot', () => {
-    it('saves new slot and triggers email API if assigned', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
+    const slotToAdd = {
+      date: '2026-08-01T15:00:00.000Z',
+      meetingLink: 'https://zoom.us/1',
+      interviewerName: 'Alice',
+      interviewerEmail: 'alice@example.com',
+      intervieweeId: 'uid-123',
+      intervieweeEmail: 'student@example.com',
+      intervieweeFirstName: 'Timmy',
+    } as Data.InterviewSlot
 
-      const slotToAdd = {
-        date: '2026-08-01T15:00:00.000Z',
-        meetingLink: 'https://zoom.us/1',
-        interviewerName: 'Alice',
-        interviewerEmail: 'alice@example.com',
-        intervieweeId: 'uid-123',
-        intervieweeEmail: 'student@example.com',
-        intervieweeFirstName: 'Timmy',
-      } as Data.InterviewSlot
+    it("writes an assigned slot and its applicant's meta.interview in one batch, then emails", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
 
       const result = await interviewService.createOrAssignInterviewSlot(
         slotToAdd,
@@ -113,26 +114,48 @@ describe('interviewService (Data Access Layer)', () => {
       )
 
       expect(result.id).toBeDefined()
-      expect(firestore.setDoc).toHaveBeenCalled()
-      expect(firestore.updateDoc).toHaveBeenCalled()
+      expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
+      expect(mockBatch.set).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ id: result.id, intervieweeId: 'uid-123' }),
+      )
+      expect(mockBatch.update).toHaveBeenCalledWith(expect.anything(), {
+        'meta.interview': true,
+      })
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/assignInterview',
         expect.objectContaining({ method: 'POST' }),
       )
     })
 
-    it('throws error if API assignment call fails', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false })
+    it('writes an unassigned slot alone and emails nobody', async () => {
+      await interviewService.createOrAssignInterviewSlot(
+        { ...slotToAdd, intervieweeId: '' },
+        undefined,
+        'user-1',
+      )
 
-      const slotToAdd = {
-        date: '2026-08-01T15:00:00.000Z',
-        meetingLink: 'https://zoom.us/1',
-        interviewerName: 'Alice',
-        interviewerEmail: 'alice@example.com',
-        intervieweeId: 'uid-123',
-      } as Data.InterviewSlot
+      expect(mockBatch.set).toHaveBeenCalledTimes(1)
+      expect(mockBatch.update).not.toHaveBeenCalled()
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('emails nobody when the batch is refused', async () => {
+      mockBatch.commit.mockRejectedValueOnce(new Error('permission-denied'))
+
+      await expect(
+        interviewService.createOrAssignInterviewSlot(
+          slotToAdd,
+          'doc-123',
+          'user-1',
+        ),
+      ).rejects.toThrow('permission-denied')
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('throws error if API assignment call fails', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false })
 
       await expect(
         interviewService.createOrAssignInterviewSlot(
@@ -145,8 +168,8 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('updateInterviewSlot', () => {
-    it('saves the updated slot with a Date-coerced date field', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
+    it('writes only the date, as a Date, and the meeting link, stamped with the semester', async () => {
+      ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
 
       const interview = {
         id: 'slot-1',
@@ -154,18 +177,26 @@ describe('interviewService (Data Access Layer)', () => {
         meetingLink: 'https://zoom.us/2',
         interviewerName: 'Alice',
         interviewerEmail: 'alice@example.com',
+        // Stale copies of what an applicant's booking owns - never written.
+        intervieweeId: '',
+        interviewSlotStatus: 'available',
       } as unknown as Data.InterviewSlot
 
       await interviewService.updateInterviewSlot(interview)
 
-      expect(firestore.setDoc).toHaveBeenCalledTimes(1)
-      const [, payload] = (firestore.setDoc as jest.Mock).mock.calls[0]
+      expect(firestore.updateDoc).toHaveBeenCalledTimes(1)
+      const [, payload] = (firestore.updateDoc as jest.Mock).mock.calls[0]
+      expect(Object.keys(payload).sort()).toEqual([
+        'date',
+        'meetingLink',
+        'semester',
+      ])
       expect(payload.date).toBeInstanceOf(Date)
       expect(payload.meetingLink).toBe('https://zoom.us/2')
     })
 
-    it('propagates errors from setDoc', async () => {
-      ;(firestore.setDoc as jest.Mock).mockRejectedValueOnce(
+    it('propagates errors from updateDoc', async () => {
+      ;(firestore.updateDoc as jest.Mock).mockRejectedValueOnce(
         new Error('permission-denied'),
       )
 

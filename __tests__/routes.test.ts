@@ -196,6 +196,11 @@ jest.mock('firebase-admin/firestore', () => ({
   },
 }))
 
+// The token-consuming transaction has its own suite (accountService.test.ts).
+jest.mock('$lib/server/accountService', () => ({
+  recordNewAccount: jest.fn().mockResolvedValue(undefined),
+}))
+
 // Mock verifyToken from $lib/server/firebase
 jest.mock('$lib/server/firebase', () => ({
   adminAuth: mockAdminAuth,
@@ -240,6 +245,7 @@ jest.mock('firebase/firestore', () => ({
 jest.mock('firebase/storage', () => ({ getStorage: jest.fn() }))
 
 // Import routes
+import { recordNewAccount } from '$lib/server/accountService'
 import { verifyToken } from '$lib/server/firebase'
 import { handle } from '../src/hooks.server'
 import { currentSemester } from '../src/lib/data/collections'
@@ -828,25 +834,43 @@ describe('signup load and actions', () => {
     )
   })
 
-  it('signup writes the users profile document, matching portal', async () => {
+  it('signup records the account against its token, matching portal', async () => {
     mockAdminAuth.createUser.mockResolvedValue({ uid: 'newUid123' })
-    const usersDoc = mockDoc('newUid123')
-    mockAdminDb.collection.mockImplementation((name: string) =>
-      name === 'users'
-        ? ({ doc: () => usersDoc } as any)
-        : (mockCollection as any),
-    )
 
     await signupActions.default({
       request: mockSignupRequest() as any,
     } as any)
 
-    expect(usersDoc.set).toHaveBeenCalledWith({
+    // The users document and the token's consumption, in one transaction.
+    expect(recordNewAccount).toHaveBeenCalledWith({
+      uid: 'newUid123',
+      token: 'token123',
       role: 'admin',
       firstName: 'John',
       lastName: 'Doe',
     })
-    mockAdminDb.collection.mockReturnValue(mockCollection)
+  })
+
+  it('signup rolls back and says so when a concurrent signup used the token first', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    mockAdminAuth.createUser.mockResolvedValue({ uid: 'newUid123' })
+    mockAdminAuth.deleteUser.mockResolvedValue(undefined)
+    ;(recordNewAccount as jest.Mock).mockRejectedValueOnce('consumed')
+
+    const res = await signupActions.default({
+      request: mockSignupRequest() as any,
+    } as any)
+
+    expect(mockAdminAuth.deleteUser).toHaveBeenCalledWith('newUid123')
+    expect(res).toEqual(
+      expect.objectContaining({
+        data: {
+          error:
+            'Token already consumed. If this token was meant specifically for your account, immediately contact an admin with this message.',
+        },
+      }),
+    )
+    errorSpy.mockRestore()
   })
 
   it('signup rolls the auth user back when a downstream step fails', async () => {
