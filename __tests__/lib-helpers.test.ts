@@ -493,13 +493,12 @@ describe('client firebase store', () => {
       storeSet = val
     })
 
+    // No getIdTokenResult: the store no longer decodes the role, so a user
+    // object without one resolves - pages read the role from page data.
     const mockUserObj = {
       uid: 'user123',
       email: 'user@test.com',
       emailVerified: true,
-      getIdTokenResult: jest.fn().mockResolvedValue({
-        claims: { role: 'instructor' },
-      }),
     }
 
     authStateChangedCallback(mockUserObj)
@@ -510,7 +509,7 @@ describe('client firebase store', () => {
     // single user identifier, matching portal's store.
     expect(storeSet).toEqual({
       object: mockUserObj,
-      profile: { uid: 'user123', role: 'instructor' },
+      profile: { uid: 'user123' },
     })
 
     unsub()
@@ -525,9 +524,6 @@ describe('client firebase store', () => {
       uid: 'user123',
       email: 'user@test.com',
       emailVerified: false,
-      getIdTokenResult: jest.fn().mockResolvedValue({
-        claims: { role: 'student' },
-      }),
     }
 
     authStateChangedCallback(mockUserObj)
@@ -537,7 +533,7 @@ describe('client firebase store', () => {
     expect(localStorage.getItem('emailVerified')).toBe('false')
     expect(storeSet).toEqual({
       object: mockUserObj,
-      profile: { uid: 'user123', role: 'student' },
+      profile: { uid: 'user123' },
     })
 
     unsub()

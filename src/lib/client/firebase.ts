@@ -83,25 +83,19 @@ function userStore() {
     undefined,
     (set) => {
       if (!isBrowser) return
-      return onAuthStateChanged(auth, async (userObject) => {
+      return onAuthStateChanged(auth, (userObject) => {
         if (userObject) {
           if (!userObject.emailVerified) {
             localStorage.setItem('emailVerified', 'false')
           }
-          try {
-            const idTokenResult = await userObject.getIdTokenResult()
-            const { role } = idTokenResult.claims as { role: Data.Role }
-            set({
-              object: userObject,
-              profile: {
-                uid: userObject.uid,
-                role,
-              },
-            })
-          } catch (err) {
-            console.error('Failed to get user id token result:', err)
-            set(null)
-          }
+          // No role here: pages read the one hooks.server.ts verified, as
+          // `page.data.user.role`. This used to decode it again from the ID
+          // token, which cost a round trip before the store resolved and, when
+          // that failed, reported a signed-in user as signed out.
+          set({
+            object: userObject,
+            profile: { uid: userObject.uid },
+          })
         } else {
           set(null)
         }
