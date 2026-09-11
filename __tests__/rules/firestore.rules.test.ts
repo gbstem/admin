@@ -550,24 +550,22 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
     )
   })
 
-  it('lets an applicant delete their own application', async () => {
+  // No client, of any role, can delete an application document any more:
+  // account deletion (portal's /api/account) removes an instructor's own
+  // application with the Admin SDK, which bypasses these rules entirely.
+  it('refuses an applicant deleting their own application', async () => {
     const db = as(UIDS.student, 'instructor')
-    await assertSucceeds(deleteDoc(doc(db, applications, UIDS.student)))
-  })
-
-  it("refuses an applicant deleting another applicant's application", async () => {
-    const db = as(UIDS.otherStudent, 'instructor')
     await assertFails(deleteDoc(doc(db, applications, UIDS.student)))
   })
 
-  it('lets an admin delete an application', async () => {
+  it('refuses an admin deleting an application', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(deleteDoc(doc(db, applications, UIDS.student)))
+    await assertFails(deleteDoc(doc(db, applications, UIDS.student)))
   })
 
-  it('lets a reviewer delete an application', async () => {
+  it('refuses a reviewer deleting an application', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(deleteDoc(doc(db, applications, UIDS.student)))
+    await assertFails(deleteDoc(doc(db, applications, UIDS.student)))
   })
 })
 

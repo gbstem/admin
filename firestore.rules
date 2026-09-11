@@ -20,7 +20,10 @@ service cloud.firestore {
     //
     // create stays open because admin's userService uses setDoc(merge) to let
     // accounts predating the users collection rename themselves; delete stays
-    // open for DeleteAccountForm and for portal's rollbackNewUser.
+    // open only for portal's rollbackNewUser (signup rollback, before a
+    // session exists) - both sites' own account deletion now goes through
+    // their /api/account route, using the Admin SDK, which bypasses these
+    // rules entirely.
     match /users/{userId} {
       allow read: if isUser(userId) || isAdmin();
       allow create: if (isUser(userId) || isAdmin())
@@ -71,7 +74,11 @@ service cloud.firestore {
                       || (isInstructorUser(userId)
                           && request.resource.data.meta.get('decided', false)
                              == resource.data.meta.get('decided', false));
-        allow delete: if isInstructorUser(userId) || isAdminOrReviewer();
+        // No delete rule: nothing writes one directly any more. An
+        // instructor's own application is removed as part of account
+        // deletion (portal's /api/account), with the Admin SDK, which
+        // bypasses these rules; nothing else in either site's UI deletes
+        // an application.
       }
 
       // A registration is a minor's date of birth, race, phone number, school

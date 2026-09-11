@@ -1,11 +1,33 @@
+import { interviewTimesCollection } from '$lib/data/collections'
+import { planAdminAccountDeletion } from '$lib/helpers/accountDeletion'
 import { tokenRejection } from '$lib/helpers/signupTokens'
-import { adminDb } from '$lib/server/firebase'
+import { adminAuth, adminDb } from '$lib/server/firebase'
+import { error } from '@sveltejs/kit'
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 export interface NewAccount {
   uid: string
   token: string
   firstName: string
   lastName: string
+}
+
+export interface AccountDeletionEligibility {
+  canDelete: boolean
+  reason: string | null
+}
+
+function toSlotForDeletion(doc: QueryDocumentSnapshot) {
+  const data = doc.data() as Data.InterviewSlot
+  const rawDate = data.date as unknown as { toDate?: () => Date }
+  return {
+    id: doc.id,
+    intervieweeId: data.intervieweeId,
+    date:
+      rawDate && typeof rawDate.toDate === 'function'
+        ? rawDate.toDate()
+        : new Date(data.date),
+  }
 }
 
 /**
@@ -47,4 +69,63 @@ export async function recordNewAccount(account: NewAccount): Promise<void> {
       consumers: [...(token.consumers ?? []), account.uid],
     })
   })
+}
+
+/**
+ * Whether `uid` (an admin or reviewer) could delete their own account right
+ * now - see `planAdminAccountDeletion` for the rule. A plain read, for the
+ * pre-flight check; `deleteAdminAccount` re-checks this same rule from
+ * inside its transaction rather than trusting this result, since time can
+ * pass between the two.
+ */
+export async function checkAdminAccountDeletionEligibility(
+  uid: string,
+): Promise<AccountDeletionEligibility> {
+  const snapshot = await adminDb
+    .collection(interviewTimesCollection)
+    .where('interviewerUid', '==', uid)
+    .get()
+  const { canDelete, reason } = planAdminAccountDeletion(
+    snapshot.docs.map(toSlotForDeletion),
+    new Date(),
+  )
+  return { canDelete, reason }
+}
+
+/**
+ * Deletes an admin/reviewer account: re-checks eligibility inside a
+ * transaction (re-reading the interview slots, never trusting an earlier
+ * check), and if it still passes, deletes every open (unbooked) slot this
+ * account owns plus its `users` document. Only after that transaction
+ * commits does it delete the Auth account - Firestore data first, Auth
+ * account last, so a failure here never leaves a live account with no way to
+ * retry, and a retry is a no-op over data that's already gone.
+ *
+ * Throws a 409 (via `error()`) with the block reason if the account can't be
+ * deleted.
+ */
+export async function deleteAdminAccount(uid: string): Promise<void> {
+  const usersRef = adminDb.collection('users').doc(uid)
+  const slotsQuery = adminDb
+    .collection(interviewTimesCollection)
+    .where('interviewerUid', '==', uid)
+
+  await adminDb.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(slotsQuery)
+    const { canDelete, reason, openSlotIds } = planAdminAccountDeletion(
+      snapshot.docs.map(toSlotForDeletion),
+      new Date(),
+    )
+    if (!canDelete) {
+      throw error(409, reason as string)
+    }
+    for (const slotId of openSlotIds) {
+      transaction.delete(
+        adminDb.collection(interviewTimesCollection).doc(slotId),
+      )
+    }
+    transaction.delete(usersRef)
+  })
+
+  await adminAuth.deleteUser(uid)
 }

@@ -11,6 +11,7 @@ jest.mock('firebase/firestore', () => ({
 describe('userService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn() as jest.Mock
   })
 
   describe('fetchUserName', () => {
@@ -91,6 +92,54 @@ describe('userService (Data Access Layer)', () => {
       await expect(
         userService.updateUserName('uid-1', 'Timmy', 'Turner'),
       ).rejects.toThrow('permission-denied')
+    })
+  })
+
+  describe('checkAccountDeletionEligibility', () => {
+    it('returns the eligibility the API reports', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ canDelete: false, reason: 'Reason text' }),
+      })
+
+      await expect(
+        userService.checkAccountDeletionEligibility(),
+      ).resolves.toEqual({ canDelete: false, reason: 'Reason text' })
+      expect(global.fetch).toHaveBeenCalledWith('/api/account')
+    })
+
+    it('throws the server message on a failed request', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: 'Not signed in.' }),
+      })
+
+      await expect(
+        userService.checkAccountDeletionEligibility(),
+      ).rejects.toThrow('Not signed in.')
+    })
+  })
+
+  describe('deleteAccountViaApi', () => {
+    it('calls DELETE on the account route', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
+
+      await userService.deleteAccountViaApi()
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/account', {
+        method: 'DELETE',
+      })
+    })
+
+    it('throws the server message when deletion is refused', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: 'You have a scheduled interview.' }),
+      })
+
+      await expect(userService.deleteAccountViaApi()).rejects.toThrow(
+        'You have a scheduled interview.',
+      )
     })
   })
 })
