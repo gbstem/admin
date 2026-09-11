@@ -85,7 +85,6 @@ export const actions = {
         await recordNewAccount({
           uid,
           token,
-          role,
           firstName: values.firstName,
           lastName: values.lastName,
         })

@@ -9,21 +9,25 @@ service cloud.firestore {
     // admin.gbstem.org and portal.gbstem.org data
     //
 
-    // `role` is authorization, so it is not the client's to write. This is
-    // written only by the Admin SDK (portal's /api/signup, admin's signup
-    // action), which bypasses these rules entirely.
+    // A person's name, and nothing else. Their role is the Auth custom claim
+    // (hasRRole below) and has no copy here: this document used to carry one,
+    // which only ever fell out of step with the claim and invited code to read
+    // the wrong value.
     //
-    // create stays open *without* a role because admin's userService uses
-    // setDoc(merge) to let accounts predating the users collection rename
-    // themselves; delete stays open for DeleteAccountForm and for portal's
-    // rollbackNewUser. Neither carries a role.
+    // Clients may write only the name fields, so nothing can be added here
+    // that something might later mistake for authorization. The Admin SDK
+    // (portal's /api/signup, admin's signup action) bypasses these rules.
+    //
+    // create stays open because admin's userService uses setDoc(merge) to let
+    // accounts predating the users collection rename themselves; delete stays
+    // open for DeleteAccountForm and for portal's rollbackNewUser.
     match /users/{userId} {
       allow read: if isUser(userId) || isAdmin();
       allow create: if (isUser(userId) || isAdmin())
-                    && !('role' in request.resource.data);
+                    && request.resource.data.keys().hasOnly(['firstName', 'lastName']);
       allow update: if (isUser(userId) || isAdmin())
-                    && request.resource.data.get('role', null)
-                       == resource.data.get('role', null);
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['firstName', 'lastName']);
       allow delete: if isUser(userId) || isAdmin();
     }
 
@@ -55,10 +59,9 @@ service cloud.firestore {
       // `meta.decided` gates whether admin's applicationService loads the
       // decision doc at all (loadApplicationDetails), so an applicant who
       // could write it themselves could set it back to false and hide their
-      // own interview notes from the admin UI. Frozen the same way
-      // users/{uid}'s `role` is above: an applicant's own write must leave it
-      // unchanged, but admin/reviewer - who set it through this same client
-      // SDK path, not the Admin SDK - can still change it.
+      // own interview notes from the admin UI. So an applicant's own write
+      // must leave it unchanged, but admin/reviewer - who set it through this
+      // same client SDK path, not the Admin SDK - can still change it.
       match /applications/{userId} {
         allow read: if isInstructorUser(userId) || isAdminOrReviewer();
         allow create: if isAdminOrReviewer()

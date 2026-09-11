@@ -4,7 +4,6 @@ import { adminDb } from '$lib/server/firebase'
 export interface NewAccount {
   uid: string
   token: string
-  role: Data.Role
   firstName: string
   lastName: string
 }
@@ -41,7 +40,6 @@ export async function recordNewAccount(account: NewAccount): Promise<void> {
     }
 
     transaction.set(userRef, {
-      role: account.role,
       firstName: account.firstName,
       lastName: account.lastName,
     })

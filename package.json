@@ -24,8 +24,6 @@
     "backfill:instructoruids": "npx tsx scripts/backfill-class-instructor-uids.ts",
     "backfill:instructoruids:dry": "npx tsx scripts/backfill-class-instructor-uids.ts --dry-run",
     "backfill:instructoruids:drop": "npx tsx scripts/backfill-class-instructor-uids.ts --drop-legacy-field",
-    "backfill:roleclaims": "npx tsx scripts/backfill-user-role-claims.ts",
-    "backfill:roleclaims:dry": "npx tsx scripts/backfill-user-role-claims.ts --dry-run",
     "verify-email": "npx tsx scripts/force-verify-email.ts",
     "verify-email:dry": "npx tsx scripts/force-verify-email.ts --dry-run",
     "emulators": "firebase emulators:start --log-verbosity=quiet",

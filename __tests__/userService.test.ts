@@ -17,7 +17,7 @@ describe('userService (Data Access Layer)', () => {
     it('returns the stored name when the users document exists', async () => {
       ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
         exists: () => true,
-        data: () => ({ role: 'admin', firstName: 'Demo', lastName: 'Admin' }),
+        data: () => ({ firstName: 'Demo', lastName: 'Admin' }),
       })
 
       await expect(userService.fetchUserName('uid-1')).resolves.toEqual({
@@ -38,7 +38,7 @@ describe('userService (Data Access Layer)', () => {
     it('defaults missing name fields to empty strings', async () => {
       ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
         exists: () => true,
-        data: () => ({ role: 'admin' }),
+        data: () => ({}),
       })
 
       await expect(userService.fetchUserName('uid-1')).resolves.toEqual({
@@ -59,7 +59,7 @@ describe('userService (Data Access Layer)', () => {
   })
 
   describe('updateUserName', () => {
-    it('merges the name fields so the role is not clobbered', async () => {
+    it('merges the name fields so nothing else in the document is clobbered', async () => {
       ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
 
       await userService.updateUserName('uid-1', 'Timmy', 'Turner')

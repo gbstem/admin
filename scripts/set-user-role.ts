@@ -1,16 +1,8 @@
-// set-user-role.ts - Sets one account's role, claim and document together.
+// set-user-role.ts - Sets one account's role.
 //
-// The escape hatch for accounts the bulk backfill deliberately will not touch.
-// scripts/backfill-user-role-claims.ts repairs the one mismatch with a known
-// cause (an `instructor` document under a `student` claim) and reports every
-// other disagreement for a human, because a document naming a role the claim
-// does not is not evidence the account should have it. This is how a human
-// then acts on one.
-//
-// It writes *both* halves. Setting only the claim leaves the account diverged
-// the other way and reported by every future backfill run; setting only the
-// document changes nothing about what the account can do, since firestore.rules
-// and every API gate read the claim.
+// A role is the Auth custom claim and nothing else - firestore.rules and every
+// API gate read it, and no Firestore document keeps a copy - so this sets the
+// claim. Nothing in either site's UI changes a role; this is how a human does.
 //
 // Usage:
 //   npx tsx scripts/set-user-role.ts --email someone@example.com --role instructor --dry-run
@@ -32,10 +24,10 @@
 // Refresh tokens are revoked by default, which signs the account out. That is
 // the conservative choice for a single account: a role change reaches
 // firestore.rules only when the ID token refreshes, so without it a demotion
-// stays ineffective for up to an hour. The bulk backfill deliberately does the
-// opposite - it would sign out well over a thousand people mid-application.
+// stays ineffective for up to an hour. Pass --no-revoke only for a promotion
+// you are happy to see take effect at the next refresh.
 import admin from 'firebase-admin'
-import { isKnownRole, KNOWN_ROLES } from './lib/userRoleClaimTransforms'
+import { isKnownRole, KNOWN_ROLES } from './lib/knownRoles'
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -131,7 +123,6 @@ if (isProduction) {
   admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const db = admin.firestore()
 const auth = admin.auth()
 
 async function main() {
@@ -139,21 +130,16 @@ async function main() {
     ? await auth.getUserByEmail(email)
     : await auth.getUser(uid as string)
 
-  const snap = await db.doc(`users/${user.uid}`).get()
   const beforeClaim =
     (user.customClaims?.role as string | undefined) ?? '(none)'
-  const beforeDoc = snap.exists
-    ? ((snap.data()?.role as string | undefined) ?? '(none)')
-    : '(no document)'
 
   console.log(`Account:  ${user.uid}  ${user.email ?? '(no address)'}`)
-  console.log(`  claim:    ${beforeClaim} -> ${role}`)
-  console.log(`  document: ${beforeDoc} -> ${role}`)
+  console.log(`  role:     ${beforeClaim} -> ${role}`)
   console.log(
     `  sessions: ${skipRevoke ? 'left alone' : 'revoked (the account is signed out)'}`,
   )
 
-  if (beforeClaim === role && beforeDoc === role) {
+  if (beforeClaim === role) {
     console.log('\nAlready set. Nothing to do.')
     return
   }
@@ -163,17 +149,12 @@ async function main() {
     return
   }
 
-  // Claim first: it is what actually authorizes, so if the second write fails
-  // the account is left with the access it was meant to have rather than a
-  // document promising access it does not have. Merged onto existing claims
-  // so an unrelated one added later is not dropped.
+  // Merged onto existing claims so an unrelated one added later is not
+  // dropped.
   await auth.setCustomUserClaims(user.uid, {
     ...(user.customClaims ?? {}),
     role,
   })
-  // merge:true because accounts predating the users collection have no
-  // document, and the name fields must survive if they do.
-  await db.doc(`users/${user.uid}`).set({ role }, { merge: true })
 
   if (!skipRevoke) {
     await auth.revokeRefreshTokens(user.uid)

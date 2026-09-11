@@ -211,13 +211,15 @@ Admins can browse a past semester's data via the `?semester=<id>` URL param on t
 
 Almost everything either site will let a person do comes down to one value: their **role** — `admin`, `reviewer`, `instructor` or `student`. Two things are worth knowing before you touch anything that reads it.
 
-**A role lives in the Auth custom claim. The `users/{uid}.role` field is a copy, for display.**
+**A role lives in the Auth custom claim, and only there.**
 
-The claim is set only by the Admin SDK — portal's `/api/signup` at signup, this repo's `signup` action for a token-issued `admin`/`reviewer` — and arrives inside the verified ID token, so a browser cannot write one. `firestore.rules` reads it through `hasRRole()`, `hooks.server.ts` reads it off the Auth record on every request, and every `verifyAdmin`/`verifyInstructor` gate reads it from `locals.user`. `firestore.rules` refuses any client write that changes the document copy, so the two cannot drift apart.
+The claim is set only by the Admin SDK — portal's `/api/signup` at signup, this repo's `signup` action for a token-issued `admin`/`reviewer`, and [`scripts/set-user-role.ts`](scripts/set-user-role.ts) by hand — and arrives inside the verified ID token, so a browser cannot write one. `firestore.rules` reads it through `hasRRole()`, `hooks.server.ts` reads it off the Auth record on every request, and every `verifyAdmin`/`verifyInstructor` gate reads it from `locals.user`. Pages read that same value as `page.data.user.role`.
 
 It has not always worked that way, and the history is the reason for the rule. `firestore.rules` used to have a second helper, `hasRole()`, that read the role out of `users/{uid}` — and `isInstructor()` used it, while `allow write: if isUser(userId)` let anyone write their own document. Signing up as a parent and then writing `role: 'instructor'` to your own document was enough to read **every student registration for the semester**: dates of birth, races, phone numbers, schools and family income indicators, for children. Portal's `/api/auth` then made it worse by minting a real custom claim from that same document whenever one was missing.
 
 So: **never authorize against a document the subject of the authorization can write.** If a rule needs to know something about a user beyond their role, read the document that actually records it, and check who is allowed to write _that_.
+
+There is no copy in Firestore. `users/{uid}` holds a name and nothing else, and `firestore.rules` lets a client write only `firstName` and `lastName` there. It once carried a `role` "for display", and that copy was only ever a hazard: nothing kept it in step with the claim, and the first production audit found 521 accounts where the two disagreed — instructors whom portal's UI, reading the document, showed instructor pages, while every instructor API route, reading the claim, refused them. Neither site writes it any more, [`scripts/remove-user-document-roles.ts`](scripts/remove-user-document-roles.ts) removes it from documents written before that, and nothing should ever add it — or any other second copy of a role — back.
 
 **The `instructor` role means "applied to teach", not "teaches".**
 
@@ -250,20 +252,15 @@ yarn test:rules     # in another
 
 Add a case to [`__tests__/rules/firestore.rules.test.ts`](__tests__/rules/firestore.rules.test.ts) for both halves of any rule you change — the access it grants _and_ the access it must still refuse. A rule that is too permissive fails no build and shows no error; the test is the only thing that catches it.
 
-### Repairing roles across every account
+### Changing one account's role
 
-[`scripts/backfill-user-role-claims.ts`](scripts/backfill-user-role-claims.ts) reconciles the claim and the document for every account:
+Nothing in either site's UI changes a role after signup. [`scripts/set-user-role.ts`](scripts/set-user-role.ts) does it for one account, from a shell:
 
 ```bash
-yarn backfill:roleclaims:dry     # audit only
-yarn backfill:roleclaims         # set claims that are missing
+npx tsx scripts/set-user-role.ts --email someone@example.com --role instructor --dry-run
 ```
 
-It does three things. It sets a claim wherever one is missing and the document names a role. It **repairs the `instructor` document / `student` claim pair**, which is a bug rather than tampering — the first production run found 521 of 522 mismatches were that identical pair, including directors and a sitting co-president, and those accounts are already broken today: portal's UI reads the role from the document so they see instructor pages, while `verifyInstructor` reads the claim so every instructor API route refuses them. And it **reports every other disagreement without touching it**, exiting non-zero so a scripted run cannot skip past them.
-
-That last distinction is the important one. A document naming a role the claim does not is not evidence the account should have it: `admin` and `reviewer` have only ever come from a signup token, so writing the document's value there would _grant_ privilege rather than restore it. Only the one narrow pair, in one direction, is repaired automatically — and only because teaching access is now gated on the decision document, so an `instructor` claim with no accepted decision confers applicant-level access and nothing more. Were the role still the gate, this repair would be handing out 521 sets of student PII.
-
-Run it before deploying a rules change that moves something onto claims, and leave **at least an hour** between the run and the deploy: a claim only reaches `request.auth.token` when the ID token refreshes, and tokens live an hour. Waiting lets every signed-in client pick it up on its own. The alternative, `revokeRefreshTokens()`, also invalidates session cookies — `hooks.server.ts` verifies with `checkRevoked` — and would sign people out mid-application.
+It sets the claim and, by default, revokes the account's refresh tokens — a claim only reaches `request.auth.token` when the ID token refreshes, and tokens live an hour, so without the revoke a demotion stays ineffective that long. The cost is that the account is signed out. Granting `admin` or `reviewer` needs `--force`; issue a signup token instead where you can, since tokens are auditable and expire.
 
 ## API Routes (`+server.ts`)
 

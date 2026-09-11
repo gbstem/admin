@@ -231,14 +231,6 @@ declare global {
       }
     }
 
-    type User = {
-      applicationType: string
-      firstName: string
-      id: string
-      lastName: string
-      role: string
-    }
-
     type Announcement<T extends 'client' | 'server' | 'pojo'> = {
       title: string
       content: string

@@ -15,7 +15,6 @@ import { recordNewAccount } from '$lib/server/accountService'
 const ACCOUNT = {
   uid: 'new-uid',
   token: 'token-1',
-  role: 'reviewer' as Data.Role,
   firstName: 'Grace',
   lastName: 'Hopper',
 }
@@ -55,7 +54,7 @@ describe('recordNewAccount', () => {
     expect(mockRunTransaction).toHaveBeenCalledTimes(1)
     expect(transaction.set).toHaveBeenCalledWith(
       { path: 'users/new-uid' },
-      { role: 'reviewer', firstName: 'Grace', lastName: 'Hopper' },
+      { firstName: 'Grace', lastName: 'Hopper' },
     )
     expect(transaction.update).toHaveBeenCalledWith(
       { path: 'tokens/token-1' },
