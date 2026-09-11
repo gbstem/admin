@@ -845,7 +845,6 @@ describe('signup load and actions', () => {
     expect(recordNewAccount).toHaveBeenCalledWith({
       uid: 'newUid123',
       token: 'token123',
-      role: 'admin',
       firstName: 'John',
       lastName: 'Doe',
     })

@@ -111,7 +111,6 @@ beforeEach(async () => {
       personal: { studentFirstName: 'Ada', dateOfBirth: '2014-01-01' },
     })
     await setDoc(doc(db, `users/${UIDS.student}`), {
-      role: 'student',
       firstName: 'Ada',
       lastName: 'Lovelace',
     })
@@ -142,7 +141,7 @@ beforeEach(async () => {
   })
 })
 
-describe("users/{uid} - the role field is not the client's to write", () => {
+describe('users/{uid} - a name and nothing else', () => {
   it('lets a user read their own document', async () => {
     const db = as(UIDS.student, 'student')
     await assertSucceeds(getDoc(doc(db, `users/${UIDS.student}`)))
@@ -160,15 +159,13 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     )
   })
 
-  it('refuses a self-promotion to instructor', async () => {
+  it('refuses writing a role into the document', async () => {
+    // The role is the Auth claim. A copy here is what the rules and portal's
+    // UI used to read, so no field but the name may be written at all.
     const db = as(UIDS.student, 'student')
     await assertFails(
       updateDoc(doc(db, `users/${UIDS.student}`), { role: 'instructor' }),
     )
-  })
-
-  it('refuses a self-promotion to admin', async () => {
-    const db = as(UIDS.student, 'student')
     await assertFails(
       setDoc(
         doc(db, `users/${UIDS.student}`),
@@ -178,7 +175,7 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     )
   })
 
-  it('refuses a role smuggled in alongside a legitimate name change', async () => {
+  it('refuses a field smuggled in alongside a legitimate name change', async () => {
     const db = as(UIDS.student, 'student')
     await assertFails(
       updateDoc(doc(db, `users/${UIDS.student}`), {
@@ -188,7 +185,7 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     )
   })
 
-  it('lets a user create a document that carries no role', async () => {
+  it('lets a user create a document that holds only a name', async () => {
     // admin's userService.updateUserName uses setDoc(merge) so accounts
     // predating the users collection can still rename themselves.
     const db = as(UIDS.undecided, 'admin')
@@ -197,7 +194,7 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     )
   })
 
-  it('refuses a created document that assigns itself a role', async () => {
+  it('refuses a created document that carries anything but a name', async () => {
     const db = as(UIDS.undecided, 'student')
     await assertFails(
       setDoc(doc(db, `users/${UIDS.undecided}`), {
@@ -207,16 +204,39 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     )
   })
 
-  it('lets a name change through setDoc(merge) on a document that has a role', async () => {
+  it('lets a name change through setDoc(merge)', async () => {
     // Both repos' userService.updateUserName use setDoc(merge) rather than
-    // updateDoc. The merged result still carries the stored role, so the
-    // unchanged-role check passes - but only because it compares the *merged*
-    // document, which is worth pinning down.
+    // updateDoc.
     const db = as(UIDS.student, 'student')
     await assertSucceeds(
       setDoc(
         doc(db, `users/${UIDS.student}`),
         { firstName: 'Augusta', lastName: 'King' },
+        { merge: true },
+      ),
+    )
+  })
+
+  it('still lets a name change through on a document written before the role field was removed', async () => {
+    // Production documents kept a `role` until
+    // scripts/remove-user-document-roles.ts ran. The update rule checks only
+    // the fields a write changes, so those accounts can rename themselves
+    // whether or not it has run yet.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), `users/${UIDS.otherStudent}`), {
+        role: 'student',
+        firstName: 'Charles',
+        lastName: 'Babbage',
+      })
+    })
+    const db = as(UIDS.otherStudent, 'student')
+    await assertSucceeds(
+      updateDoc(doc(db, `users/${UIDS.otherStudent}`), { firstName: 'Chas' }),
+    )
+    await assertSucceeds(
+      setDoc(
+        doc(db, `users/${UIDS.otherStudent}`),
+        { firstName: 'Charles', lastName: 'B.' },
         { merge: true },
       ),
     )
@@ -228,9 +248,8 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     await assertSucceeds(deleteDoc(doc(db, `users/${UIDS.student}`)))
   })
 
-  it('refuses an admin promoting another user by document', async () => {
-    // Even an admin changes roles through the Admin SDK, so that the claim
-    // and the document can never disagree.
+  it("refuses an admin writing a role into another user's document", async () => {
+    // Even an admin changes roles through the Admin SDK, on the claim.
     const db = as(UIDS.admin, 'admin')
     await assertFails(
       updateDoc(doc(db, `users/${UIDS.student}`), { role: 'instructor' }),
@@ -462,8 +481,8 @@ describe("applications/{uid} - meta.decided is not the applicant's to write", ()
 
   it('lets an admin set meta.decided', async () => {
     // applicationService.saveNotes/submitOfficialDecision write this through
-    // the client SDK, not the Admin SDK - unlike role, this one has to stay
-    // writable by rules for admin/reviewer.
+    // the client SDK, not the Admin SDK, so it has to stay writable by rules
+    // for admin/reviewer.
     const db = as(UIDS.admin, 'admin')
     await assertSucceeds(
       updateDoc(doc(db, applications, UIDS.student), {

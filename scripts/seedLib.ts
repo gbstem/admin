@@ -271,49 +271,41 @@ export async function seedEmulator(): Promise<void> {
 
   console.log('Seeding mock profiles in the "users" collection...')
   await db.collection('users').doc('instructor-demo-uid').set({
-    role: 'instructor',
     firstName: 'Demo',
     lastName: 'Instructor',
   })
 
   await db.collection('users').doc('instructor-rejected-uid').set({
-    role: 'instructor',
     firstName: 'Rejected',
     lastName: 'Instructor',
   })
 
   await db.collection('users').doc('instructor-interview-uid').set({
-    role: 'instructor',
     firstName: 'Interview',
     lastName: 'Instructor',
   })
 
   await db.collection('users').doc('instructor-cohost-uid').set({
-    role: 'instructor',
     firstName: 'Cohost',
     lastName: 'Instructor',
   })
 
   await db.collection('users').doc('instructor-substitute-uid').set({
-    role: 'instructor',
     firstName: 'Substitute',
     lastName: 'Instructor',
   })
 
   await db.collection('users').doc('student-demo-uid').set({
-    role: 'student',
     firstName: 'Demo',
     lastName: 'Student',
   })
 
   await db.collection('users').doc('reviewer-demo-uid').set({
-    role: 'reviewer',
     firstName: 'Demo',
     lastName: 'Reviewer',
   })
 
   await db.collection('users').doc(adminUser.uid).set({
-    role: 'admin',
     firstName: 'Demo',
     lastName: 'Admin',
   })
