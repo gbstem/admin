@@ -234,6 +234,11 @@ It is granted at signup, before any interview — so it says nothing about wheth
 
 When a feature needs cross-instructor access, add a route like these rather than widening a rule.
 
+**A role alone never authorizes a write.** A rule like `allow create: if isStudent()` can't tell whether the class or student a document names is the caller's, or keep them from choosing its fields, so no rule grants a whole role a write. `classFeedback` and `instructorFeedback` are admin-read-only, and portal files them through routes that check the caller against the class and fill in the names themselves:
+
+- `/api/instructorFeedback` requires an accepted instructor who owns or co-teaches the class, and marks the session complete in the same transaction (a substitute files through `/api/substituteFeedback` instead)
+- `/api/studentFeedback` requires a parent filing for one of their own students who is on the class's roster
+
 ### Changing what a role can do
 
 `firestore.rules` is the only thing between a browser and the database, and it is not exercised by `yarn test` — those suites mock Firestore entirely. It has its own suite instead, which loads the real rules into the emulator and evaluates them:

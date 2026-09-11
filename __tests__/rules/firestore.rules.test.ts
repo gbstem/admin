@@ -961,81 +961,60 @@ describe('instructorInterviewTimes - admins and reviewers only; applicants book 
   })
 })
 
-describe('classFeedback and instructorFeedback - role-enforced creation', () => {
-  it('lets a student create classFeedback', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertSucceeds(
-      setDoc(doc(db, classFeedback, 'cf-2'), {
-        rating: 5,
-        comment: 'Loved the lesson',
-      }),
+describe('classFeedback and instructorFeedback - written only by the Admin SDK', () => {
+  // No client writes feedback, whatever its role: a role alone doesn't
+  // authorize writing about a particular class or student. Portal's
+  // /api/studentFeedback, /api/instructorFeedback and /api/substituteFeedback
+  // file it after checking the caller against the class.
+  const clients = {
+    'a student': () => as(UIDS.student, 'student'),
+    'an accepted instructor of a class': () => as(UIDS.accepted, 'instructor'),
+    'an instructor who has only applied': () =>
+      as(UIDS.undecided, 'instructor'),
+    'a substitute': () => as(UIDS.substitute, 'instructor'),
+    'a reviewer': () => as(UIDS.reviewer, 'reviewer'),
+    'an admin': () => as(UIDS.admin, 'admin'),
+    'an account with no role': () => as(UIDS.otherStudent),
+    'a signed-out user': () => testEnv.unauthenticatedContext().firestore(),
+  }
+  const collections = { classFeedback, instructorFeedback }
+
+  describe.each(Object.entries(collections))('%s', (_name, path) => {
+    const existingId = path === classFeedback ? 'cf-1' : 'if-1'
+
+    it.each(Object.keys(clients))('refuses %s creating one', async (who) => {
+      const db = clients[who as keyof typeof clients]()
+      await assertFails(
+        setDoc(doc(db, path, `${UIDS.accepted}-1-123`), {
+          classId: `${UIDS.accepted}-1`,
+          feedback: 'Written straight from the browser',
+        }),
+      )
+    })
+
+    it.each(Object.keys(clients))(
+      'refuses %s changing or deleting one',
+      async (who) => {
+        const db = clients[who as keyof typeof clients]()
+        await assertFails(
+          updateDoc(doc(db, path, existingId), { feedback: 'Rewritten' }),
+        )
+        await assertFails(deleteDoc(doc(db, path, existingId)))
+      },
     )
-  })
 
-  it('refuses an instructor creating classFeedback', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertFails(
-      setDoc(doc(db, classFeedback, 'cf-2'), {
-        rating: 5,
-        comment: 'Should be rejected',
-      }),
+    it('lets an admin read one', async () => {
+      const db = as(UIDS.admin, 'admin')
+      await assertSucceeds(getDoc(doc(db, path, existingId)))
+    })
+
+    it.each(Object.keys(clients).filter((who) => who !== 'an admin'))(
+      'refuses %s reading one',
+      async (who) => {
+        const db = clients[who as keyof typeof clients]()
+        await assertFails(getDoc(doc(db, path, existingId)))
+      },
     )
-  })
-
-  it('refuses an unauthenticated user creating classFeedback', async () => {
-    const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(
-      setDoc(doc(db, classFeedback, 'cf-2'), {
-        rating: 5,
-      }),
-    )
-  })
-
-  it('lets an admin read classFeedback', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(getDoc(doc(db, classFeedback, 'cf-1')))
-  })
-
-  it('refuses a student reading classFeedback', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(db, classFeedback, 'cf-1')))
-  })
-
-  it('lets an instructor create instructorFeedback', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
-      setDoc(doc(db, instructorFeedback, 'if-2'), {
-        sessionNotes: 'Completed module 3',
-      }),
-    )
-  })
-
-  it('refuses a student creating instructorFeedback', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(
-      setDoc(doc(db, instructorFeedback, 'if-2'), {
-        sessionNotes: 'Students cannot submit instructor feedback',
-      }),
-    )
-  })
-
-  it('refuses an unauthenticated user creating instructorFeedback', async () => {
-    const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(
-      setDoc(doc(db, instructorFeedback, 'if-2'), {
-        sessionNotes: 'Anonymous note',
-      }),
-    )
-  })
-
-  it('lets an admin read instructorFeedback', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(getDoc(doc(db, instructorFeedback, 'if-1')))
-  })
-
-  it('refuses an instructor reading instructorFeedback directly', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertFails(getDoc(doc(db, instructorFeedback, 'if-1')))
   })
 })
 

@@ -110,7 +110,9 @@ service cloud.firestore {
       // and ownership through portal's /api/classDetails, which saves with the
       // Admin SDK after checking the caller and every added co-instructor.
       // What an instructor of the class writes here directly is only the
-      // per-session state ClassSchedule and the feedback form keep.
+      // per-session state ClassSchedule keeps. Filing feedback marks a session
+      // complete too, but through portal's /api/instructorFeedback, which
+      // writes the class and the feedback together with the Admin SDK.
       //
       // Teaching a class requires having been accepted to teach one. Note
       // `isAcceptedInstructor` rather than `isTeachingInstructor`: a
@@ -141,13 +143,18 @@ service cloud.firestore {
         allow read, write: if isAdminOrReviewer();
       }
 
+      // Feedback is written only by the Admin SDK. Holding a role doesn't
+      // authorize writing about a particular class or student, and a rule
+      // can't check either, so filing goes through portal routes that do:
+      // /api/studentFeedback (the caller's own student, on the class's
+      // roster), /api/instructorFeedback (an accepted instructor of the
+      // class) and /api/substituteFeedback (the session's substitute). They
+      // also set every identifying field themselves.
       match /classFeedback/{feedbackId} {
-        allow create: if isStudent();
         allow read: if isAdmin();
       }
 
       match /instructorFeedback/{feedbackId} {
-        allow create: if isInstructor();
         allow read: if isAdmin();
       }
     }
