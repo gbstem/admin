@@ -14,9 +14,11 @@ import {
 } from '$lib/helpers/setInterviewTimes'
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   query,
+  runTransaction,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore'
@@ -146,24 +148,37 @@ export const interviewService = {
    * Deletes an interview slot from Firestore.
    *
    * When the slot was booked (`intervieweeId` set), clears that applicant's
-   * `meta.interview` flag in the same batch - otherwise it stays stuck
+   * `meta.interview` flag in the same transaction - otherwise it stays stuck
    * `true` with no slot behind it, which hides them from
    * `fetchEligibleInterviewees` and from the Interview Time Requests queue
    * (both gated on `meta.interview === false`) with no way to reschedule
    * them short of editing Firestore by hand. Mirrors
    * `createOrAssignInterviewSlot` setting the flag `true` when a slot is
    * booked.
+   *
+   * A transaction, not a batch, because the applicant's document isn't
+   * guaranteed to still exist (their application could have been deleted
+   * independently of this slot, including by account deletion) - `update()`
+   * throws on a missing document, and inside a batch that failure takes the
+   * slot delete down with it, permanently blocking cleanup of an otherwise
+   * harmless orphaned slot. Reading first and skipping the update when the
+   * document is gone keeps the slot deletable either way.
    */
   async deleteInterviewSlot(
     slot: Pick<Data.InterviewSlot, 'id' | 'intervieweeId'>,
   ): Promise<void> {
-    const batch = writeBatch(db)
-    batch.delete(doc(db, interviewTimesCollection, slot.id))
-    if (slot.intervieweeId) {
-      batch.update(doc(db, applicationsCollection, slot.intervieweeId), {
-        'meta.interview': false,
-      })
+    const slotRef = doc(db, interviewTimesCollection, slot.id)
+    if (!slot.intervieweeId) {
+      await deleteDoc(slotRef)
+      return
     }
-    await batch.commit()
+    const appRef = doc(db, applicationsCollection, slot.intervieweeId)
+    await runTransaction(db, async (transaction) => {
+      const appSnap = await transaction.get(appRef)
+      transaction.delete(slotRef)
+      if (appSnap.exists()) {
+        transaction.update(appRef, { 'meta.interview': false })
+      }
+    })
   },
 }

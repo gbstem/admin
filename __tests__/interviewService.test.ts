@@ -9,19 +9,33 @@ const mockBatch = {
   commit: jest.fn(),
 }
 
+const mockTransaction = {
+  get: jest.fn(),
+  delete: jest.fn(),
+  update: jest.fn(),
+}
+const mockRunTransaction = jest.fn(
+  async (_db: unknown, updateFn: (t: typeof mockTransaction) => unknown) =>
+    updateFn(mockTransaction),
+)
+
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),
   query: jest.fn(() => ({})),
   getDocs: jest.fn(),
+  deleteDoc: jest.fn(),
   updateDoc: jest.fn(),
   writeBatch: jest.fn(() => mockBatch),
+  runTransaction: (...args: unknown[]) => (mockRunTransaction as any)(...args),
 }))
 
 describe('interviewService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockBatch.commit.mockReset().mockResolvedValue(undefined)
+    mockTransaction.get.mockReset().mockResolvedValue({ exists: () => true })
+    mockRunTransaction.mockClear()
     global.fetch = jest.fn() as jest.Mock
   })
 
@@ -217,33 +231,49 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('deleteInterviewSlot', () => {
-    it("deletes the slot and clears the booked applicant's meta.interview in one batch", async () => {
+    it("deletes the slot and clears the booked applicant's meta.interview in one transaction", async () => {
+      mockTransaction.get.mockResolvedValue({ exists: () => true })
+
       await interviewService.deleteInterviewSlot({
         id: 'slot-1',
         intervieweeId: 'uid-123',
       })
 
-      expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
-      expect(mockBatch.delete).toHaveBeenCalledTimes(1)
-      expect(mockBatch.update).toHaveBeenCalledWith(expect.anything(), {
+      expect(mockRunTransaction).toHaveBeenCalledTimes(1)
+      expect(mockTransaction.delete).toHaveBeenCalledTimes(1)
+      expect(mockTransaction.update).toHaveBeenCalledWith(expect.anything(), {
         'meta.interview': false,
       })
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
     })
 
-    it('deletes an unbooked slot alone, without touching any application', async () => {
+    it('deletes the slot without touching the application when it no longer exists', async () => {
+      // The booked applicant's document can be gone independently of the
+      // slot (e.g. their account was deleted) - the slot must still be
+      // deletable, not stuck because update() would refuse a missing doc.
+      mockTransaction.get.mockResolvedValue({ exists: () => false })
+
+      await interviewService.deleteInterviewSlot({
+        id: 'slot-1',
+        intervieweeId: 'uid-123',
+      })
+
+      expect(mockTransaction.delete).toHaveBeenCalledTimes(1)
+      expect(mockTransaction.update).not.toHaveBeenCalled()
+    })
+
+    it('deletes an unbooked slot directly, without a transaction', async () => {
       await interviewService.deleteInterviewSlot({
         id: 'slot-1',
         intervieweeId: '',
       })
 
-      expect(mockBatch.delete).toHaveBeenCalledTimes(1)
-      expect(mockBatch.update).not.toHaveBeenCalled()
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
+      expect(firestore.deleteDoc).toHaveBeenCalledTimes(1)
+      expect(mockRunTransaction).not.toHaveBeenCalled()
+      expect(mockTransaction.update).not.toHaveBeenCalled()
     })
 
-    it('propagates a failed batch', async () => {
-      mockBatch.commit.mockRejectedValueOnce(new Error('not-found'))
+    it('propagates a failed transaction', async () => {
+      mockRunTransaction.mockRejectedValueOnce(new Error('not-found'))
 
       await expect(
         interviewService.deleteInterviewSlot({
@@ -251,6 +281,19 @@ describe('interviewService (Data Access Layer)', () => {
           intervieweeId: 'uid-123',
         }),
       ).rejects.toThrow('not-found')
+    })
+
+    it('propagates a failed delete for an unbooked slot', async () => {
+      ;(firestore.deleteDoc as jest.Mock).mockRejectedValueOnce(
+        new Error('permission-denied'),
+      )
+
+      await expect(
+        interviewService.deleteInterviewSlot({
+          id: 'slot-1',
+          intervieweeId: '',
+        }),
+      ).rejects.toThrow('permission-denied')
     })
   })
 })
