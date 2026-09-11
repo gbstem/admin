@@ -168,7 +168,7 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('updateInterviewSlot', () => {
-    it('writes only the date, as a Date, and the meeting link', async () => {
+    it('writes only the date, as a Date, and the meeting link, stamped with the semester', async () => {
       ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
 
       const interview = {
@@ -186,7 +186,11 @@ describe('interviewService (Data Access Layer)', () => {
 
       expect(firestore.updateDoc).toHaveBeenCalledTimes(1)
       const [, payload] = (firestore.updateDoc as jest.Mock).mock.calls[0]
-      expect(Object.keys(payload).sort()).toEqual(['date', 'meetingLink'])
+      expect(Object.keys(payload).sort()).toEqual([
+        'date',
+        'meetingLink',
+        'semester',
+      ])
       expect(payload.date).toBeInstanceOf(Date)
       expect(payload.meetingLink).toBe('https://zoom.us/2')
     })

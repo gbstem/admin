@@ -130,13 +130,17 @@ export const interviewService = {
    * write the whole slot back from the copy the page loaded, which would
    * erase a booking an applicant made through portal's /api/interview in the
    * meantime - leaving their application flagged for an interview on a slot
-   * that no longer names them.
+   * that no longer names them. Still stamped with the semester, like every
+   * other slot write, since search filters on it.
    */
   async updateInterviewSlot(interview: Data.InterviewSlot): Promise<void> {
-    await updateDoc(doc(db, interviewTimesCollection, interview.id), {
-      date: new Date(interview.date),
-      meetingLink: interview.meetingLink,
-    })
+    await updateDoc(
+      doc(db, interviewTimesCollection, interview.id),
+      withSemester({
+        date: new Date(interview.date),
+        meetingLink: interview.meetingLink,
+      }),
+    )
   },
 
   /**

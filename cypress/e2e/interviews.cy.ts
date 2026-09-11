@@ -236,9 +236,11 @@ describe('Section F: Interview Slot Field Coverage', () => {
   })
 
   it('Test Case 16d: Interview Slot - Editing Keeps The Fields It Does Not Render', () => {
-    // The edit card renders only the date and the meeting link, but saves a
-    // whole document. The seeded slot carries an assigned interviewee, so this
-    // is where a mapper that dropped those fields would erase them.
+    // The edit card renders only the date and the meeting link, and saves only
+    // those (stamped with the semester) - it used to write the whole slot back
+    // from the copy the page loaded. The seeded slot carries an assigned
+    // interviewee, so this is where a save that dropped or overwrote those
+    // fields would show.
     const editedLink = 'https://zoom.us/j/7777777777'
 
     cy.contains('a', 'https://zoom.us/j/555555555')
