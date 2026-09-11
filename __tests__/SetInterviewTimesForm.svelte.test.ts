@@ -230,7 +230,7 @@ describe('SetInterviewTimesForm Component', () => {
 
     await waitFor(() => {
       expect(interviewService.deleteInterviewSlot).toHaveBeenCalledWith(
-        futureSlot.id,
+        futureSlot,
       )
     })
 

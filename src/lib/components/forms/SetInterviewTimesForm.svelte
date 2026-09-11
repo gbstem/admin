@@ -302,7 +302,7 @@
       return
     }
     try {
-      await interviewService.deleteInterviewSlot(interview.id)
+      await interviewService.deleteInterviewSlot(interview)
       // Remove it from local state immediately rather than waiting on the
       // refetch below, so the card disappears even if that round trip is slow.
       allInterviewSlots = allInterviewSlots.filter(
