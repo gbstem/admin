@@ -14,7 +14,6 @@ import {
 } from '$lib/helpers/setInterviewTimes'
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   query,
@@ -145,8 +144,26 @@ export const interviewService = {
 
   /**
    * Deletes an interview slot from Firestore.
+   *
+   * When the slot was booked (`intervieweeId` set), clears that applicant's
+   * `meta.interview` flag in the same batch - otherwise it stays stuck
+   * `true` with no slot behind it, which hides them from
+   * `fetchEligibleInterviewees` and from the Interview Time Requests queue
+   * (both gated on `meta.interview === false`) with no way to reschedule
+   * them short of editing Firestore by hand. Mirrors
+   * `createOrAssignInterviewSlot` setting the flag `true` when a slot is
+   * booked.
    */
-  async deleteInterviewSlot(slotId: string): Promise<void> {
-    await deleteDoc(doc(db, interviewTimesCollection, slotId))
+  async deleteInterviewSlot(
+    slot: Pick<Data.InterviewSlot, 'id' | 'intervieweeId'>,
+  ): Promise<void> {
+    const batch = writeBatch(db)
+    batch.delete(doc(db, interviewTimesCollection, slot.id))
+    if (slot.intervieweeId) {
+      batch.update(doc(db, applicationsCollection, slot.intervieweeId), {
+        'meta.interview': false,
+      })
+    }
+    await batch.commit()
   },
 }

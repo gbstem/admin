@@ -2,7 +2,12 @@ import { interviewService } from '$lib/services/interviewService'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 
-const mockBatch = { set: jest.fn(), update: jest.fn(), commit: jest.fn() }
+const mockBatch = {
+  set: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  commit: jest.fn(),
+}
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
@@ -10,7 +15,6 @@ jest.mock('firebase/firestore', () => ({
   query: jest.fn(() => ({})),
   getDocs: jest.fn(),
   updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
   writeBatch: jest.fn(() => mockBatch),
 }))
 
@@ -213,18 +217,39 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('deleteInterviewSlot', () => {
-    it('calls deleteDoc with slot id', async () => {
-      ;(firestore.deleteDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      await interviewService.deleteInterviewSlot('slot-1')
-      expect(firestore.deleteDoc).toHaveBeenCalled()
+    it("deletes the slot and clears the booked applicant's meta.interview in one batch", async () => {
+      await interviewService.deleteInterviewSlot({
+        id: 'slot-1',
+        intervieweeId: 'uid-123',
+      })
+
+      expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
+      expect(mockBatch.delete).toHaveBeenCalledTimes(1)
+      expect(mockBatch.update).toHaveBeenCalledWith(expect.anything(), {
+        'meta.interview': false,
+      })
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
     })
 
-    it('propagates errors from deleteDoc', async () => {
-      ;(firestore.deleteDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('not-found'),
-      )
+    it('deletes an unbooked slot alone, without touching any application', async () => {
+      await interviewService.deleteInterviewSlot({
+        id: 'slot-1',
+        intervieweeId: '',
+      })
+
+      expect(mockBatch.delete).toHaveBeenCalledTimes(1)
+      expect(mockBatch.update).not.toHaveBeenCalled()
+      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
+    })
+
+    it('propagates a failed batch', async () => {
+      mockBatch.commit.mockRejectedValueOnce(new Error('not-found'))
+
       await expect(
-        interviewService.deleteInterviewSlot('slot-1'),
+        interviewService.deleteInterviewSlot({
+          id: 'slot-1',
+          intervieweeId: 'uid-123',
+        }),
       ).rejects.toThrow('not-found')
     })
   })
