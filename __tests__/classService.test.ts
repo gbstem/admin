@@ -109,7 +109,7 @@ describe('admin classService (Data Access Layer)', () => {
   })
 
   describe('saveClassDetails', () => {
-    it('saves updated class values stamped with the current semester', async () => {
+    it('merges the edited fields, stamped with the current semester', async () => {
       ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
 
       await classService.saveClassDetails('c1', {
@@ -117,13 +117,15 @@ describe('admin classService (Data Access Layer)', () => {
       } as any)
 
       expect(firestore.setDoc).toHaveBeenCalledTimes(1)
-      const [, payload] = (firestore.setDoc as jest.Mock).mock.calls[0]
+      const [, payload, options] = (firestore.setDoc as jest.Mock).mock.calls[0]
       expect(payload).toEqual(
         expect.objectContaining({
           course: 'Python 1',
           semester: expect.any(String),
         }),
       )
+      // A merge, so the roster and schedule other writers keep survive.
+      expect(options).toEqual({ merge: true })
     })
 
     it('propagates errors from setDoc', async () => {

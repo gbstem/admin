@@ -330,11 +330,12 @@ function fillClassForm(input: ClassInput) {
 /**
  * The complete class document the form is expected to have written.
  *
- * `classService.saveClassDetails` uses `setDoc` with **no** `{ merge: true }`,
- * so this really is the whole document: anything missing from the write is
- * deleted outright rather than left alone. That makes every unrendered field
- * below - the roster, the generated schedule, the instructor's name, the
- * co-instructor list - depend on `classEditedFields` spreading `values`.
+ * `classService.saveClassDetails` merges only the fields the form owns (see
+ * `classEditedFields`), so every unrendered field below - the roster, the
+ * generated schedule, the instructor's name, the co-instructor list - has to
+ * come through from the stored document untouched. It used to write the whole
+ * document back from the copy loaded when the dialog opened, which could drop
+ * an enrollment made in the meantime.
  */
 function expectedClassDoc(input: ClassInput) {
   return {

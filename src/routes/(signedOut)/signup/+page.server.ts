@@ -1,9 +1,9 @@
+import { recordNewAccount } from '$lib/server/accountService'
 import { sendEmail } from '$lib/server/email'
-import { adminAuth, adminDb, verifyToken } from '$lib/server/firebase'
+import { adminAuth, verifyToken } from '$lib/server/firebase'
 import { renderEmail } from '$lib/emails/render'
 import { fail, redirect } from '@sveltejs/kit'
 import type { FirebaseError } from 'firebase-admin'
-import { FieldValue } from 'firebase-admin/firestore'
 import type { Actions, PageServerLoad } from './$types'
 
 // Shared with the `default` action below: same states, same copy, whether the
@@ -82,17 +82,13 @@ export const actions = {
       // writes the `users` document so both sites produce identical records.
       try {
         await adminAuth.setCustomUserClaims(uid, { role })
-        await adminDb.collection('users').doc(uid).set({
+        await recordNewAccount({
+          uid,
+          token,
           role,
           firstName: values.firstName,
           lastName: values.lastName,
         })
-        await adminDb
-          .collection('tokens')
-          .doc(token)
-          .update({
-            consumers: FieldValue.arrayUnion(uid),
-          })
       } catch (err) {
         console.error('Signup error, rolling back account:', err)
         await adminAuth
@@ -100,6 +96,11 @@ export const actions = {
           .catch((delErr) =>
             console.error('Error rolling back auth user:', delErr),
           )
+        // Somebody else's signup used the token between the check above and
+        // this one; say so, rather than suggesting a retry that can't work.
+        if (err === 'consumed' || err === 'expired') {
+          return fail(400, { error: _tokenErrorMessage(err) })
+        }
         return fail(400, {
           error: 'Account setup failed. Please try again.',
         })

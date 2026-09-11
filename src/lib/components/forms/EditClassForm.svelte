@@ -50,10 +50,10 @@
       async onUpdate({ form: formVal }) {
         if (!formVal.valid) return
         if (id !== undefined) {
-          const updatedValues = classEditedFields(values, formVal.data)
+          const editedFields = classEditedFields(formVal.data)
           try {
-            await classService.saveClassDetails(id, updatedValues)
-            values = updatedValues
+            await classService.saveClassDetails(id, editedFields)
+            values = { ...values, ...editedFields }
             disabled = true
             await invalidate('app:registrations')
             alert.trigger('success', 'Changes were saved successfully.')

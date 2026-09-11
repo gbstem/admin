@@ -24,6 +24,20 @@ export interface ClientInstructorFeedback {
 /**
  * Service providing Data Access Layer for Admin Class operations.
  */
+/** The class fields admin's EditClassForm edits. */
+export type ClassEditableFields = Pick<
+  ClassData,
+  | 'course'
+  | 'gradeRecommendation'
+  | 'classCap'
+  | 'meetingLink'
+  | 'classDay1'
+  | 'classTime1'
+  | 'classDay2'
+  | 'classTime2'
+  | 'online'
+>
+
 export const classService = {
   /**
    * Fetches a single class document by ID and normalizes meeting times.
@@ -54,15 +68,18 @@ export const classService = {
   },
 
   /**
-   * Overwrites a class document with edited configuration values.
+   * Merges edited configuration values into a class document. Only the fields
+   * the edit form owns (see classEditedFields), so the roster and schedule
+   * that other writers keep are never overwritten from a stale copy.
    */
   async saveClassDetails(
     classId: string,
-    updatedValues: ClassData,
+    editedFields: ClassEditableFields,
   ): Promise<void> {
     await setDoc(
       doc(db, classesCollection, classId),
-      withSemester(updatedValues),
+      withSemester(editedFields),
+      { merge: true },
     )
   },
 
