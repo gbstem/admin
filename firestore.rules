@@ -76,9 +76,29 @@ service cloud.firestore {
       // directly through the client SDK; all instructor access is brokered by
       // server-side API routes (/api/classRoster, /api/remindStudents) that strictly
       // enforce class ownership and return only the minimal necessary fields.
+      //
+      // `classes` and `enrolled` say which classes the student is in, and each
+      // class's own `students` has to say the same - capacity, the instructor
+      // roster and reminders all read that side. Portal's /api/enroll writes
+      // both sides together in one Admin SDK transaction, so a parent's own
+      // writes must leave these two fields as they are: a registration is
+      // created without an enrollment, updated without changing it, and
+      // deleted only once it is in no class. Frozen the same way
+      // applications' `meta.decided` is above. Admins still change them
+      // through this client SDK path (admin's studentService enrollment).
       match /registrations/{userId} {
         allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
-        allow write: if isStudentUserOrTheirChild(userId) || isAdmin();
+        allow create: if isAdmin()
+                      || (isStudentUserOrTheirChild(userId)
+                          && request.resource.data.get('classes', []) == []
+                          && request.resource.data.get('enrolled', false) == false);
+        allow update: if isAdmin()
+                      || (isStudentUserOrTheirChild(userId)
+                          && !request.resource.data.diff(resource.data).affectedKeys()
+                               .hasAny(['classes', 'enrolled']));
+        allow delete: if isAdmin()
+                      || (isStudentUserOrTheirChild(userId)
+                          && resource.data.get('classes', []) == []);
       }
 
       match /decisions/{userId} {

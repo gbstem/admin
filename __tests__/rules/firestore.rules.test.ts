@@ -7,6 +7,7 @@ import {
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getCountFromServer,
   getDoc,
@@ -233,6 +234,186 @@ describe("users/{uid} - the role field is not the client's to write", () => {
     const db = as(UIDS.admin, 'admin')
     await assertFails(
       updateDoc(doc(db, `users/${UIDS.student}`), { role: 'instructor' }),
+    )
+  })
+})
+
+describe("registrations - classes and enrolled are not the parent's to write", () => {
+  // What portal's /api/enroll leaves behind: the class's `students` lists the
+  // student, and the registration lists the class. A parent changing only the
+  // registration side would leave the two disagreeing.
+  const ENROLLED = { classes: [`${UIDS.accepted}-1`], enrolled: true }
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), registrations, UIDS.student), {
+        personal: { studentFirstName: 'Ada', dateOfBirth: '2014-01-01' },
+        ...ENROLLED,
+      })
+    })
+  })
+
+  it('lets a parent create a registration carrying the empty defaults', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertSucceeds(
+      setDoc(doc(db, registrations, `${UIDS.student}-2`), {
+        personal: { studentFirstName: 'Charles' },
+        classes: [],
+        enrolled: false,
+      }),
+    )
+  })
+
+  it('refuses a parent creating a registration already in a class', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      setDoc(doc(db, registrations, `${UIDS.student}-2`), {
+        personal: { studentFirstName: 'Charles' },
+        classes: [`${UIDS.accepted}-1`],
+      }),
+    )
+  })
+
+  it('refuses a parent creating a registration marked enrolled', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      setDoc(doc(db, registrations, `${UIDS.student}-2`), {
+        personal: { studentFirstName: 'Charles' },
+        enrolled: true,
+      }),
+    )
+  })
+
+  it('lets a parent edit an enrolled registration without touching its enrollment', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertSucceeds(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        'personal.studentFirstName': 'Augusta',
+      }),
+    )
+  })
+
+  it('lets a merge re-send the enrollment the registration already has', async () => {
+    // A full-snapshot merge from a form holding the loaded document changes
+    // nothing about the enrollment, so it is not refused.
+    const db = as(UIDS.student, 'student')
+    await assertSucceeds(
+      setDoc(
+        doc(db, registrations, UIDS.student),
+        { personal: { studentFirstName: 'Augusta' }, ...ENROLLED },
+        { merge: true },
+      ),
+    )
+  })
+
+  it('refuses a parent adding a class to their registration', async () => {
+    // The exploit the old classes page performed by accident: the
+    // registration half of an enrollment, with no seat taken on the class.
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        classes: [`${UIDS.accepted}-1`, `${UIDS.accepted}-2`],
+      }),
+    )
+  })
+
+  it('refuses a parent removing a class from their registration', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), { classes: [] }),
+    )
+  })
+
+  it('refuses a parent changing enrolled', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), { enrolled: false }),
+    )
+  })
+
+  it('refuses a parent deleting the enrollment fields', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        classes: deleteField(),
+      }),
+    )
+  })
+
+  it('refuses an enrollment change smuggled in alongside a legitimate edit', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        'personal.studentFirstName': 'Augusta',
+        classes: [`${UIDS.accepted}-1`, `${UIDS.accepted}-2`],
+      }),
+    )
+  })
+
+  it('refuses a parent overwriting an enrolled registration without its enrollment', async () => {
+    const db = as(UIDS.student, 'student')
+    await assertFails(
+      setDoc(doc(db, registrations, UIDS.student), {
+        personal: { studentFirstName: 'Augusta' },
+      }),
+    )
+  })
+
+  it('refuses a parent deleting a registration that is still in a class', async () => {
+    // It would leave the student on the class roster with no registration.
+    const db = as(UIDS.student, 'student')
+    await assertFails(deleteDoc(doc(db, registrations, UIDS.student)))
+  })
+
+  it('lets a parent delete a registration that is in no class', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore()
+      await setDoc(doc(db, registrations, `${UIDS.student}-2`), {
+        personal: { studentFirstName: 'Charles' },
+        classes: [],
+        enrolled: false,
+      })
+      await setDoc(doc(db, registrations, `${UIDS.student}-3`), {
+        personal: { studentFirstName: 'Draft' },
+      })
+    })
+    const db = as(UIDS.student, 'student')
+    await assertSucceeds(deleteDoc(doc(db, registrations, `${UIDS.student}-2`)))
+    await assertSucceeds(deleteDoc(doc(db, registrations, `${UIDS.student}-3`)))
+  })
+
+  it('lets an admin change the enrollment through the client SDK', async () => {
+    // admin's studentService enrolls and unenrolls with client writes, not the
+    // Admin SDK.
+    const db = as(UIDS.admin, 'admin')
+    await assertSucceeds(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        classes: [`${UIDS.accepted}-1`, `${UIDS.accepted}-2`],
+      }),
+    )
+    await assertSucceeds(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        classes: [],
+        enrolled: false,
+      }),
+    )
+  })
+
+  it('lets an admin create an enrolled registration and delete one', async () => {
+    const db = as(UIDS.admin, 'admin')
+    await assertSucceeds(
+      setDoc(doc(db, registrations, `${UIDS.student}-2`), {
+        personal: { studentFirstName: 'Charles' },
+        ...ENROLLED,
+      }),
+    )
+    await assertSucceeds(deleteDoc(doc(db, registrations, UIDS.student)))
+  })
+
+  it('refuses a reviewer changing the enrollment', async () => {
+    const db = as(UIDS.reviewer, 'reviewer')
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), { enrolled: false }),
     )
   })
 })
