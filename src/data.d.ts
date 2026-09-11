@@ -27,8 +27,9 @@ declare global {
       type Profile = {
         // Patched in from the auth object at read time; mirrors portal's
         // profile shape so the uid is the single user identifier on both sites.
+        // Deliberately no role - branch on `page.data.user.role`, the claim
+        // hooks.server.ts verified (see App.PageData).
         uid: string
-        role: Role
       }
       type Store = {
         object: ClientUser

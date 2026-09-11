@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state'
   import { user } from '$lib/client/firebase'
   import CheckboxInput from '$lib/components/CheckboxInput.svelte'
   import {
@@ -266,7 +267,7 @@
         interview,
         currentUser?.object?.email,
         currentUser?.object?.uid,
-        currentUser?.profile?.role,
+        page.data.user?.role,
       )
     ) {
       alert.trigger(
@@ -291,7 +292,7 @@
         interview,
         currentUser?.object?.email,
         currentUser?.object?.uid,
-        currentUser?.profile?.role,
+        page.data.user?.role,
       )
     ) {
       alert.trigger(
@@ -520,7 +521,7 @@
               </div>
             {/if}
 
-            {#if (interview.interviewSlotStatus === 'available' || interview.interviewSlotStatus === 'pending') && (isMyInterview(interview) || currentUser?.profile?.role === 'admin')}
+            {#if (interview.interviewSlotStatus === 'available' || interview.interviewSlotStatus === 'pending') && (isMyInterview(interview) || page.data.user?.role === 'admin')}
               <div>
                 <Button
                   color="blue"

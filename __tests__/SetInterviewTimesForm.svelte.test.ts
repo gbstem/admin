@@ -1,7 +1,7 @@
 // The component derives its signed-in state from `$lib/client/firebase`'s
 // `user` store. Driving that store for real would mean faking a chain of
-// Firebase SDK calls (getApps/initializeApp/getAuth/onAuthStateChanged/
-// getIdTokenResult) that's timing-sensitive and, since `user` is a
+// Firebase SDK calls (getApps/initializeApp/getAuth/onAuthStateChanged)
+// that's timing-sensitive and, since `user` is a
 // module-level singleton, leaks state across tests in this file if not
 // handled carefully. The component only ever reads the store's emitted
 // {object, profile} shape via `user.subscribe(...)`, so mock that shape
@@ -28,6 +28,7 @@ jest.mock('$lib/client/firebase', () => {
 
 import { mount, unmount, flushSync } from 'svelte'
 import { fireEvent, waitFor, within } from '@testing-library/dom'
+import { page } from '$app/state'
 import { user as mockUserStore } from '$lib/client/firebase'
 import SetInterviewTimesForm from '$lib/components/forms/SetInterviewTimesForm.svelte'
 import { interviewService } from '$lib/services/interviewService'
@@ -40,8 +41,8 @@ const authUser = {
   },
   profile: {
     uid: 'user-1',
-    role: 'admin',
   },
+  role: 'admin',
 }
 
 const reviewerAuthUser = {
@@ -52,8 +53,21 @@ const reviewerAuthUser = {
   },
   profile: {
     uid: 'user-2',
-    role: 'reviewer',
   },
+  role: 'reviewer',
+}
+
+// An admin who owns none of the slots below - what only the role lets through.
+const otherAdminAuthUser = {
+  object: {
+    uid: 'user-3',
+    email: 'other-admin@example.com',
+    displayName: 'Ada Admin',
+  },
+  profile: {
+    uid: 'user-3',
+  },
+  role: 'admin',
 }
 
 const futureSlot: Data.InterviewSlot = {
@@ -106,12 +120,20 @@ describe('SetInterviewTimesForm Component', () => {
   afterEach(() => {
     document.body.removeChild(container)
     jest.restoreAllMocks()
+    delete (page.data as any).user
   })
 
   // Mounts with the store still unresolved (undefined), then resolves it to
   // `user` - mirroring the real timing where onMount subscribes before
-  // Firebase's auth-state listener has fired.
+  // Firebase's auth-state listener has fired. The role is the one the
+  // signed-in layout provides from the server, there before the component is.
   async function mountAuthenticated(user: any = authUser) {
+    ;(page.data as any).user = {
+      uid: user.object.uid,
+      email: user.object.email,
+      emailVerified: true,
+      role: user.role,
+    }
     const app = mount(SetInterviewTimesForm, { target: container })
     flushSync()
     ;(mockUserStore as any).set(user)
@@ -242,6 +264,27 @@ describe('SetInterviewTimesForm Component', () => {
       ).toBeInTheDocument()
     })
     expect(within(container).queryByText('Edit')).toBeNull()
+
+    unmount(app)
+  })
+
+  it('shows the Edit control to an admin for a slot someone else owns', async () => {
+    ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+      futureSlot,
+    ])
+    const app = await mountAuthenticated(otherAdminAuthUser)
+
+    await fireEvent.click(
+      within(container).getByLabelText('Only include my interviews'),
+    )
+    flushSync()
+
+    await waitFor(() => {
+      expect(
+        within(container).getByText(futureSlot.meetingLink),
+      ).toBeInTheDocument()
+    })
+    expect(within(container).getByText('Edit')).toBeInTheDocument()
 
     unmount(app)
   })

@@ -40,8 +40,7 @@
     },
   })
 
-  let userRole = $derived($user?.profile?.role || pageData?.user?.role)
-  let isReviewer = $derived(userRole === 'reviewer')
+  let isReviewer = $derived(pageData.user.role === 'reviewer')
 
   function getClassStatusBg(status: string) {
     switch (status) {
@@ -61,9 +60,7 @@
   async function loadDashboardData() {
     loading = true
     try {
-      const currentRole = $user?.profile?.role || pageData?.user?.role
-      const reviewer = currentRole === 'reviewer'
-      const result = await dashboardService.fetchDashboardData(reviewer)
+      const result = await dashboardService.fetchDashboardData(isReviewer)
       dashboardData = result.dashboardData
       classesToday = result.classesToday
       uncompletedRegistrationsEmails = result.uncompletedRegistrationsEmails

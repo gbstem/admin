@@ -11,7 +11,16 @@ declare global {
     interface Locals {
       user: Data.User.Peek | null
     }
-    // interface PageData {}
+    interface PageData {
+      /**
+       * The signed-in user, role included, as `hooks.server.ts` verified them:
+       * the session cookie plus the Auth record's role claim. Set by
+       * `(signedIn)/+layout.server.ts`, so it is there on the first render of
+       * every signed-in page. Branch on this `role`. Absent on signed-out
+       * pages.
+       */
+      user?: Data.User.Peek
+    }
     // interface Platform {}
   }
 }
