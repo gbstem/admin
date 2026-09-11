@@ -23,9 +23,8 @@ describe('Section M: Check In Details and Meals', () => {
     cy.contains('td', 'Demo Student One').click()
     cy.get('[role="dialog"]').should('exist')
 
-    // Verify Check In & Meals card is visible and confirmation submitted message is shown
+    // Verify Check In & Meals card is visible
     cy.contains('h2', 'Check In & Meals').should('exist')
-    cy.contains('div', 'Confirmation form was submitted.').should('exist')
 
     // Click Check In button
     cy.contains('button', 'Check In').click({ force: true })

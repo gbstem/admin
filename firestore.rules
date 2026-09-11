@@ -224,9 +224,14 @@ service cloud.firestore {
     //
     // PARENT / GUARDIAN CONFIRMATIONS
     //
+    // The retreat-attendance form that wrote these (portal's
+    // ConfirmationForm.svelte) was removed in 2025; nothing client-side
+    // writes or reads this collection any more. Client access is closed -
+    // only the Admin SDK, or a future feature explicitly reopening it,
+    // reaches these documents now.
     match /confirmations/{userId} {
-      allow read: if isStudentUser(userId) || isAdminOrReviewer();
-      allow write: if isStudentUser(userId) || isAdmin();
+      allow read: if isAdminOrReviewer();
+      allow write: if isAdmin();
     }
 
     //
@@ -331,9 +336,6 @@ service cloud.firestore {
     }
     function isInstructorUser(userId) {
       return isUser(userId) && isInstructor();
-    }
-    function isStudentUser(userId) {
-      return isUser(userId) && isStudent();
     }
     function isStudentUserOrTheirChild(userId) {
       return isStudent() && (userId == request.auth.uid || userId.matches(request.auth.uid + '-[0-9]+'));

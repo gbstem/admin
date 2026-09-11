@@ -58,7 +58,6 @@
   })
 
   let checkInLoading = $state(true)
-  let confirmed = $state(false)
   let checkedIn = $state(false)
   let checkedInAt: any = $state(null)
   let food: Record<string, Record<string, boolean>> = $state({})
@@ -78,7 +77,6 @@
         studentData = details.studentData
       }
       studentID = details.studentID
-      confirmed = details.confirmed
       checkedIn = details.checkedIn
       checkedInAt = details.checkedInAt
       food = details.food
@@ -390,11 +388,8 @@
         </div>
         {#if checkInLoading}
           <div class="p-4 text-gray-500">Loading check-in details…</div>
-        {:else if confirmed}
+        {:else}
           <div>
-            <div class="mb-4 font-medium text-green-700">
-              Confirmation form was submitted.
-            </div>
             <div class="mb-4 flex items-center gap-2">
               <span class="font-semibold">Checked in:</span>
               <div>
@@ -451,10 +446,6 @@
                 {/each}
               {/if}
             </div>
-          </div>
-        {:else}
-          <div class="font-medium text-red-500">
-            Did not send in a confirmation form.
           </div>
         {/if}
       </Card>
