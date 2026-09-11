@@ -1,87 +1,23 @@
-import { resolveSemester, semesterCollectionPath } from '$lib/data/collections'
-import { adminDb, toDateSafe } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
+import { resolveSemester } from '$lib/data/collections'
+import { registrationService } from '$lib/server/registrationService'
 import { parsePagination } from '$lib/utils'
 import { error } from '@sveltejs/kit'
-import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import type { PageServerLoad } from './$types'
-// import { db } from '$lib/client/firebase'
 
 export const load = (async ({ url, depends }) => {
   depends('app:registrations')
-  const collectionName = semesterCollectionPath(
-    resolveSemester(url.searchParams.get('semester')),
-    'registrations',
-  )
+  const semesterId = resolveSemester(url.searchParams.get('semester'))
   const query = url.searchParams.get('query')
   if (query === null || query === '') {
     const { pageNum, limitVal, offsetVal } = parsePagination(url)
 
-    const filter = url.searchParams.get('filter') ?? 'submitted'
     try {
-      let dbQuery: Query
-
-      if (filter === 'submitted') {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .where('meta.submitted', '==', true)
-          .orderBy('timestamps.updated', 'desc')
-      } else if (filter === 'enrolled') {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .where('enrolled', '==', true)
-          .orderBy('timestamps.updated', 'desc')
-      } else if (filter === 'not enrolled') {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .where('enrolled', '==', false)
-          .where('meta.submitted', '==', true)
-          .orderBy('timestamps.updated', 'desc')
-      } else if (filter === 'inPerson') {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .where('program.inPerson', '==', true)
-          .where('meta.submitted', '==', true)
-          .orderBy('timestamps.updated', 'desc')
-      } else if (filter === 'incomplete') {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .where('meta.submitted', '==', false)
-          .orderBy('timestamps.updated', 'desc')
-      } else {
-        dbQuery = adminDb
-          .collection(collectionName)
-          .orderBy('timestamps.updated', 'desc')
-      }
-
-      dbQuery = dbQuery.limit(limitVal).offset(offsetVal)
-
-      const snapshot = await dbQuery.get()
-
       return {
-        registrations: snapshot.docs.map((doc: QueryDocumentSnapshot) => {
-          const data = doc.data() as Data.Registration<'server'>
-          return {
-            id: doc.id,
-            values: {
-              ...data,
-              meta: {
-                ...data.meta,
-              },
-              timestamps: {
-                updated: toDateSafe(
-                  data.timestamps.updated,
-                  doc.id,
-                  'timestamps.updated',
-                ),
-                created: toDateSafe(
-                  data.timestamps.created,
-                  doc.id,
-                  'timestamps.created',
-                ),
-              },
-            },
-          }
+        registrations: await registrationService.fetchRegistrations({
+          semesterId,
+          filter: url.searchParams.get('filter'),
+          limit: limitVal,
+          offset: offsetVal,
         }),
         page: pageNum,
         limit: limitVal,
@@ -97,33 +33,12 @@ export const load = (async ({ url, depends }) => {
     }
   } else {
     try {
-      const hits = await searchIndex<
-        Omit<Data.Registration<'server'>, 'meta' | 'timestamps'> & {
-          meta: {
-            uid: string
-            submitted: boolean
-          }
-          timestamps: {
-            updated: Date
-            created: Date
-          }
-        }
-      >(collectionName, query)
       return {
         query,
-        registrations: hits.map((hit) => {
-          return {
-            id: hit.objectID,
-            values: {
-              personal: hit.personal,
-              academic: hit.academic,
-              program: hit.program,
-              agreements: hit.agreements,
-              meta: hit.meta,
-              timestamps: hit.timestamps,
-            },
-          }
-        }),
+        registrations: await registrationService.searchRegistrations(
+          semesterId,
+          query,
+        ),
       }
     } catch (err: any) {
       console.error('[Search Error] registrations search load:', err)

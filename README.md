@@ -137,9 +137,9 @@ await studentService.enrollStudent(studentData, selectedClass, studentId)
 
 instead of constructing a raw `updateDoc(doc(db, classesCollection, classId), { students: arrayUnion(studentId) })` call inline, mixed in with template markup and UI state.
 
-Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` (see `__tests__/subRequestService.test.ts`).
+Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`, `applicationService.ts`, `registrationService.ts`, `classService.ts`, `studentService.ts`, `tokenService.ts`, `announcementService.ts`, `instructorFeedbackService.ts`, `studentFeedbackService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` and live under `__tests__/server/` — a flat `__tests__/<name>Service.test.ts` would collide with the client DAL's test of the same base name (e.g. `applicationService.ts` exists in both `src/lib/services/` and `src/lib/server/`); `subRequestService.test.ts` predates that convention and is the one exception still at the top level.
 
-TODO: the other `+page.server.ts` loads (`applications`, `registrations`, `classes`, `students`, `tokens`, `announcements`, `instructor-feedback`, `student-feedback`) still query `adminDb` inline. Move each one into a `src/lib/server/*Service.ts` when you next touch it.
+TODO: `(signedIn)/profile`'s account deletion (`DeleteAccountForm.svelte`'s client-side `deleteUser`, plus the rollback in `(signedOut)/signup/+page.server.ts`) still bypasses the DAL pattern above. Move it into an API route backed by a `src/lib/server/*Service.ts` when you next touch it.
 
 **Why this matters, especially for a small, rotating volunteer team:**
 

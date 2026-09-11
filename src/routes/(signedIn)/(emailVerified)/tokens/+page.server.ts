@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
-import { adminDb } from '$lib/server/firebase'
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
+import { tokenService } from '$lib/server/tokenService'
 
 import { parsePagination } from '$lib/utils'
 
@@ -10,20 +9,10 @@ export const load = (async ({ depends, locals, url }) => {
     depends('app:tokens')
     const { pageNum, limitVal, offsetVal } = parsePagination(url)
     try {
-      let dbQuery = adminDb.collection('tokens').orderBy('expires', 'desc')
-      dbQuery = dbQuery.limit(limitVal).offset(offsetVal)
-
-      const snapshot = await dbQuery.get()
       return {
-        tokens: snapshot.docs.map((doc: QueryDocumentSnapshot) => {
-          const data = doc.data() as Data.Token<'server'>
-          return {
-            id: doc.id,
-            values: {
-              ...data,
-              expires: data.expires.toDate(),
-            } as Data.Token<'pojo'>,
-          }
+        tokens: await tokenService.fetchTokens({
+          limit: limitVal,
+          offset: offsetVal,
         }),
         page: pageNum,
         limit: limitVal,

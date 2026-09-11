@@ -1,21 +1,7 @@
-import { instructorFeedbackCollection } from '$lib/data/collections'
-import { adminDb } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
+import { instructorFeedbackService } from '$lib/server/instructorFeedbackService'
 import { parsePagination } from '$lib/utils'
 import { error } from '@sveltejs/kit'
-import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import type { PageServerLoad } from './$types'
-
-interface DBInstructorFeedback {
-  instructorName: string
-  students: string[]
-  attendanceList:
-    Record<string, { present: boolean }> | Array<{ present: boolean }>
-  date: string
-  courseName: string
-  feedback: string
-  classNumber: number
-}
 
 export const load = (async ({ url, depends, locals }) => {
   if (!locals.user || locals.user.role !== 'admin') {
@@ -26,50 +12,14 @@ export const load = (async ({ url, depends, locals }) => {
   if (query === null || query === '') {
     const { pageNum, limitVal, offsetVal } = parsePagination(url)
 
-    const course = url.searchParams.get('course')
     try {
-      let dbQuery: Query = adminDb.collection(instructorFeedbackCollection)
-
-      if (course && course !== 'all') {
-        dbQuery = dbQuery.where('courseName', '==', course)
-      }
-
-      dbQuery = dbQuery.orderBy('date', 'desc')
-
-      // Apply pagination limit and offset
-      dbQuery = dbQuery.limit(limitVal).offset(offsetVal)
-
-      const snapshot = await dbQuery.get()
-
       return {
         page: pageNum,
         limit: limitVal,
-        feedback: snapshot.docs.map((doc: QueryDocumentSnapshot) => {
-          const data = doc.data() as DBInstructorFeedback
-
-          const attendanceList: boolean[] = []
-          if (data.attendanceList) {
-            if (Array.isArray(data.attendanceList)) {
-              for (const entry of data.attendanceList) {
-                attendanceList.push(entry.present)
-              }
-            } else {
-              for (const propt in data.attendanceList) {
-                attendanceList.push(data.attendanceList[propt].present)
-              }
-            }
-          }
-
-          return {
-            id: doc.id,
-            instructorName: data.instructorName,
-            courseName: data.courseName,
-            students: data.students,
-            feedback: data.feedback,
-            date: data.date,
-            attendanceList: attendanceList,
-            classNumber: data.classNumber,
-          }
+        feedback: await instructorFeedbackService.fetchInstructorFeedback({
+          course: url.searchParams.get('course'),
+          limit: limitVal,
+          offset: offsetVal,
         }),
       }
     } catch (err: any) {
@@ -83,37 +33,10 @@ export const load = (async ({ url, depends, locals }) => {
     }
   } else {
     try {
-      const hits = await searchIndex<DBInstructorFeedback>(
-        instructorFeedbackCollection,
-        query,
-      )
       return {
         query,
-        feedback: hits.map((hit) => {
-          const attendanceList: boolean[] = []
-          if (hit.attendanceList) {
-            if (Array.isArray(hit.attendanceList)) {
-              for (const entry of hit.attendanceList) {
-                attendanceList.push(entry.present)
-              }
-            } else {
-              for (const propt in hit.attendanceList) {
-                attendanceList.push(hit.attendanceList[propt].present)
-              }
-            }
-          }
-
-          return {
-            id: hit.objectID,
-            instructorName: hit.instructorName,
-            courseName: hit.courseName,
-            students: hit.students,
-            feedback: hit.feedback,
-            date: hit.date,
-            attendanceList: attendanceList,
-            classNumber: hit.classNumber,
-          }
-        }),
+        feedback:
+          await instructorFeedbackService.searchInstructorFeedback(query),
       }
     } catch (err: any) {
       console.error('[Search Error] instructor-feedback search load:', err)
