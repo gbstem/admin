@@ -47,9 +47,10 @@
 //      UNRESOLVED line: an address no account owns, so no uid could be stamped
 //      for it. Fix what can be fixed by hand and re-run.
 //   2. Ship the app code that stops reading and writing these addresses:
-//      Phase 4's fallback removal, and the admin interview views and slot
-//      request list that still display them. Strip before that and those
-//      views go blank, and the next booking writes intervieweeEmail back.
+//      Phase 5 item 4, which moves every view that displays one onto a uid
+//      lookup (the audit lists them), and Phase 4, which removes the server
+//      fallbacks and the client writes. Strip before item 4 and those views go
+//      blank; before Phase 4, the next booking writes intervieweeEmail back.
 //   3. Run --strip-emails --dry-run. Its UNRESOLVED lines add stored uids that
 //      name deleted accounts, and are exactly what it will keep. Decide on
 //      them, then run --strip-emails - with --strip-unresolved only if the

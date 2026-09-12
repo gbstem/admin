@@ -81,10 +81,11 @@
 //      address no account owns, so no uid could be stamped for it. Fix what
 //      can be fixed by hand and re-run.
 //   2. Ship the app code that stops reading and writing these addresses:
-//      Phase 4's fallback removal, and the pages that still display them
-//      (admin's classes and sub-requests pages, portal's SubClasses.svelte).
-//      Strip before that and those pages go blank, and the next class save or
-//      sub request claim writes the address straight back.
+//      Phase 5 item 4, which moves every page that displays one onto a uid
+//      lookup (the audit lists them), and Phase 4, which removes the server
+//      fallbacks and the client writes. Strip before item 4 and those pages go
+//      blank; before Phase 4, the next class save or sub request claim writes
+//      the address straight back.
 //   3. Run --strip-emails --dry-run. Its UNRESOLVED lines add stored uids that
 //      name deleted accounts, and are exactly what it will keep. Decide on
 //      them, then run --strip-emails - with --strip-unresolved only if the
