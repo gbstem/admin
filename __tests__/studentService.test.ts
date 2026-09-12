@@ -47,7 +47,6 @@ describe('studentService (Data Access Layer)', () => {
     interface BaseMocksOptions {
       studentExists?: boolean
       studentData?: any
-      confirmedExists?: boolean
       checkInResult?: { exists: () => boolean; data?: () => any }
       classesDocs?: any[]
       attendanceResult?: { docs: any[]; forEach: (cb: any) => void }
@@ -59,7 +58,6 @@ describe('studentService (Data Access Layer)', () => {
         personal: { studentFirstName: 'Bobby', studentLastName: 'Tables' },
         meta: { uid: 'uid-1' },
       },
-      confirmedExists = true,
       checkInResult = {
         exists: () => true,
         data: () => ({
@@ -71,8 +69,8 @@ describe('studentService (Data Access Layer)', () => {
       classesDocs = [],
       attendanceResult = mockQuerySnapshot([]),
     }: BaseMocksOptions = {}) {
-      // getDoc is called for student, check-in, and confirmation - queue each
-      // call's return value in that order.
+      // getDoc is called for student, then check-in - queue each call's
+      // return value in that order.
       ;(firestore.getDoc as jest.Mock)
         .mockResolvedValueOnce({
           exists: () => studentExists,
@@ -80,7 +78,6 @@ describe('studentService (Data Access Layer)', () => {
           data: () => studentData,
         })
         .mockResolvedValueOnce(checkInResult)
-        .mockResolvedValueOnce({ exists: () => confirmedExists })
       ;(firestore.getDocs as jest.Mock)
         .mockResolvedValueOnce(mockQuerySnapshot(classesDocs))
         .mockResolvedValueOnce(attendanceResult)
@@ -106,7 +103,6 @@ describe('studentService (Data Access Layer)', () => {
       const res = await studentService.fetchStudentFullDetails('student-1')
 
       expect(res.studentData?.name).toBe('Bobby Tables')
-      expect(res.confirmed).toBe(true)
       expect(res.checkedIn).toBe(true)
       expect(res.checkedInAt).toEqual(new Date('2026-01-01'))
       expect(res.food).toEqual({ '2026-01-01': { dinner: true } })
@@ -116,27 +112,12 @@ describe('studentService (Data Access Layer)', () => {
       expect(res.attendance).toHaveLength(1)
     })
 
-    it('returns null studentData and skips confirmation lookup when the student document does not exist', async () => {
+    it('returns null studentData when the student document does not exist', async () => {
       baseMocks({ studentExists: false })
 
       const res = await studentService.fetchStudentFullDetails('student-1')
 
       expect(res.studentData).toBeNull()
-      expect(res.confirmed).toBe(false)
-      // Only check-in + attendance getDoc/getDocs calls happen, no confirmation lookup
-      expect(firestore.getDoc).toHaveBeenCalledTimes(2)
-    })
-
-    it('skips confirmation lookup when the student has no meta.uid', async () => {
-      baseMocks({
-        studentData: {
-          personal: { studentFirstName: 'No', studentLastName: 'Uid' },
-        },
-      })
-
-      const res = await studentService.fetchStudentFullDetails('student-1')
-
-      expect(res.confirmed).toBe(false)
       expect(firestore.getDoc).toHaveBeenCalledTimes(2)
     })
 
@@ -158,15 +139,13 @@ describe('studentService (Data Access Layer)', () => {
       expect(res.food).toEqual({})
     })
 
-    it('defaults checkedIn/confirmed to false when the check-in and confirmation docs do not exist', async () => {
+    it('defaults checkedIn to false when the check-in doc does not exist', async () => {
       baseMocks({
-        confirmedExists: false,
         checkInResult: { exists: () => false },
       })
 
       const res = await studentService.fetchStudentFullDetails('student-1')
 
-      expect(res.confirmed).toBe(false)
       expect(res.checkedIn).toBe(false)
       expect(res.food).toEqual({})
     })
@@ -243,30 +222,6 @@ describe('studentService (Data Access Layer)', () => {
       await expect(
         studentService.fetchStudentFullDetails('student-1'),
       ).rejects.toThrow('classes query failed')
-    })
-
-    it('swallows a confirmation fetch failure (permission issue) and treats it as unconfirmed', async () => {
-      ;(firestore.getDoc as jest.Mock)
-        .mockResolvedValueOnce({
-          exists: () => true,
-          id: 'student-1',
-          data: () => ({ personal: {}, meta: { uid: 'uid-1' } }),
-        })
-        .mockResolvedValueOnce({ exists: () => false })
-        .mockRejectedValueOnce(new Error('permission-denied'))
-      ;(firestore.getDocs as jest.Mock)
-        .mockResolvedValueOnce(mockQuerySnapshot([]))
-        .mockResolvedValueOnce(mockQuerySnapshot([]))
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-
-      const res = await studentService.fetchStudentFullDetails('student-1')
-
-      expect(res.confirmed).toBe(false)
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Failed to fetch confirmation details (possible permission issue):',
-        expect.any(Error),
-      )
-      warnSpy.mockRestore()
     })
   })
 

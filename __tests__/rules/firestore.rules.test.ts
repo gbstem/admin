@@ -1517,14 +1517,17 @@ describe("subRequests - a request's own people; open requests and claims go thro
 })
 
 describe('confirmations - parent/guardian confirmations', () => {
-  it('lets a user read and write their own confirmation', async () => {
+  // The retreat-attendance form that wrote these (portal's
+  // ConfirmationForm.svelte) was removed in 2025; client access is closed
+  // entirely now - only the Admin SDK reaches this collection.
+  it('refuses a student reading or writing their own confirmation', async () => {
     const db = as(UIDS.student, 'student')
-    await assertSucceeds(
+    await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
+    await assertFails(
       setDoc(doc(db, `confirmations/${UIDS.student}`), {
         confirmed: true,
       }),
     )
-    await assertSucceeds(getDoc(doc(db, `confirmations/${UIDS.student}`)))
   })
 
   it("refuses a user reading or writing another user's confirmation", async () => {

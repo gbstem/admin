@@ -33,7 +33,7 @@ import { cloneDeep } from 'lodash-es'
  */
 export const studentService = {
   /**
-   * Fetches full student details including confirmations, check-in status, classes, and attendance.
+   * Fetches full student details including check-in status, classes, and attendance.
    */
   async fetchStudentFullDetails(studentId: string) {
     // Start fetching everything in parallel to optimize load times and prevent timeout
@@ -61,45 +61,26 @@ export const studentService = {
 
     // Wait for the primary student data first
     const studentDoc = await studentPromise
-    let confirmedPromise: Promise<any> | null = null
     let studentData: Student | null = null
 
     if (studentDoc.exists()) {
       const data = studentDoc.data()
       if (data) {
         studentData = parseStudentProfileData(data)
-        if (data.meta?.uid) {
-          confirmedPromise = getDoc(
-            doc(db, 'confirmations', data.meta.uid),
-          ).catch((err) => {
-            console.warn(
-              'Failed to fetch confirmation details (possible permission issue):',
-              err,
-            )
-            return null
-          })
-        }
       }
     }
 
     // Wait for all other parallel promises
-    const [confirmedDoc, checkInDoc, classesSnap, attendanceSnap] =
-      await Promise.all([
-        confirmedPromise || Promise.resolve(null),
-        checkInPromise,
-        classesPromise,
-        attendancePromise,
-      ])
+    const [checkInDoc, classesSnap, attendanceSnap] = await Promise.all([
+      checkInPromise,
+      classesPromise,
+      attendancePromise,
+    ])
 
-    // Process check-in and confirmation details
-    let confirmed = false
+    // Process check-in details
     let checkedIn = false
     let checkedInAt: Date | null = null
     let food: Record<string, Record<string, boolean>> = {}
-
-    if (confirmedDoc && confirmedDoc.exists()) {
-      confirmed = confirmedDoc.exists()
-    }
 
     if (checkInDoc && checkInDoc.exists()) {
       const checkInData = checkInDoc.data()
@@ -138,7 +119,6 @@ export const studentService = {
     return {
       studentData,
       studentID: studentDoc.id,
-      confirmed,
       checkedIn,
       checkedInAt,
       food,

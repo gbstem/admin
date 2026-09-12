@@ -721,11 +721,6 @@ export async function seedEmulator(): Promise<void> {
   validateRegistration(regStudent3, 'student3')
   await db.collection(registrationsCollection).doc('student3').set(regStudent3)
 
-  console.log('Seeding mock confirmation form for student-demo-uid...')
-  await db.collection('confirmations').doc('student-demo-uid').set({
-    submitted: true,
-  })
-
   // Seeding 30 additional mock students/registrations
   console.log('Seeding 30 additional mock students/registrations...')
   const firstNames = [
