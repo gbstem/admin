@@ -1,44 +1,96 @@
-// backfill-interviewer-uids.ts - One-time backfill for interview slot
-// interviewer uid migration.
+// backfill-interviewer-uids.ts - Backfill for the interview side of the
+// email-to-uid migration: interview slots, and interview time requests.
 //
 // Background: interview slot documents used to identify their interviewer by
 // `interviewerEmail` only. If an interviewer later changed their account email
 // address, their existing slots were orphaned because permission checks and
 // filtering compared `interviewerEmail` against the live Auth email. PR #65
-// added `interviewerUid` to identify interview slot ownership stably, falling
-// back to `interviewerEmail` if an account was deleted or uid is missing.
+// added `interviewerUid` to identify interview slot ownership stably.
 //
-// This script walks all interview slot documents across all semesters in Firestore
-// (`semesters/{semesterId}/instructorInterviewTimes`), looks up the interviewer's
-// UID via Firebase Auth using `interviewerEmail`, and stamps `interviewerUid` onto
-// each slot. We retain email as a permanent record of the interviewer if
-// an account is deleted, though that fallback is rare. Stored email is unreliable
-// because an interviewer could change their email later, so code should avoid using it.
+// This script walks all interview slot documents across all semesters in
+// Firestore (`semesters/{semesterId}/instructorInterviewTimes`), looks up the
+// interviewer's UID via Firebase Auth using `interviewerEmail`, and stamps
+// `interviewerUid` onto each slot. It does the same for the applicant a slot is
+// booked for, stamping a missing `intervieweeId` from `intervieweeEmail`. An
+// unbooked slot has neither, and is left alone.
 //
-// If an account cannot be found for the given email (e.g. account deleted or
-// email changed), or if `interviewerEmail` is missing or invalid, the script emits
-// a warning and skips updating that document, leaving the slot intact with its
-// original `interviewerEmail` fallback.
+// It also covers the top-level `interviewTimeRequests` collection, whose
+// documents gained an explicit `uid` in Phase 2 of notes/EMAIL_TO_UID_AUDIT.md.
+// Older ones carry only `email`, and admin recovers the requester by parsing
+// the `${uid}-${date}` document ID (parseSlotRequestDoc). This stamps that same
+// uid when an account still has it - firestore.rules only lets a client create
+// a request under its own uid, so the ID is the better record - and falls back
+// to the address's owner when it doesn't. Requests are ignored by the UI after
+// 30 days; they are backfilled anyway so every document fits the schema, and
+// future analytics or migrations needn't know which ones predate the field.
+//
+// An address that no account owns is flagged UNRESOLVED, and its document is
+// left with the address and no uid.
 //
 // Usage:
 //   npx tsx scripts/backfill-interviewer-uids.ts
-//   npx tsx scripts/backfill-interviewer-uids.ts --dry-run
-//   npx tsx scripts/backfill-interviewer-uids.ts --production
-//   npx tsx scripts/backfill-interviewer-uids.ts --dry-run --production
+//       Stamp missing interviewerUid, intervieweeId and time request uid
+//       fields. KEEP every address.
+//   npx tsx scripts/backfill-interviewer-uids.ts --strip-emails
+//       Stamp as above, then delete interviewerEmail, intervieweeEmail and a
+//       time request's email wherever a live Auth account's uid now backs
+//       them. Read STRIPPING ADDRESSES below first.
+//   ... --strip-unresolved  With --strip-emails, also delete the addresses it
+//                       flags UNRESOLVED - the only record of who they were.
+//   ... --dry-run       Preview counts + a sample, no writes
+//   ... --production    Target production instead of the emulator
 //
-// Idempotent: only updates documents that still need an interviewerUid, so re-running
+// STRIPPING ADDRESSES (notes/EMAIL_TO_UID_AUDIT.md Phase 5) - the data has to
+// outlive the code that reads it:
+//
+//   1. Run without --strip-emails, --dry-run first, and review every
+//      UNRESOLVED line: an address no account owns, so no uid could be stamped
+//      for it. Fix what can be fixed by hand and re-run.
+//   2. Ship the app code that stops reading and writing these addresses:
+//      Phase 5 item 4, which moves every view that displays one onto a uid
+//      lookup (the audit lists them), and Phase 4, which removes the server
+//      fallbacks and the client writes. Strip before item 4 and those views go
+//      blank; before Phase 4, the next booking writes intervieweeEmail back.
+//   3. Run --strip-emails --dry-run. Its UNRESOLVED lines add stored uids that
+//      name deleted accounts, and are exactly what it will keep. Decide on
+//      them, then run --strip-emails - with --strip-unresolved only if the
+//      decision was to lose them too.
+//
+// An address a live uid backs loses nothing when stripped: Auth has that
+// person's current address. Re-running --strip-emails later is the check that
+// nothing wrote one back.
+//
+// Idempotent: only updates documents that still need changing, so re-running
 // after a partial failure is safe.
 import admin from 'firebase-admin'
 import { semesterCollectionPath } from '../src/lib/data/collections'
 import collectionsList from '../src/lib/data/collectionsList.json'
 import {
-  extractInterviewerEmail,
-  interviewSlotNeedsUidBackfill,
-} from './lib/interviewerUidBackfillTransforms'
+  interviewSlotEmailFields,
+  slotRequestEmailFields,
+  storedUid,
+  uidFromSlotRequestId,
+  type Resolution,
+} from './lib/emailToUidTransforms'
+import {
+  addTally,
+  backfillEmailFields,
+  createAuthLookup,
+  emptyTally,
+  unresolvedSummary,
+  type BackfillContext,
+} from './lib/uidBackfillRuntime'
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
 const isProduction = args.includes('--production')
+const stripEmails = args.includes('--strip-emails')
+const stripUnresolved = args.includes('--strip-unresolved')
+
+if (stripUnresolved && !stripEmails) {
+  console.error('--strip-unresolved only applies alongside --strip-emails.')
+  process.exit(1)
+}
 
 if (isProduction) {
   if (
@@ -93,130 +145,64 @@ if (isProduction) {
   admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const db = admin.firestore()
-const auth = admin.auth()
-
-const SAMPLE_SIZE = 5 // docs shown in --dry-run output
-const BATCH_LIMIT = 500 // Firestore batched-write limit
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = []
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size))
-  }
-  return chunks
+const lookup = createAuthLookup(admin.auth())
+const ctx: BackfillContext = {
+  db: admin.firestore(),
+  lookup,
+  isDryRun,
+  stripEmails,
+  stripUnresolved,
+  deleteField: admin.firestore.FieldValue.delete(),
 }
 
-type Resolution = { uid: string } | { reason: string }
+// Not semester-scoped, and has no constant in collections.ts: admin's
+// interviewService and portal's name it inline too.
+const SLOT_REQUESTS_COLLECTION = 'interviewTimeRequests'
 
 /**
- * Resolves an email address to a Firebase Auth UID.
- *
- * Cached because an interviewer typically has multiple slots across a semester,
- * and misses/hits avoid redundant Auth round trips.
+ * Decides what uid to stamp on an interview time request: the one in its
+ * document ID while that account exists, since that is who created it and who
+ * admin already shows as the requester; otherwise the stored address's owner.
  */
-const resolutionCache = new Map<string, Resolution>()
+async function resolveSlotRequestUid(
+  requestId: string,
+  email: string | null,
+): Promise<Resolution> {
+  const idUid = uidFromSlotRequestId(requestId)
 
-async function resolveInterviewerUid(email: string): Promise<Resolution> {
-  const cached = resolutionCache.get(email)
-  if (cached) return cached
-
-  let resolution: Resolution
-  try {
-    const user = await auth.getUserByEmail(email)
-    resolution = { uid: user.uid }
-  } catch (err: any) {
-    resolution = {
-      reason: err?.message || 'No account found for this email address',
+  if (idUid && (await lookup.uidExists(idUid))) {
+    const byEmail = email ? await lookup.uidForEmail(email) : null
+    return {
+      uid: idUid,
+      note:
+        byEmail && 'uid' in byEmail && byEmail.uid !== idUid
+          ? `via document ID - ${email} now belongs to ${byEmail.uid}`
+          : undefined,
     }
   }
 
-  resolutionCache.set(email, resolution)
-  return resolution
-}
-
-type PlannedWrite = {
-  id: string
-  ref: FirebaseFirestore.DocumentReference
-  interviewerUid: string
-  interviewerEmail: string
-}
-
-async function backfillSemesterInterviewSlots(semesterId: string) {
-  const path = semesterCollectionPath(semesterId, 'instructorInterviewTimes')
-  const snapshot = await db.collection(path).get()
-  const toUpdate = snapshot.docs.filter((doc) =>
-    interviewSlotNeedsUidBackfill(doc.data()),
-  )
-
-  if (toUpdate.length === 0) {
-    console.log(`  ${path}: ${snapshot.size} docs, none need backfilling.`)
-    return { path, count: 0, warnings: 0 }
-  }
-
-  console.log(
-    `  ${path}: ${toUpdate.length}/${snapshot.size} docs still lack interviewerUid.`,
-  )
-
-  const planned: PlannedWrite[] = []
-  let warnings = 0
-
-  for (const doc of toUpdate) {
-    const data = doc.data()
-    const email = extractInterviewerEmail(data)
-
-    if (!email) {
-      warnings += 1
-      console.warn(
-        `    WARNING: ${semesterId}/${doc.id} has no valid interviewerEmail; skipping update.`,
-      )
-      continue
+  if (email) {
+    const byEmail = await lookup.uidForEmail(email)
+    if ('uid' in byEmail) {
+      return {
+        uid: byEmail.uid,
+        note: idUid
+          ? `via email - document ID uid ${idUid} has no account`
+          : 'via email - the document ID has no uid prefix',
+      }
     }
-
-    const resolution = await resolveInterviewerUid(email)
-    if ('uid' in resolution) {
-      planned.push({
-        id: doc.id,
-        ref: doc.ref,
-        interviewerUid: resolution.uid,
-        interviewerEmail: email,
-      })
-    } else {
-      warnings += 1
-      console.warn(
-        `    WARNING: ${semesterId}/${doc.id}: could not find UID for "${email}" (${resolution.reason}); skipping update.`,
-      )
+    return {
+      reason: idUid
+        ? `${byEmail.reason}, and document ID uid ${idUid} has no account either`
+        : `${byEmail.reason}, and the document ID has no uid prefix`,
     }
   }
 
-  if (planned.length === 0) {
-    console.log(`    nothing writable here; see any warnings above.`)
-    return { path, count: 0, warnings }
-  }
-
-  if (isDryRun) {
-    for (const write of planned.slice(0, SAMPLE_SIZE)) {
-      console.log(
-        `    [dry-run sample] ${write.id}: interviewerUid -> ${write.interviewerUid} (interviewerEmail "${write.interviewerEmail}" retained)`,
-      )
-    }
-    return { path, count: planned.length, warnings }
-  }
-
-  let committed = 0
-  for (const batchDocs of chunk(planned, BATCH_LIMIT)) {
-    const batch = db.batch()
-    for (const write of batchDocs) {
-      batch.update(write.ref, {
-        interviewerUid: write.interviewerUid,
-      })
-    }
-    await batch.commit()
-    committed += batchDocs.length
-    console.log(`    committed ${committed}/${planned.length}`)
-  }
-
-  return { path, count: planned.length, warnings }
+  return idUid
+    ? {
+        reason: `document ID uid ${idUid} has no account, and there is no email`,
+      }
+    : { reason: 'no email and no uid prefix in the document ID' }
 }
 
 async function main() {
@@ -224,29 +210,53 @@ async function main() {
     (s) => s.id,
   )
   console.log(
-    `${isDryRun ? '[DRY RUN] ' : ''}Backfilling interview slot interviewer uids across ` +
-      `${semesters.length} semester(s): ${semesters.join(', ')}\n`,
+    `${isDryRun ? '[DRY RUN] ' : ''}Backfilling interview uids across ` +
+      `${semesters.length} semester(s): ${semesters.join(', ')}; and ${SLOT_REQUESTS_COLLECTION}`,
+  )
+  console.log(
+    stripEmails
+      ? `Stamping uids, and removing every address a live account's uid backs` +
+          `${stripUnresolved ? ' - and, with --strip-unresolved, the ones none does' : ''}.\n`
+      : 'Stamping uids only, leaving every address in place.\n',
   )
 
-  let totalDocs = 0
-  let totalWarnings = 0
+  const slotTotals = emptyTally()
   for (const semesterId of semesters) {
     console.log(`Semester ${semesterId}:`)
-    const result = await backfillSemesterInterviewSlots(semesterId)
-    totalDocs += result.count
-    totalWarnings += result.warnings
-  }
-
-  console.log(
-    `\n${isDryRun ? '[DRY RUN] Would backfill' : 'Backfilled'} ${totalDocs} interview slot document(s) ` +
-      `across ${semesters.length} semester(s).`,
-  )
-  if (totalWarnings > 0) {
-    console.warn(
-      `\n${totalWarnings} interview slot(s) could not be resolved to an Auth UID - see the WARNING lines above. ` +
-        `Their updates were skipped and they retain interviewerEmail as a fallback.`,
+    addTally(
+      slotTotals,
+      await backfillEmailFields(
+        ctx,
+        semesterCollectionPath(semesterId, 'instructorInterviewTimes'),
+        interviewSlotEmailFields,
+      ),
     )
   }
+
+  console.log('Interview time requests:')
+  const requestTotals = await backfillEmailFields(
+    ctx,
+    SLOT_REQUESTS_COLLECTION,
+    slotRequestEmailFields,
+    {
+      resolveUid: (docId) => ({
+        uid: (email) => resolveSlotRequestUid(docId, email),
+      }),
+      // The document ID needs no address to go on.
+      alsoNeedsWork: (data) => storedUid(data, 'uid') === null,
+    },
+  )
+
+  const totals = emptyTally()
+  addTally(totals, slotTotals)
+  addTally(totals, requestTotals)
+  console.log(
+    `\n${isDryRun ? '[DRY RUN] Would update' : 'Updated'} ${slotTotals.count} interview slot document(s) ` +
+      `across ${semesters.length} semester(s) and ${requestTotals.count} interview time request(s): ` +
+      `${totals.stamped} uid(s) stamped, ${totals.stripped} address(es) removed.`,
+  )
+  const unresolved = unresolvedSummary(totals.unresolved, ctx)
+  if (unresolved) console.warn(`\n${unresolved}`)
 }
 
 main().catch((err) => {
