@@ -84,6 +84,7 @@ Cypress.Commands.add('submitSearch', (term: string) => {
   const selector = 'input[placeholder="Search"]'
   cy.fillInput(selector, term)
   cy.get(selector).type('{enter}')
+  cy.wait(250)
   // Build the expectation the same way SearchBox does, via URLSearchParams --
   // it encodes a space as "+", which encodeURIComponent would never match for
   // multi-word terms like "Demo Student".
