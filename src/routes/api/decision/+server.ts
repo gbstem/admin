@@ -1,28 +1,21 @@
 import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { renderEmail } from '$lib/emails/render'
-import { resolveApplicantEmail } from '$lib/server/applicantIdentity'
+import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
 import { z } from 'zod'
 
-// `applicantUid` is the application document's id. `email` is the legacy form
-// the applicant typed on their application, which goes stale the moment they
-// change their account address; it stays only for browser sessions loaded
-// before the uid migration and is logged as `[legacy-email-fallback]` whenever
-// it is used - see notes/EMAIL_TO_UID_AUDIT.md section 7, Phase 4.
-const decisionSchema = z
-  .object({
-    applicantUid: z.string().optional(),
-    email: z.string().email('Invalid email address').optional(),
-    decision: z.enum(['rejected', 'waitlisted', 'substitute', 'accepted']),
-    name: z.string().min(1, 'Name is required'),
-  })
-  .refine((data) => Boolean(data.applicantUid || data.email), {
-    message: 'Either applicantUid or email is required',
-    path: ['applicantUid'],
-  })
+// `applicantUid` is the application document's id. The applicant's current
+// address is resolved from Auth; the one they typed on their application goes
+// stale the moment they change their account email, so it is not accepted -
+// see notes/EMAIL_TO_UID_AUDIT.md section 7, Phase 4.
+const decisionSchema = z.object({
+  applicantUid: z.string().min(1, 'Applicant uid is required'),
+  decision: z.enum(['rejected', 'waitlisted', 'substitute', 'accepted']),
+  name: z.string().min(1, 'Name is required'),
+})
 
 export type DecisionRequestBody = z.infer<typeof decisionSchema>
 
@@ -31,17 +24,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     verifyAdminOrReviewer(locals)
     const body = decisionSchema.parse(await request.json())
 
-    const intervieweeEmail = await resolveApplicantEmail(
+    const intervieweeEmail = await resolveAccountEmail(
       body.applicantUid,
-      body.email,
+      'Applicant',
       '/api/decision',
     )
-    if (!intervieweeEmail) {
-      return json(
-        { error: 'Applicant email could not be resolved' },
-        { status: 400 },
-      )
-    }
     const decision = body.decision
 
     const template = {

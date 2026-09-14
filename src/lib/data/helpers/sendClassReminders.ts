@@ -9,7 +9,7 @@ import type Student from '../types/Student'
  * @param studentName The name of the student to send the email to, use "all" if you want to send it ot all of them
  * @param studentEmail The email of the student to send the email to
  * @param instructorName The name of the instructor
- * @param instructorEmail The email of the instructor
+ * @param instructorUid The uid of the instructor, resolved to their current email server-side
  * @param otherInstructorUids The uids of other instructors, resolved to current emails server-side
  * @param className The name of the class
  * @param nextMeetingTime The time of the next class
@@ -19,7 +19,6 @@ function sendClassReminder(opts: {
   studentName?: string
   studentEmail?: string
   instructorName: string
-  instructorEmail?: string
   instructorUid?: string
   otherInstructorUids: string[]
   className: string
@@ -31,7 +30,6 @@ function sendClassReminder(opts: {
     studentName,
     studentEmail,
     instructorName,
-    instructorEmail,
     instructorUid,
     otherInstructorUids,
     className,
@@ -48,14 +46,11 @@ function sendClassReminder(opts: {
         alert.trigger('error', 'No upcoming classes found!')
         return
       }
-      // Uid plus the stored address: the server prefers the uid and resolves
-      // the instructor's current address from Auth, falling back to this one
-      // when the uid is missing or names no Auth account. Only the server can
-      // tell which, so the client sends both and the server logs any fallback.
+      // The uid only: the server resolves the instructor's current address
+      // from Auth, and refuses a class with no uid rather than guess.
       const payload: RemindInstructorRequestBody = {
         name: normalizeCapitals(instructorName),
-        instructorUid: instructorUid || undefined,
-        email: instructorEmail,
+        instructorUid: instructorUid || '',
         otherInstructorUids: otherInstructorUids,
         class: className,
         classTime: nextMeetingTime,

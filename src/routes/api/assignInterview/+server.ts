@@ -1,40 +1,24 @@
 import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { renderEmail } from '$lib/emails/render'
-import { resolveCurrentInterviewerEmail } from '$lib/server/interviewerIdentity'
-import { adminAuth } from '$lib/server/firebase'
+import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
 import { z } from 'zod'
 
-// Both email fields are legacy: the current client sends uids only, and these
-// exist solely so a browser session loaded before the uid migration keeps
-// working until it ages out. Every use is logged as `[legacy-email-fallback]`;
-// once that counter has read zero for several days, make both uids required and
-// delete the emails - see notes/EMAIL_TO_UID_AUDIT.md section 7, Phase 4.
-const assignInterviewSchema = z
-  .object({
-    email: z.string().email('Invalid interviewer email address').optional(),
-    interviewerUid: z.string().optional(),
-    date: z.string().min(1, 'Date is required'),
-    link: z.string().min(1, 'Meeting link is required'),
-    interviewer: z.string().min(1, 'Interviewer name is required'),
-    firstName: z.string().min(1, 'Interviewee first name is required'),
-    intervieweeUid: z.string().optional(),
-    intervieweeEmail: z
-      .string()
-      .email('Invalid interviewee email address')
-      .optional(),
-  })
-  .refine((data) => Boolean(data.interviewerUid || data.email), {
-    message: 'Either interviewerUid or email is required',
-    path: ['interviewerUid'],
-  })
-  .refine((data) => Boolean(data.intervieweeUid || data.intervieweeEmail), {
-    message: 'Either intervieweeUid or intervieweeEmail is required',
-    path: ['intervieweeUid'],
-  })
+// Both people are named by uid, and their current addresses are resolved from
+// Auth. The endpoint no longer accepts an address for either, which would let
+// the caller pick the recipient - see notes/EMAIL_TO_UID_AUDIT.md section 7,
+// Phase 4.
+const assignInterviewSchema = z.object({
+  interviewerUid: z.string().min(1, 'Interviewer uid is required'),
+  date: z.string().min(1, 'Date is required'),
+  link: z.string().min(1, 'Meeting link is required'),
+  interviewer: z.string().min(1, 'Interviewer name is required'),
+  firstName: z.string().min(1, 'Interviewee first name is required'),
+  intervieweeUid: z.string().min(1, 'Interviewee uid is required'),
+})
 
 export type AssignInterviewRequestBody = z.infer<typeof assignInterviewSchema>
 
@@ -43,48 +27,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     verifyAdmin(locals)
     const body = assignInterviewSchema.parse(await request.json())
 
-    const interviewerEmail = await resolveCurrentInterviewerEmail(
+    const interviewerEmail = await resolveAccountEmail(
       body.interviewerUid,
-      body.email,
+      'Interviewer',
       '/api/assignInterview',
     )
-    if (!interviewerEmail) {
-      return json(
-        { error: 'Interviewer email could not be resolved' },
-        { status: 400 },
-      )
-    }
+    const intervieweeEmail = await resolveAccountEmail(
+      body.intervieweeUid,
+      'Interviewee',
+      '/api/assignInterview',
+    )
     const interviewDate = body.date
     const interviewLink = body.link
     const interviewerName = body.interviewer
     const intervieweeFirstName = body.firstName
-
-    let intervieweeEmail = body.intervieweeEmail
-    if (body.intervieweeUid) {
-      try {
-        const user = await adminAuth.getUser(body.intervieweeUid)
-        if (user.email) {
-          intervieweeEmail = user.email
-        }
-      } catch (err) {
-        console.error(
-          'Failed to resolve interviewee email by uid, falling back to passed email:',
-          err,
-        )
-      }
-    } else if (body.intervieweeEmail) {
-      console.warn(
-        '[legacy-email-fallback] /api/assignInterview: no intervieweeUid in ' +
-          'payload, using the client-supplied interviewee email',
-      )
-    }
-
-    if (!intervieweeEmail) {
-      return json(
-        { error: 'Interviewee email could not be resolved' },
-        { status: 400 },
-      )
-    }
 
     const template = {
       name: 'interviewScheduled',

@@ -228,7 +228,6 @@
                       onclick={() =>
                         sendClassReminder({
                           instructorName: classToday.class.instructorFirstName,
-                          instructorEmail: classToday.class.instructorEmail,
                           instructorUid: classToday.class.instructorUid,
                           otherInstructorUids:
                             classToday.class.otherInstructorUids ?? [],

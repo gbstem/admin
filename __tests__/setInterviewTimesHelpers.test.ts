@@ -106,7 +106,7 @@ describe('SetInterviewTimes Helpers', () => {
   })
 
   describe('buildAssignInterviewApiPayload & resetInterviewSlotToAdd', () => {
-    test('sends uids alongside the stored addresses', () => {
+    test('sends uids and none of the stored addresses', () => {
       const slot = resetInterviewSlotToAdd(
         'Jane Doe',
         'jane@example.com',
@@ -122,14 +122,13 @@ describe('SetInterviewTimes Helpers', () => {
       expect(payload.interviewer).toBe('Jane Doe')
       expect(payload.interviewerUid).toBe('interviewer-uid-1')
       expect(payload.intervieweeUid).toBe('interviewee-uid-1')
-      // The addresses ride along so the server has something to fall back to
-      // when a uid names no Auth account - which only the server can detect.
-      // It prefers the uid, so a stale stored address cannot misdirect mail.
-      expect(payload.email).toBe('jane@example.com')
-      expect(payload.intervieweeEmail).toBe('alice@example.com')
+      // The server resolves both addresses from the uids, so a stale stored
+      // address cannot misdirect mail.
+      expect(payload).not.toHaveProperty('email')
+      expect(payload).not.toHaveProperty('intervieweeEmail')
     })
 
-    test('still sends the addresses for a slot carrying no uids at all', () => {
+    test('sends empty uids for a slot carrying none, for the server to refuse', () => {
       const slot = resetInterviewSlotToAdd('Jane Doe', 'jane@example.com', '')
       slot.intervieweeFirstName = 'Alice'
       slot.intervieweeEmail = 'alice@example.com'
@@ -137,10 +136,10 @@ describe('SetInterviewTimes Helpers', () => {
       slot.date = '2026-05-28T10:00'
 
       const payload = buildAssignInterviewApiPayload(slot)
-      expect(payload.interviewerUid).toBeUndefined()
-      expect(payload.email).toBe('jane@example.com')
-      expect(payload.intervieweeUid).toBeUndefined()
-      expect(payload.intervieweeEmail).toBe('alice@example.com')
+      expect(payload.interviewerUid).toBe('')
+      expect(payload.intervieweeUid).toBe('')
+      expect(payload).not.toHaveProperty('email')
+      expect(payload).not.toHaveProperty('intervieweeEmail')
     })
   })
 

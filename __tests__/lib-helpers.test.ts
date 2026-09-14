@@ -271,7 +271,7 @@ describe('sendClassReminders', () => {
 
     sendClassReminder({
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -286,7 +286,7 @@ describe('sendClassReminders', () => {
 
     sendClassReminder({
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'No Upcoming Classes',
@@ -307,7 +307,7 @@ describe('sendClassReminders', () => {
 
     sendClassReminder({
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -318,6 +318,11 @@ describe('sendClassReminders', () => {
       '/api/remindInstructor',
       expect.any(Object),
     )
+    // The instructor is named by uid alone; the server resolves the address.
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.instructorUid).toBe('inst-uid')
+    expect(body).not.toHaveProperty('email')
 
     await new Promise(process.nextTick)
     expect(alert.trigger).toHaveBeenCalledWith(
@@ -335,7 +340,7 @@ describe('sendClassReminders', () => {
 
     sendClassReminder({
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -358,7 +363,7 @@ describe('sendClassReminders', () => {
         { name: 'jane smith', email: 'jane@test.com' },
       ] as any,
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -386,7 +391,7 @@ describe('sendClassReminders', () => {
     sendClassReminder({
       studentList: [{ name: 'john doe', email: 'john@test.com' }] as any,
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -408,7 +413,7 @@ describe('sendClassReminders', () => {
       studentName: 'john doe',
       studentEmail: 'john@test.com',
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',
@@ -437,7 +442,7 @@ describe('sendClassReminders', () => {
       studentName: 'john doe',
       studentEmail: 'john@test.com',
       instructorName: 'test instructor',
-      instructorEmail: 'inst@test.com',
+      instructorUid: 'inst-uid',
       otherInstructorUids: [],
       className: 'Math',
       nextMeetingTime: 'Monday at 2:00 PM',

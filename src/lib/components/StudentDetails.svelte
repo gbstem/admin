@@ -202,7 +202,6 @@
                     studentName: studentData.name,
                     studentEmail: studentData.email,
                     instructorName: value.instructorFirstName,
-                    instructorEmail: value.instructorEmail,
                     instructorUid: value.instructorUid,
                     otherInstructorUids: value.otherInstructorUids ?? [],
                     className: value.course,

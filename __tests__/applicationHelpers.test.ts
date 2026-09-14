@@ -151,66 +151,31 @@ describe('Application Helper Functions', () => {
       expect(deadlineClose).toContain('Sep 3')
     })
 
-    test('buildScheduleInterviewPayload sends the applicant uid and address', () => {
+    test('buildScheduleInterviewPayload sends the applicant uid and no address', () => {
       const payload = buildScheduleInterviewPayload(
         'applicant-uid-1',
-        'student@example.com',
         'John',
         'Sep 8',
       )
       // The uid is the application document's id, so the server resolves the
       // applicant's *current* address rather than the one they typed on the
-      // form. The typed address rides along for the case the server cannot
-      // detect from the client: an applicant whose account has been deleted.
+      // form.
       expect(payload).toEqual({
         applicantUid: 'applicant-uid-1',
-        email: 'student@example.com',
         name: 'John',
         deadline: 'Sep 8',
       })
     })
 
-    test('buildScheduleInterviewPayload still sends the address with no uid', () => {
-      const payload = buildScheduleInterviewPayload(
-        '',
-        'student@example.com',
-        'John',
-        'Sep 8',
-      )
-      expect(payload).toEqual({
-        applicantUid: undefined,
-        email: 'student@example.com',
-        name: 'John',
-        deadline: 'Sep 8',
-      })
-    })
-
-    test('buildDecisionApiPayload sends the applicant uid and address', () => {
+    test('buildDecisionApiPayload sends the applicant uid and no address', () => {
       const payload = buildDecisionApiPayload(
         'accepted',
         'applicant-uid-1',
-        'student@example.com',
         'John',
       )
       expect(payload).toEqual({
         decision: 'accepted',
         applicantUid: 'applicant-uid-1',
-        email: 'student@example.com',
-        name: 'John',
-      })
-    })
-
-    test('buildDecisionApiPayload still sends the address with no uid', () => {
-      const payload = buildDecisionApiPayload(
-        'accepted',
-        '',
-        'student@example.com',
-        'John',
-      )
-      expect(payload).toEqual({
-        decision: 'accepted',
-        applicantUid: undefined,
-        email: 'student@example.com',
         name: 'John',
       })
     })

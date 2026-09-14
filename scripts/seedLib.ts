@@ -1232,6 +1232,19 @@ export async function seedEmulator(): Promise<void> {
       classStatuses = ['EverythingComplete', 'ClassInFuture']
     }
 
+    // Every instructor gets a real Auth account at the stored address. Since
+    // Phase 4 of the uid migration, a notification to an instructor resolves
+    // their address from instructorUid alone, and a uid no account backs
+    // gets no email - so an unbacked uid would make enrolling in, or
+    // reminding, one of these classes fail in e2e.
+    await createOrUpdateUser(
+      `instructor-fake-${i}`,
+      `instructor-fake-${i}@gbstem.org`,
+      'penguin',
+      `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
+      'instructor',
+    )
+
     const classData = {
       classCap: 15,
       classDay1: 'Monday',
@@ -1240,9 +1253,6 @@ export async function seedEmulator(): Promise<void> {
       classTime2: '16:00',
       course: course,
       instructorEmail: `instructor-fake-${i}@gbstem.org`,
-      // No Auth account backs these, so the server's uid lookup falls back to
-      // the address above - which is the point: it exercises the
-      // `[legacy-email-fallback]` path the Phase 4 gate watches.
       instructorUid: `instructor-fake-${i}`,
       instructorFirstName: firstNames[i % firstNames.length],
       instructorLastName: lastNames[i % lastNames.length],
@@ -1300,6 +1310,8 @@ export async function seedEmulator(): Promise<void> {
           new Date(newestSubRequestTime - (30 - i) * 24 * 60 * 60 * 1000),
         ),
         originalInstructorEmail: `instructor-fake-${i}@gbstem.org`,
+        // Claiming a sub request resolves the instructor from this uid alone.
+        originalInstructorUid: `instructor-fake-${i}`,
         subInstructorId: i % 3 !== 0 ? `sub-inst-id-${i}` : '',
         subInstructorFirstName:
           i % 3 !== 0 ? firstNames[(i + 2) % firstNames.length] : '',

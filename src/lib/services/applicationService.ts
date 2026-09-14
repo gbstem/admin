@@ -177,7 +177,6 @@ export const applicationService = {
     appId: string,
     newDecision: Data.Decision,
     interview: Data.Interview,
-    applicantEmail: string,
     applicantFirstName: string,
     instructorOrientationDate: string,
     viewedSemester?: string,
@@ -204,13 +203,11 @@ export const applicationService = {
       const appData = appSnap?.exists?.()
         ? (appSnap.data() as Data.Application<'client'>)
         : null
-      const email = appData?.personal?.email || applicantEmail
       const firstName = appData?.personal?.firstName || applicantFirstName
 
       if (newDecision === 'interview') {
         const payload = buildScheduleInterviewPayload(
           appId,
-          email,
           firstName,
           interviewDeadline,
         )
@@ -226,12 +223,7 @@ export const applicationService = {
           )
         }
       } else {
-        const payload = buildDecisionApiPayload(
-          newDecision,
-          appId,
-          email,
-          firstName,
-        )
+        const payload = buildDecisionApiPayload(newDecision, appId, firstName)
         const res = await fetch('/api/decision', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -315,14 +307,12 @@ export const applicationService = {
           const appSnap = await getDoc(doc(db, appCollection, id))
           if (appSnap.exists()) {
             const data = appSnap.data() as Data.Application<'client'>
-            const applicantEmail = data.personal?.email
             const applicantFirstName = data.personal?.firstName
 
-            if (applicantEmail && applicantFirstName) {
+            if (applicantFirstName) {
               if (decision === 'interview') {
                 const payload = buildScheduleInterviewPayload(
                   id,
-                  applicantEmail,
                   applicantFirstName,
                   interviewDeadline,
                 )
@@ -335,7 +325,6 @@ export const applicationService = {
                 const payload = buildDecisionApiPayload(
                   decision,
                   id,
-                  applicantEmail,
                   applicantFirstName,
                 )
                 await fetch('/api/decision', {
