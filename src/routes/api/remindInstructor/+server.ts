@@ -1,15 +1,14 @@
 import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { resolveCoInstructorEmails } from '$lib/server/instructorDirectory'
+import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { renderEmail } from '$lib/emails/render'
-import { adminAuth } from '$lib/server/firebase'
 import { json } from '@sveltejs/kit'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
 const remindInstructorSchema = z.object({
-  email: z.string().email('Invalid instructor email address').optional(),
-  instructorUid: z.string().optional(),
+  instructorUid: z.string().min(1, 'Instructor uid is required'),
   // Resolved to current addresses server-side (see instructorDirectory.ts)
   // rather than sent by the client, so a cc always reaches the account's
   // current address and a client can't dictate the recipient list.
@@ -26,32 +25,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     verifyAdmin(locals)
     const body = remindInstructorSchema.parse(await request.json())
 
-    let email = body.email
-    if (body.instructorUid) {
-      try {
-        const instructor = await adminAuth.getUser(body.instructorUid)
-        if (instructor.email) {
-          email = instructor.email
-        }
-      } catch (err) {
-        console.error(
-          'Failed to resolve instructor email by uid, falling back to passed email:',
-          err,
-        )
-      }
-    } else if (body.email) {
-      console.warn(
-        '[legacy-email-fallback] /api/remindInstructor: no instructorUid in ' +
-          'payload, using the client-supplied instructor email',
-      )
-    }
-
-    if (!email) {
-      return json(
-        { error: 'Instructor email could not be resolved.' },
-        { status: 400 },
-      )
-    }
+    const email = await resolveAccountEmail(
+      body.instructorUid,
+      'Instructor',
+      '/api/remindInstructor',
+    )
 
     const otherEmails = await resolveCoInstructorEmails(
       body.otherInstructorUids,

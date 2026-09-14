@@ -2,21 +2,21 @@ import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { renderEmail } from '$lib/emails/render'
 import { formatTime24to12 } from '$lib/utils'
-import { adminAuth } from '$lib/server/firebase'
+import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
 import { z } from 'zod'
 
 const enrollSchema = z.object({
+  // The student's address stays: students are registered under a parent
+  // account and have no Auth uid of their own to resolve one from.
   email: z.string().email('Invalid email address'),
   firstName: z.string().min(1, 'First name is required'),
   instructor: z.string().min(1, 'Instructor name is required'),
-  instructorUid: z.string().optional(),
-  instructorEmail: z
-    .string()
-    .email('Invalid instructor email address')
-    .optional(),
+  // Resolved to the instructor's current address server-side; there is no
+  // instructor address parameter (notes/EMAIL_TO_UID_AUDIT.md, Phase 4).
+  instructorUid: z.string().min(1, 'Instructor uid is required'),
   classTimes: z.array(z.string()).min(1, 'At least one class time is required'),
   classDays: z.array(z.string()).min(1, 'At least one class day is required'),
   course: z.string().min(1, 'Course is required'),
@@ -32,32 +32,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     verifyAdmin(locals)
     const body = enrollSchema.parse(await request.json())
 
-    let instructorEmail = body.instructorEmail
-    if (body.instructorUid) {
-      try {
-        const instructor = await adminAuth.getUser(body.instructorUid)
-        if (instructor.email) {
-          instructorEmail = instructor.email
-        }
-      } catch (err) {
-        console.error(
-          'Failed to resolve instructor email by uid, falling back to passed email:',
-          err,
-        )
-      }
-    } else if (body.instructorEmail) {
-      console.warn(
-        '[legacy-email-fallback] /api/enroll: no instructorUid in payload, ' +
-          'using the client-supplied instructor email',
-      )
-    }
-
-    if (!instructorEmail) {
-      return json(
-        { error: 'Instructor email could not be resolved.' },
-        { status: 400 },
-      )
-    }
+    const instructorEmail = await resolveAccountEmail(
+      body.instructorUid,
+      'Instructor',
+      '/api/enroll',
+    )
 
     const classes = body.classDays.map(
       (day: string, index: number) =>

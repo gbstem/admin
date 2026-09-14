@@ -147,7 +147,6 @@ describe('admin applicationService (Data Access Layer)', () => {
         'app-1',
         'interview',
         {} as any,
-        'alice@example.com',
         'Alice',
         '2026-09-01',
       )
@@ -168,7 +167,6 @@ describe('admin applicationService (Data Access Layer)', () => {
           'app-1',
           'accepted',
           {} as any,
-          'alice@example.com',
           'Alice',
           '2026-09-01',
         ),
@@ -184,7 +182,6 @@ describe('admin applicationService (Data Access Layer)', () => {
         'app-1',
         'accepted',
         {} as any,
-        'alice@example.com',
         'Alice',
         '2026-09-01',
       )
@@ -195,7 +192,7 @@ describe('admin applicationService (Data Access Layer)', () => {
       )
     })
 
-    it('fetches application document to use true applicant email and name if available', async () => {
+    it('fetches application document to use the current first name, and sends no address', async () => {
       ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
         exists: () => true,
         data: () => ({
@@ -209,21 +206,18 @@ describe('admin applicationService (Data Access Layer)', () => {
         'app-10',
         'interview',
         {} as any,
-        'stale@example.com',
         'Stale',
         '2026-09-01',
       )
 
-      // The re-fetched address is still what the server falls back to, so the
-      // stale one passed by the caller must not win. The uid the server
-      // prefers is the application id.
+      // The applicant is named by the application id alone; the server
+      // resolves their current address from it.
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/scheduleInterview',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({
             applicantUid: 'app-10',
-            email: 'david-h@example.com',
             name: 'David',
             deadline: 'Mon, Aug 31',
           }),
@@ -244,7 +238,6 @@ describe('admin applicationService (Data Access Layer)', () => {
           'app-1',
           'interview',
           {} as any,
-          'alice@example.com',
           'Alice',
           '2026-09-01',
         ),
@@ -269,7 +262,6 @@ describe('admin applicationService (Data Access Layer)', () => {
         'app-1',
         'rejected',
         {} as any,
-        'alice@example.com',
         'Alice',
         '2026-09-01',
       )
@@ -293,7 +285,6 @@ describe('admin applicationService (Data Access Layer)', () => {
           'app-1',
           'accepted',
           {} as any,
-          'alice@example.com',
           'Alice',
           '2026-09-01',
         ),
@@ -376,7 +367,6 @@ describe('admin applicationService (Data Access Layer)', () => {
           body: JSON.stringify({
             decision: 'accepted',
             applicantUid: 'app-1',
-            email: 'alice@example.com',
             name: 'Alice',
           }),
         }),

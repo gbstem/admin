@@ -163,7 +163,6 @@
         frozenId,
         newDecision,
         interview,
-        values.personal.email,
         values.personal.firstName,
         semesterDates.instructorOrientation,
         viewedSemester(),

@@ -355,6 +355,7 @@ describe('studentService (Data Access Layer)', () => {
       instructorFirstName: 'Jane',
       instructorLastName: 'Doe',
       instructorEmail: 'jane@example.com',
+      instructorUid: 'jane-uid',
       classTime1: '4:00 PM',
       classTime2: '4:00 PM',
       course: 'Python 1',
@@ -377,6 +378,11 @@ describe('studentService (Data Access Layer)', () => {
         '/api/enroll',
         expect.objectContaining({ method: 'POST' }),
       )
+      // The instructor is named by uid alone; the stored address stays home.
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      const body = JSON.parse(init.body)
+      expect(body.instructorUid).toBe('jane-uid')
+      expect(body).not.toHaveProperty('instructorEmail')
     })
 
     it('throws if the enrollment email API responds not-ok', async () => {

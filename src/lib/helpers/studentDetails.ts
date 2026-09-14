@@ -50,12 +50,9 @@ export function buildEnrollApiPayload(
     email: studentData.email,
     firstName: parentFirstName,
     instructor: `${classSelected.instructorFirstName} ${classSelected.instructorLastName}`,
-    // Uid plus the stored address: the server prefers the uid and resolves the
-    // instructor's current address from Auth, falling back to this one when the
-    // uid is missing or names no Auth account. Only the server can tell which,
-    // so the client sends both and the server logs any fallback.
-    instructorUid: classSelected.instructorUid || undefined,
-    instructorEmail: classSelected.instructorEmail,
+    // The uid only: the server resolves the instructor's current address from
+    // Auth.
+    instructorUid: classSelected.instructorUid,
     classTimes: [classSelected.classTime1, classSelected.classTime2],
     classDays: [classSelected.classDay1, classSelected.classDay2],
     course: classSelected.course,

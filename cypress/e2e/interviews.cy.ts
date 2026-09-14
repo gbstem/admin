@@ -272,7 +272,7 @@ describe('Section F: Interview Slot Field Coverage', () => {
           intervieweeFirstName: 'David',
           intervieweeLastName: 'Miller',
           intervieweeEmail: 'applicant1@gmail.com',
-          intervieweeId: 'user_app1',
+          intervieweeId: 'app-david',
           interviewSlotStatus: 'available',
         })
       })
