@@ -874,7 +874,19 @@ export async function seedEmulator(): Promise<void> {
   }
 
   // Create Mock Applications
+  //
+  // As in production, an application's document id is its applicant's Auth
+  // uid, and that account exists: the decision and interview emails resolve
+  // the applicant's address from the uid alone since Phase 4 of the uid
+  // migration, so an application no account backs gets no email.
   console.log(`Seeding mock applications in "${applicationsCollection}"...`)
+  await createOrUpdateUser(
+    'app-david',
+    'applicant1@gmail.com',
+    'penguin',
+    'David Miller',
+    'instructor',
+  )
   const appDavid = {
     personal: {
       email: 'applicant1@gmail.com',
@@ -910,7 +922,7 @@ export async function seedEmulator(): Promise<void> {
       submitting: true,
     },
     meta: {
-      uid: 'user_app1',
+      uid: 'app-david',
       interview: false,
       submitted: true,
       decided: false,
@@ -1128,6 +1140,14 @@ export async function seedEmulator(): Promise<void> {
   for (let i = 0; i < 30; i++) {
     const id = `app-fake-${i}`
     const submitted = i % 3 !== 0 // 20 submitted, 10 incomplete
+    // The applicant's account, keyed like the application - see above.
+    await createOrUpdateUser(
+      id,
+      `applicant-${i}@gmail.com`,
+      'penguin',
+      `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
+      'instructor',
+    )
     const inPerson = i % 5 === 0 // 6 inPerson
     const isDecided = i % 6 === 0 // 5 decided
 
@@ -1168,7 +1188,7 @@ export async function seedEmulator(): Promise<void> {
         submitting: true,
       },
       meta: {
-        uid: `user-fake-app-${i}`,
+        uid: id,
         interview: true,
         submitted: submitted,
         decided: isDecided,
@@ -1337,7 +1357,7 @@ export async function seedEmulator(): Promise<void> {
       intervieweeFirstName: 'David',
       intervieweeLastName: 'Miller',
       intervieweeEmail: 'applicant1@gmail.com',
-      intervieweeId: 'user_app1',
+      intervieweeId: 'app-david',
       interviewerEmail: 'demo@gbstem.org',
       // Keyed primarily by uid. Stored email is unreliable because the interviewer
       // could change it later, so code should avoid using it; it is retained as a
