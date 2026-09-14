@@ -51,8 +51,8 @@ export function buildEnrollApiPayload(
     firstName: parentFirstName,
     instructor: `${classSelected.instructorFirstName} ${classSelected.instructorLastName}`,
     // The uid only: the server resolves the instructor's current address from
-    // Auth, and refuses a class with no uid rather than guess.
-    instructorUid: classSelected.instructorUid || '',
+    // Auth.
+    instructorUid: classSelected.instructorUid,
     classTimes: [classSelected.classTime1, classSelected.classTime2],
     classDays: [classSelected.classDay1, classSelected.classDay2],
     course: classSelected.course,

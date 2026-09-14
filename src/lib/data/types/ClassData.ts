@@ -13,9 +13,9 @@ type ClassData = {
   instructorFirstName: string
   instructorLastName: string
   instructorEmail: string
-  // Absent on classes written before this field existed - callers must fall
-  // back to instructorEmail rather than treat '' as "no owner". See
-  // firestore.rules's isInstructorOfClass().
+  // The class's owner, and the only way to reach them: rules grant class
+  // writes on it and the notification endpoints resolve the instructor's
+  // address from it. instructorEmail is a stored copy kept for display.
   instructorUid: string
   otherInstructorUids: string[]
   classCap: number

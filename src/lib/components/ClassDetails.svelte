@@ -186,6 +186,7 @@
               sendClassReminder({
                 studentList: studentList,
                 instructorName: values.instructorFirstName,
+                instructorUid: values.instructorUid,
                 otherInstructorUids: values.otherInstructorUids ?? [],
                 className: values.course,
                 nextMeetingTime: getNearestFutureClass(values.meetingTimes),

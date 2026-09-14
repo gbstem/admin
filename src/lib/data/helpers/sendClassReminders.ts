@@ -19,7 +19,7 @@ function sendClassReminder(opts: {
   studentName?: string
   studentEmail?: string
   instructorName: string
-  instructorUid?: string
+  instructorUid: string
   otherInstructorUids: string[]
   className: string
   nextMeetingTime: string
@@ -47,10 +47,10 @@ function sendClassReminder(opts: {
         return
       }
       // The uid only: the server resolves the instructor's current address
-      // from Auth, and refuses a class with no uid rather than guess.
+      // from Auth.
       const payload: RemindInstructorRequestBody = {
         name: normalizeCapitals(instructorName),
-        instructorUid: instructorUid || '',
+        instructorUid,
         otherInstructorUids: otherInstructorUids,
         class: className,
         classTime: nextMeetingTime,

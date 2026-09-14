@@ -98,13 +98,12 @@ export function buildAssignInterviewApiPayload(
   slot: Data.InterviewSlot,
 ): AssignInterviewRequestBody {
   // Uids only. The server resolves both current addresses from Auth, so an
-  // address stored on the slot that has gone stale can't misdirect the mail,
-  // and a slot missing either uid is refused rather than guessed at.
+  // address stored on the slot that has gone stale can't misdirect the mail.
   return {
-    intervieweeUid: slot.intervieweeId || '',
+    intervieweeUid: slot.intervieweeId,
     firstName: slot.intervieweeFirstName || '',
     interviewer: slot.interviewerName || '',
-    interviewerUid: slot.interviewerUid || '',
+    interviewerUid: slot.interviewerUid,
     link: slot.meetingLink || '',
     date: formatDateLocal(slot.date),
   }
