@@ -2,9 +2,9 @@
 
 This document details the manual and automated regression test suite to verify all core features of the gbSTEM Admin website before any production release. It is structured sequentially to facilitate direct translation into Cypress E2E tests.
 
-If you want to watch Cypress execute this in your browser, you can start it with extra arguments like the following, where `--headed` makes it so it runs a visible browser and `--browser` selects a browser to run (this example is using Chromium, the open source version of Chrome that is often installed on Linux systems but you can also use `chrome` to run the official version of Google Chrome, or `firefox` to run Firefox). But as you'll see, it goes **very** fast and is hard to keep up with. You can use other arguments to have it add a video that you can playback at a slower speed. For example, `yarn cypress --browser=chromium --headed --video` will create a video of the test run in the `cypress/videos` directory. There are many [options you can use](https://docs.cypress.io/guides/references/command-line#cypress-open). See [this page](https://docs.cypress.io/guides/getting-started/opening-the-app) to get started with Cypress.
+If you want to watch Cypress execute this in your browser, you can start it with extra arguments like the following, where `--headed` makes it so it runs a visible browser and `--browser` selects a browser to run (e.g. `chrome` or `firefox`). But as you'll see, it goes **very** fast and is hard to keep up with. There are many [options you can use](https://docs.cypress.io/guides/references/command-line#cypress-open). See [this page](https://docs.cypress.io/guides/getting-started/opening-the-app) to get started with Cypress.
 
-`yarn cypress --browser=chromium --headed`
+`yarn cypress --browser=chrome --headed`
 
 However, remember that you can actually see what is happening on the screen in a way that Cypress isn't: it just keys off of HTML elements and CSS classes, so can miss major visual bugs. That means it is important for you to do a test run yourself, or at least carefully watch the Cypress test run. It is also important to use meaningful IDs and class names when we create our components and tests.
 
