@@ -1,4 +1,5 @@
 import {
+  applicationsCollection,
   currentSemester,
   interviewTimesCollection,
 } from '../../src/lib/data/collections'
@@ -110,6 +111,38 @@ describe('Section H: Interview Timeslots Configuration', () => {
     // Assigning the interviewee is the only prompt this flow should raise --
     // editing and deleting the slot must not.
     cy.get('@confirms').should('have.length', 1)
+  })
+
+  it('Test Case 16a: Interview Time Requests - Each Request Shows Its Requester', () => {
+    // The seed has no time requests, so this one is written the way portal's
+    // "request a time" does. The list only shows requests from applicants
+    // still waiting for an interview, and Test Case 16 books David Miller, so
+    // he is put back first.
+    const requestDate = '2030-01-15T10:00'
+    const requestId = `app-david-${requestDate}`
+    cy.task('mergeFirestoreDoc', {
+      docPath: `${applicationsCollection}/app-david`,
+      data: { meta: { interview: false } },
+    })
+    cy.task('setInterviewTimeRequest', {
+      id: requestId,
+      uid: 'app-david',
+      firstName: 'David',
+      lastName: 'Miller',
+      email: 'applicant1@gmail.com',
+      date: requestDate,
+    })
+    cy.reload()
+
+    // Each request is a row of date, name and address, found by the name.
+    cy.contains('h2', 'Interview Time Requests')
+      .parent()
+      .contains('div', 'David Miller', { timeout: 10000 })
+      .find('p')
+      .last()
+      .should('have.text', 'applicant1@gmail.com')
+
+    cy.task('deleteFirestoreDoc', `interviewTimeRequests/${requestId}`)
   })
 })
 

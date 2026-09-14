@@ -150,6 +150,31 @@ export default defineConfig({
             })
           return null
         },
+        // Writes an `interviewTimeRequests` doc in the shape portal's
+        // interviewService.requestInterviewSlot writes. A task of its own
+        // rather than `mergeFirestoreDoc`, because `date` has to be stored as
+        // a Timestamp and task arguments arrive as JSON, which turns a Date
+        // into a string.
+        async setInterviewTimeRequest(request: {
+          id: string
+          uid: string
+          firstName: string
+          lastName: string
+          email: string
+          date: string
+        }) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          const { id, date, ...fields } = request
+          await getFirestore()
+            .collection('interviewTimeRequests')
+            .doc(id)
+            .set({ ...fields, date: Timestamp.fromDate(new Date(date)) })
+          return null
+        },
         // Writes a `tokens` doc directly, bypassing the app's own token
         // creation flow, so a spec can set up an already-expired or
         // already-consumed token without waiting real time or driving a

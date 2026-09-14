@@ -1,3 +1,5 @@
+import { expectCellInColumn } from '../support/utils'
+
 describe('Section J: Substitute Requests Log', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -157,8 +159,19 @@ describe('Section J: Substitute Requests Log', () => {
         }
       })
 
-    // Click on a row containing notes
-    cy.contains('tr', 'instructor-fake-26@gbstem.org').click()
+    // Click on a row containing notes. Found by its substitute's name, the one
+    // column a person is named by here besides the addresses under test.
+    // sub-req-fake-26 is Python 1, so the course filter above leaves it shown.
+    expectCellInColumn(
+      cy.contains('tr', 'Mark'),
+      'Original Instructor Email',
+      'instructor-fake-26@gbstem.org',
+    )
+    expectCellInColumn(
+      cy.contains('tr', 'Mark'),
+      'Substitute Instructor Email',
+      'sub-26@gbstem.org',
+    ).click()
     cy.get('[role="dialog"]').should('exist')
     cy.get('[role="dialog"]').contains('div', 'Dentist appointment fake #26.')
 
