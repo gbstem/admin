@@ -15,6 +15,37 @@ export const generateDateHash = (prefix: string): string => {
 }
 
 /**
+ * Asserts that the cell of `row` under the column headed `header` reads
+ * exactly `text`, retrying until it does, and yields the row.
+ *
+ * Checking the cell by its column, rather than that the row contains the text
+ * somewhere, is what gives an address assertion teeth: a row found by an
+ * instructor's name also holds their name, course and link. These pin what
+ * each view should show while Phase 5 item 4 of notes/EMAIL_TO_UID_AUDIT.md
+ * changes where the address comes from.
+ *
+ * Headers are matched on `textContent` and case-insensitively, because the
+ * admin `Table` uppercases them with CSS.
+ */
+export function expectCellInColumn(
+  row: Cypress.Chainable<JQuery<HTMLElement>>,
+  header: string,
+  text: string,
+): Cypress.Chainable<JQuery<HTMLElement>> {
+  return row.should(($row) => {
+    const $tr = $row.is('tr') ? $row : $row.closest('tr')
+    const headers = $tr
+      .closest('table')
+      .find('th')
+      .toArray()
+      .map((th: HTMLElement) => (th.textContent ?? '').trim().toLowerCase())
+    const index = headers.indexOf(header.toLowerCase())
+    expect(index, `"${header}" column`).to.be.greaterThan(-1)
+    expect($tr.children('td').eq(index).text().trim(), header).to.equal(text)
+  })
+}
+
+/**
  * Prepares a document read back through `cy.getFirestoreDoc` for a
  * whole-document deep-equal against an expected shape.
  *

@@ -2,7 +2,20 @@ import {
   classesCollection,
   currentSemester,
 } from '../../src/lib/data/collections'
-import { prepareDocForCompare } from '../support/utils'
+import { expectCellInColumn, prepareDocForCompare } from '../support/utils'
+
+/** The seed's Python 1 class and its instructor. */
+const DEMO_INSTRUCTOR = 'Demo Instructor'
+const DEMO_INSTRUCTOR_EMAIL = 'instructor@gbstem.org'
+
+/** The directory row for `instructor`, checked to show `email`. */
+function classRow(instructor: string, email: string) {
+  return expectCellInColumn(
+    cy.contains('tr', instructor),
+    'Instructor Email',
+    email,
+  )
+}
 
 describe('Section E: Classes Directory', () => {
   beforeEach(() => {
@@ -160,7 +173,7 @@ describe('Section E: Classes Directory', () => {
 
   it('Test Case 13: Class Details Modal Actions', () => {
     // Open modal for Python 1 class taught by Demo Instructor
-    cy.contains('tr', 'Demo Instructor').click()
+    classRow(DEMO_INSTRUCTOR, DEMO_INSTRUCTOR_EMAIL).click()
     cy.get('[role="dialog"]').should('exist')
 
     // Verify Class List columns
@@ -257,7 +270,7 @@ describe('Section E: Classes Directory', () => {
     cy.contains('button', 'Close').click()
     cy.get('[role="dialog"]').should('not.exist')
 
-    cy.contains('tr', 'Demo Instructor').click()
+    classRow(DEMO_INSTRUCTOR, DEMO_INSTRUCTOR_EMAIL).click()
     cy.get('[role="dialog"]').should('exist')
     cy.get('input[name="class-capacity"]').should(
       'have.value',
@@ -289,6 +302,7 @@ interface ClassInput {
 /** Bob Jones's Scratch 1 class - Test Case 13 works on Demo Instructor's. */
 const SEEDED_CLASS_ID = 'class-scratch'
 const SEEDED_CLASS_INSTRUCTOR = 'Bob Jones'
+const SEEDED_CLASS_INSTRUCTOR_EMAIL = 'instructor2@gbstem.org'
 /** Search matches one name field at a time, so a full name matches nothing. */
 const SEEDED_CLASS_SEARCH = 'Bob'
 
@@ -350,7 +364,7 @@ function expectedClassDoc(input: ClassInput) {
     classTime2: input.classTime2,
     online: input.online,
     // None of these are rendered by this form.
-    instructorEmail: 'instructor2@gbstem.org',
+    instructorEmail: SEEDED_CLASS_INSTRUCTOR_EMAIL,
     instructorFirstName: 'Bob',
     instructorLastName: 'Jones',
     otherInstructorUids: ['instructor-cohost-uid'],
@@ -404,7 +418,9 @@ function openClassForEdit() {
       cy.submitSearch(SEEDED_CLASS_SEARCH)
     }
   })
-  cy.contains('tr', SEEDED_CLASS_INSTRUCTOR).click({ force: true })
+  classRow(SEEDED_CLASS_INSTRUCTOR, SEEDED_CLASS_INSTRUCTOR_EMAIL).click({
+    force: true,
+  })
   cy.get('[role="dialog"]').should('exist')
   cy.contains('button', 'Edit').click({ force: true })
   cy.get('input[name="gradeRecommendation"]').should('not.be.disabled')

@@ -1,6 +1,7 @@
 import { kebabCase } from 'lodash-es'
 import { currentSemester } from '../../src/lib/data/collections'
 import courses from '../../src/lib/data/courses.json'
+import { expectCellInColumn } from '../support/utils'
 
 /**
  * The seed fills the math and science columns from the current semester's
@@ -159,28 +160,41 @@ describe('Section F: Students Directory', () => {
     cy.contains('td', 'Charlie Brown').click()
     cy.get('[role="dialog"]').should('exist')
 
-    // Enroll Charlie in "Python 1"
+    // Enroll Charlie in Demo Instructor's "Python 1". Named in full: several
+    // generated classes are Python 1 too, and each option reads "<course>
+    // taught by <instructor> at ...".
     // eq(0) is the Add Class dropdown
     cy.get('input[name="select-a-class"]', { timeout: 15000 })
       .eq(0)
       .clear({ force: true })
-      .type('Python 1', { force: true })
+      .type('Python 1 taught by Demo Instructor', { force: true })
     cy.get('input[name="select-a-class"]')
       .eq(0)
       .parent()
       .parent()
       .find('button')
-      .contains('Python 1')
+      .contains('Python 1 taught by Demo Instructor')
       .click({ force: true })
 
     // Click Add Class
     cy.contains('button', 'Add Class').click({ force: true })
     cy.waitForNotification('Enrolled in class successfully!')
-    cy.verifyEmailSent('parent1@gmail.com', 'class details for Charlie Brown')
+    cy.verifyEmailSent(
+      'parent1@gmail.com',
+      'class details for Charlie Brown',
+    ).then((message: any) => {
+      expect(message.cc, 'the instructor is copied').to.deep.equal([
+        'instructor@gbstem.org',
+      ])
+    })
 
-    // Class 1 Information should appear
+    // Class 1 Information should appear, with the instructor's address
     cy.contains('h2', 'Class 1 Information').should('exist')
-    cy.contains('td', 'Python 1').should('exist')
+    expectCellInColumn(
+      cy.get('[role="dialog"]').contains('tr', 'Demo Instructor'),
+      'Instructor Email',
+      'instructor@gbstem.org',
+    ).should('contain', 'Python 1')
 
     // Drop the class
     // eq(1) is the Drop Class dropdown
