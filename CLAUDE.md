@@ -64,6 +64,10 @@ Changing a role means changing the claim, server-side — `scripts/set-user-role
 
 `firestore.rules` has its own test suite — `yarn test:rules`, needs the emulator — because `yarn test` mocks Firestore and so cannot see rules at all. Any rule you change wants a case for what it grants _and_ what it must still refuse.
 
+## Icons come from Heroicons, not pasted `<svg>`s
+
+Icons are Heroicons, through `@steeze-ui/heroicons` and `@steeze-ui/svelte-icon`: `<Icon src={XMark} class="h-5 w-5" />`, with `theme="mini"` for the 20px solid set. `Icon` renders the `<svg>` inline, so server-rendered pages still carry it in their HTML. `$lib/components/icons/` holds only glyphs Heroicons lacks (`SpinnerIcon`, `PersonIcon`). **Don't paste a new `<svg>` into a page or component** — use a Heroicon, or add a component there when none fits. Keep one glyph per idea: check what the app already uses for a concept before picking an icon for it. Portal follows the same convention.
+
 ## Types
 
 Domain types live in `src/lib/data/types/` plus a global ambient `Data` namespace in `src/data.d.ts` (e.g. `Data.User.Peek`, `Data.Role`) — usable unimported anywhere. `tsconfig.json` sets `strict: true` and `verbatimModuleSyntax: true`, so type-only imports must use `import type`.

@@ -20,6 +20,8 @@
   import { format } from 'date-fns'
   import { kebabCase } from 'lodash-es'
   import type { PageData } from './$types'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { XMark } from '@steeze-ui/heroicons'
 
   interface Props {
     data: PageData
@@ -292,20 +294,7 @@
           {#if registration.values.meta.submitted}
             {format(registration.values.timestamps.updated, 'yyyy.MM.dd p')}
           {:else}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Icon src={XMark} class="h-5 w-5" />
           {/if}
         </td>
 

@@ -18,6 +18,8 @@
   import { tick } from 'svelte'
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { DocumentDuplicate, XCircle } from '@steeze-ui/heroicons'
 
   interface Props {
     open?: boolean
@@ -331,21 +333,7 @@
               copyEmails([studentData.email, studentData.secondaryEmail])}
             class="flex items-center gap-1"
           >
-            <svg
-              fill="#000"
-              height="20"
-              width="20"
-              viewBox="0 0 352.804 352.804"
-            >
-              <g>
-                <path
-                  d="M318.54,57.282h-47.652V15c0-8.284-6.716-15-15-15H34.264c-8.284,0-15,6.716-15,15v265.522c0,8.284,6.716,15,15,15h47.651
-           v42.281c0,8.284,6.716,15,15,15H318.54c8.284,0,15-6.716,15-15V72.282C333.54,63.998,326.824,57.282,318.54,57.282z
-            M49.264,265.522V30h191.623v27.282H96.916c-8.284,0-15,6.716-15,15v193.24H49.264z M303.54,322.804H111.916V87.282H303.54V322.804
-           z"
-                />
-              </g>
-            </svg>
+            <Icon src={DocumentDuplicate} class="h-5 w-5 text-black" />
             <span>Copy Emails</span>
           </Button>
         </div>
@@ -430,20 +418,7 @@
                   </span>
                 {:else}
                   <div class="flex items-center gap-1 text-red-500">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="h-5 w-5"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
+                    <Icon src={XCircle} class="h-5 w-5" />
                     <span>No</span>
                   </div>
                 {/if}

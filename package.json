@@ -75,6 +75,8 @@
   "type": "module",
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
+    "@steeze-ui/heroicons": "^2.4.2",
+    "@steeze-ui/svelte-icon": "^1.6.2",
     "algoliasearch": "^5.57.0",
     "bits-ui": "^2.19.1",
     "clsx": "^2.1.1",

@@ -23,11 +23,11 @@ const config: Config = {
     // `esm-env` dependency) - down-level both so Jest's CJS loader can
     // read them (paired with transformIgnorePatterns below, since
     // node_modules is untransformed by default).
-    'node_modules[/\\\\](svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed)[/\\\\].*\\.js$':
+    'node_modules[/\\\\](svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui)[/\\\\].*\\.js$':
       '<rootDir>/jest-transform-esm-to-cjs.cjs',
   },
   transformIgnorePatterns: [
-    '[/\\\\]node_modules[/\\\\](?!(svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed)[/\\\\])',
+    '[/\\\\]node_modules[/\\\\](?!(svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui)[/\\\\])',
   ],
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
@@ -50,6 +50,9 @@ const config: Config = {
     '^svelte-toolbelt$': '<rootDir>/node_modules/svelte-toolbelt/dist/index.js',
     '^sveltekit-superforms$':
       '<rootDir>/node_modules/sveltekit-superforms/dist/index.js',
+    // Same missing condition for the icon data, which every icon imports.
+    '^@steeze-ui/heroicons$':
+      '<rootDir>/node_modules/@steeze-ui/heroicons/dist/index.js',
     // The zod adapter directly, not `adapters/index.js`. That barrel eagerly
     // imports every validation library superforms supports - effect, typebox,
     // arktype, valibot, joi, yup - each of which drags in its own ESM-only

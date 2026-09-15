@@ -22,6 +22,14 @@
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
   import EditApplicationForm from './forms/EditApplicationForm.svelte'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import {
+    CheckCircle,
+    ExclamationCircle,
+    PlusCircle,
+    XCircle,
+  } from '@steeze-ui/heroicons'
+  import PersonIcon from '$lib/components/icons/PersonIcon.svelte'
 
   interface Props {
     open?: boolean
@@ -217,18 +225,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely yes')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={CheckCircle} theme="mini" class="h-5 w-5" />
                 <span>Likely Yes</span></Button
               >
               <Button
@@ -240,18 +237,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely waitlist')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={ExclamationCircle} theme="mini" class="h-5 w-5" />
                 <span>Likely Waitlist</span></Button
               >
               <Button
@@ -263,18 +249,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely no')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
                 <span>Likely No</span></Button
               >
               <Button
@@ -282,18 +257,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision(null)}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
                 <span>Clear Likely Decision</span></Button
               >
               <Button
@@ -304,15 +268,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('interview')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="16"
-                  width="10"
-                  viewBox="0 0 320 512"
-                  ><path
-                    d="M112 48a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm40 304V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V256.9L59.4 304.5c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h29.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9L232 256.9V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V352H152z"
-                  /></svg
-                >
+                <PersonIcon class="text-black" />
                 <span>Interview</span></Button
               >
               <Button
@@ -323,18 +279,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('accepted')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={CheckCircle} theme="mini" class="h-5 w-5" />
                 <span>Accept</span></Button
               >
               <Button
@@ -344,21 +289,11 @@
                   : 'gray'}
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('substitute')}
-                ><svg
+                ><Icon
+                  src={PlusCircle}
+                  theme="mini"
                   class="h-5 w-5 text-purple-300"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4.243a1 1 0 1 0-2 0V11H7.757a1 1 0 1 0 0 2H11v3.243a1 1 0 1 0 2 0V13h3.243a1 1 0 1 0 0-2H13V7.757Z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                />
                 <span>Substitute</span></Button
               >
               <Button
@@ -369,18 +304,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('waitlisted')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={ExclamationCircle} theme="mini" class="h-5 w-5" />
                 <span>Waitlist</span></Button
               >
 
@@ -392,18 +316,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('rejected')}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
                 <span>Reject</span></Button
               >
             {:else}

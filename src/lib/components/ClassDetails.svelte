@@ -16,6 +16,8 @@
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
   import EditClassForm from './forms/EditClassForm.svelte'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { DocumentDuplicate } from '@steeze-ui/heroicons'
 
   interface Props {
     open?: boolean
@@ -230,26 +232,7 @@
                 )}
               class="flex items-center gap-1"
             >
-              <svg
-                fill="#000000"
-                height="20"
-                width="20"
-                version="1.1"
-                id="Capa_1"
-                xmlns="http://www.w3.org/2000/svg"
-                xmlns:xlink="http://www.w3.org/1999/xlink"
-                viewBox="0 0 352.804 352.804"
-                xml:space="preserve"
-              >
-                <g>
-                  <path
-                    d="M318.54,57.282h-47.652V15c0-8.284-6.716-15-15-15H34.264c-8.284,0-15,6.716-15,15v265.522c0,8.284,6.716,15,15,15h47.651
-           v42.281c0,8.284,6.716,15,15,15H318.54c8.284,0,15-6.716,15-15V72.282C333.54,63.998,326.824,57.282,318.54,57.282z
-            M49.264,265.522V30h191.623v27.282H96.916c-8.284,0-15,6.716-15,15v193.24H49.264z M303.54,322.804H111.916V87.282H303.54V322.804
-           z"
-                  />
-                </g>
-              </svg>
+              <Icon src={DocumentDuplicate} class="h-5 w-5 text-black" />
               <span>Copy Emails</span>
             </Button>
           </div>
