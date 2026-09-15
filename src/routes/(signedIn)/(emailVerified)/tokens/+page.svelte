@@ -11,6 +11,8 @@
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
   import { writeToClipboard } from '$lib/utils'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { Check, Plus, XMark } from '@steeze-ui/heroicons'
 
   interface Props {
     data: PageData
@@ -153,20 +155,7 @@
         onclick={handleCreate}
         disabled={disabled.create}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="h-5 w-5"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 4.5v15m7.5-7.5h-15"
-          />
-        </svg>
+        <Icon src={Plus} class="h-5 w-5" />
       </Button>
     </th>
   {/snippet}
@@ -201,35 +190,9 @@
         <td class="px-6 py-4 capitalize"> {token.values.role} </td>
         <td class="px-6 py-4 capitalize">
           {#if token.values.consumable}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4.5 12.75l6 6 9-13.5"
-              />
-            </svg>
+            <Icon src={Check} class="h-5 w-5" />
           {:else}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Icon src={XMark} class="h-5 w-5" />
           {/if}
         </td>
         <td class="px-6 py-4"> {token.values.consumers.length} </td>

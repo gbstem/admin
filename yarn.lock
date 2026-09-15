@@ -2953,6 +2953,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@steeze-ui/heroicons@npm:^2.4.2":
+  version: 2.4.2
+  resolution: "@steeze-ui/heroicons@npm:2.4.2"
+  checksum: 10c0/cebcdf7b1668b582c8bb605ca163329052eabf6762022acd7370e216c7d6c91004721c5778914654792aff01b38a7c182c24efbd236ba2b12044dee2fe9c00a9
+  languageName: node
+  linkType: hard
+
+"@steeze-ui/svelte-icon@npm:^1.6.2":
+  version: 1.6.2
+  resolution: "@steeze-ui/svelte-icon@npm:1.6.2"
+  peerDependencies:
+    svelte: ^5.0.0
+  checksum: 10c0/1b654a014e0d7240dc53a90cce8b0575cd79be198e892ed42a2e2da34b183c29d3126d5907100243d01cd502222c7dabcd7e4d2f2c0dec553685533d8a762b28
+  languageName: node
+  linkType: hard
+
 "@sveltejs/acorn-typescript@npm:^1.0.10, @sveltejs/acorn-typescript@npm:^1.0.9":
   version: 1.0.11
   resolution: "@sveltejs/acorn-typescript@npm:1.0.11"
@@ -3988,6 +4004,8 @@ __metadata:
     "@eslint/js": "npm:^10.0.1"
     "@firebase/rules-unit-testing": "npm:^5.0.2"
     "@sendgrid/mail": "npm:^8.1.6"
+    "@steeze-ui/heroicons": "npm:^2.4.2"
+    "@steeze-ui/svelte-icon": "npm:^1.6.2"
     "@sveltejs/adapter-vercel": "npm:^6.3.4"
     "@sveltejs/kit": "npm:^2.70.3"
     "@sveltejs/vite-plugin-svelte": "npm:^7.3.0"

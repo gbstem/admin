@@ -9,6 +9,8 @@
   import { actionsState } from '$lib/stores.svelte'
   import Button from './Button.svelte'
   import progress from '$lib/client/progress'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { Bars2, XMark } from '@steeze-ui/heroicons'
 
   interface Props {
     user: Data.User.Peek
@@ -147,35 +149,9 @@
       }}
     >
       {#if open}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="h-8 w-8"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <Icon src={XMark} class="h-8 w-8" />
       {:else}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="h-8 w-8"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M3.75 9h16.5m-16.5 6.75h16.5"
-          />
-        </svg>
+        <Icon src={Bars2} class="h-8 w-8" />
       {/if}
     </button>
   </div>

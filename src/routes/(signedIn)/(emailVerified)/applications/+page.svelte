@@ -19,6 +19,15 @@
   import { generateCSV } from '$lib/utils'
   import { format } from 'date-fns'
   import type { PageData } from './$types'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import {
+    Check,
+    CheckCircle,
+    ExclamationCircle,
+    PlusCircle,
+    XCircle,
+    XMark,
+  } from '@steeze-ui/heroicons'
 
   interface Props {
     data: PageData
@@ -303,44 +312,19 @@
         <td class="px-6 py-4">
           {#if application.values.meta.decision?.likelyDecision}
             {#if application.values.meta.decision?.likelyDecision === 'likely yes'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <Icon
+                src={CheckCircle}
+                theme="mini"
                 class="h-5 w-5 text-green-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {:else if application.values.meta.decision?.likelyDecision === 'likely no'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="h-5 w-5 text-red-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <Icon src={XCircle} theme="mini" class="h-5 w-5 text-red-300" />
             {:else if application.values.meta.decision?.likelyDecision === 'likely waitlist'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <Icon
+                src={ExclamationCircle}
+                theme="mini"
                 class="h-5 w-5 text-yellow-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {/if}
           {:else}
             None
@@ -353,92 +337,37 @@
           {#if application.values.meta.submitted}
             {format(application.values.timestamps.updated, 'yyyy.MM.dd p')}
           {:else}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Icon src={XMark} class="h-5 w-5" />
           {/if}
         </td>
         <td class="px-6 py-4">
           {#if application.values.meta.decision?.type}
             {#if application.values.meta.decision?.type === 'accepted'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <Icon
+                src={CheckCircle}
+                theme="mini"
                 class="h-5 w-5 text-green-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {:else if application.values.meta.decision?.type === 'waitlisted'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <Icon
+                src={ExclamationCircle}
+                theme="mini"
                 class="h-5 w-5 text-yellow-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {:else if application.values.meta.decision.type === 'rejected'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="h-5 w-5 text-red-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <Icon src={XCircle} theme="mini" class="h-5 w-5 text-red-300" />
             {:else if application.values.meta.decision.type === 'interview'}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <Icon
+                src={ExclamationCircle}
+                theme="mini"
                 class="h-5 w-5 text-blue-300"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {:else if application.values.meta.decision.type === 'substitute'}
-              <svg
+              <Icon
+                src={PlusCircle}
+                theme="mini"
                 class="h-5 w-5 text-purple-300"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4.243a1 1 0 1 0-2 0V11H7.757a1 1 0 1 0 0 2H11v3.243a1 1 0 1 0 2 0V13h3.243a1 1 0 1 0 0-2H13V7.757Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              />
             {/if}
           {:else}
             None
@@ -462,35 +391,9 @@
 
         <td class="px-6 py-4">
           {#if application.values.essay.taughtBefore}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4.5 12.75l6 6 9-13.5"
-              />
-            </svg>
+            <Icon src={Check} class="h-5 w-5" />
           {:else}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="h-5 w-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Icon src={XMark} class="h-5 w-5" />
           {/if}
         </td>
       </tr>

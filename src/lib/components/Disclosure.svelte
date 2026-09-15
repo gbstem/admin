@@ -12,6 +12,8 @@
   import { uniqueId } from 'lodash-es'
   import { slide } from 'svelte/transition'
   import { quintOut } from 'svelte/easing'
+  import { Icon } from '@steeze-ui/svelte-icon'
+  import { ChevronDown } from '@steeze-ui/heroicons'
 
   interface Props {
     class?: string
@@ -55,23 +57,13 @@
     <div class="grow text-left font-bold">
       {@render title?.()}
     </div>
-    <svg
+    <Icon
+      src={ChevronDown}
       class={cn(
         'ml-3 h-6 w-6 shrink-0 transition-transform',
         openState && 'rotate-180',
       )}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="1.5"
-      stroke="currentColor"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-      />
-    </svg>
+    />
   </button>
 
   {#if openState}
