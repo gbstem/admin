@@ -278,6 +278,8 @@ import { POST as decisionPOST } from '../src/routes/api/decision/+server'
 import { POST as enrollPOST } from '../src/routes/api/enroll/+server'
 import { POST as remindInstructorPOST } from '../src/routes/api/remindInstructor/+server'
 import { POST as remindStudentsPOST } from '../src/routes/api/remindStudents/+server'
+import { POST as resolveEmailsPOST } from '../src/routes/api/resolveEmails/+server'
+import { EMAIL_LOOKUP_REFUSED } from '$lib/server/emailIntents'
 import { POST as scheduleInterviewPOST } from '../src/routes/api/scheduleInterview/+server'
 
 describe('routes load tests', () => {
@@ -1445,6 +1447,108 @@ describe('API routes POST endpoints', () => {
       } as any),
     ).rejects.toMatchObject({ status: 400 })
     expect(MailService.send).not.toHaveBeenCalled()
+  })
+})
+
+describe('api/resolveEmails', () => {
+  let mockRequest: any
+
+  const adminLocals = {
+    user: { uid: 'admin-uid', email: 'admin@test.com', role: 'admin' },
+  }
+  const lookup = (overrides: Record<string, unknown> = {}) => ({
+    intent: 'classInstructors',
+    uids: ['owner-uid'],
+    context: { classId: 'class-1' },
+    ...overrides,
+  })
+  const post = (locals: any = adminLocals) =>
+    resolveEmailsPOST({ request: mockRequest, locals } as any)
+
+  /** Serves `data` as the current semester's class-1; every other doc is missing. */
+  function mockClass1(data: Record<string, unknown> | undefined) {
+    mockAdminDb.doc.mockImplementation((path: string) => {
+      const found = data !== undefined && path.endsWith('/classes/class-1')
+      return {
+        get: async () => ({
+          exists: found,
+          data: () => (found ? data : undefined),
+        }),
+      }
+    })
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockRequest = { json: jest.fn() }
+    mockClass1({
+      instructorUid: 'owner-uid',
+      otherInstructorUids: ['cohost-uid'],
+    })
+  })
+
+  afterEach(() => {
+    mockAdminDb.doc.mockImplementation((id: string) => mockDoc(id))
+  })
+
+  it.each(['admin', 'reviewer'])(
+    "returns a class's instructors' current addresses to a %s",
+    async (role) => {
+      mockRequest.json.mockResolvedValue(
+        lookup({ uids: ['owner-uid', 'cohost-uid'] }),
+      )
+      mockAdminAuth.getUsers.mockResolvedValueOnce({
+        users: [{ uid: 'owner-uid', email: 'owner@gbstem.org' }],
+      })
+
+      const res: any = await post({ user: { ...adminLocals.user, role } })
+
+      expect(res.body).toEqual({
+        emails: { 'owner-uid': 'owner@gbstem.org', 'cohost-uid': null },
+      })
+    },
+  )
+
+  it.each([
+    [
+      'a uid that is not one of the class instructors',
+      lookup({ uids: ['owner-uid', 'someone-else'] }),
+      undefined,
+      adminLocals,
+    ],
+    ['a class that does not exist', lookup(), null, adminLocals],
+    [
+      'an applicant',
+      lookup(),
+      undefined,
+      { user: { ...adminLocals.user, role: 'applicant' } },
+    ],
+  ])('refuses %s', async (_label, body, classData, locals) => {
+    if (classData === null) mockClass1(undefined)
+    mockRequest.json.mockResolvedValue(body)
+
+    await expect(post(locals)).rejects.toMatchObject({
+      status: 403,
+      message: EMAIL_LOOKUP_REFUSED,
+    })
+    expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
+  })
+
+  it('requires a signed-in caller', async () => {
+    mockRequest.json.mockResolvedValue(lookup())
+
+    await expect(post({ user: null })).rejects.toMatchObject({ status: 401 })
+  })
+
+  it.each([
+    ['an unknown intent', lookup({ intent: 'everyAddress' })],
+    ['no uids', lookup({ uids: [] })],
+    ['a uid longer than Auth allows', lookup({ uids: ['x'.repeat(129)] })],
+  ])('rejects %s at validation', async (_label, body) => {
+    mockRequest.json.mockResolvedValue(body)
+
+    await expect(post()).rejects.toMatchObject({ status: 400 })
+    expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
   })
 })
 

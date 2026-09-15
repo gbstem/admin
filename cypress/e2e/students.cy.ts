@@ -177,6 +177,7 @@ describe('Section F: Students Directory', () => {
       .click({ force: true })
 
     // Click Add Class
+    cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
     cy.contains('button', 'Add Class').click({ force: true })
     cy.waitForNotification('Enrolled in class successfully!')
     cy.verifyEmailSent(
@@ -195,6 +196,12 @@ describe('Section F: Students Directory', () => {
       'Instructor Email',
       'instructor@gbstem.org',
     ).should('contain', 'Python 1')
+    // The seed stores the same address on the class that the instructor's
+    // account has, so the cell alone can't show where it came from: pin that
+    // it was looked up from the uid.
+    cy.wait('@resolveEmails')
+      .its('response.body.emails')
+      .should('deep.equal', { 'instructor-demo-uid': 'instructor@gbstem.org' })
 
     // Drop the class
     // eq(1) is the Drop Class dropdown
