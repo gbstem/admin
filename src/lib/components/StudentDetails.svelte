@@ -62,9 +62,39 @@
   let checkedInAt: any = $state(null)
   let food: Record<string, Record<string, boolean>> = $state({})
 
+  // classId -> the instructor's current address, for the Instructor Email
+  // column. Resolved from the class's instructorUid, never read off the class
+  // document: the stored copy goes stale when the instructor changes their
+  // account email, and `--strip-emails` removes it. A uid that names no
+  // account leaves the cell blank.
+  let instructorEmails: Record<string, string> = $state({})
+
+  async function loadInstructorEmails(studentId: string, classes: ClassData[]) {
+    await Promise.all(
+      classes.map(async ({ id: classId, instructorUid }) => {
+        if (!instructorUid) return
+        try {
+          const email = await studentService.fetchClassInstructorEmail(
+            classId,
+            instructorUid,
+          )
+          // A late reply for a student the dialog has since moved on from.
+          if (id !== studentId) return
+          if (email) instructorEmails[classId] = email
+        } catch (err) {
+          console.error(
+            `Could not resolve the instructor address for class ${classId}:`,
+            err,
+          )
+        }
+      }),
+    )
+  }
+
   // Load student classes and info
   async function loadStudentClasses(studentId: string) {
     checkInLoading = true
+    instructorEmails = {}
     enrolledClasses = []
     unenrolledClasses = []
     attendance = []
@@ -83,6 +113,8 @@
       enrolledClasses = details.enrolledClasses
       unenrolledClasses = details.unenrolledClasses
       attendance = details.attendance
+      // Not awaited: the dialog needn't wait on the address column.
+      void loadInstructorEmails(studentId, details.enrolledClasses)
     } finally {
       checkInLoading = false
     }
@@ -237,7 +269,7 @@
                         {value.instructorLastName}</td
                       >
                       <td class="p-2 whitespace-nowrap"
-                        >{value.instructorEmail}</td
+                        >{instructorEmails[value.id] ?? ''}</td
                       >
                       <td class="p-2 whitespace-nowrap">{value.meetingLink}</td>
                       <td class="p-2 whitespace-nowrap"

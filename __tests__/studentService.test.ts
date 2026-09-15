@@ -43,6 +43,52 @@ describe('studentService (Data Access Layer)', () => {
     global.fetch = jest.fn() as jest.Mock
   })
 
+  describe('fetchClassInstructorEmail', () => {
+    it('asks for the instructor under the class-instructors intent', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ emails: { 'inst-uid': 'inst@example.com' } }),
+      })
+
+      await expect(
+        studentService.fetchClassInstructorEmail('class-1', 'inst-uid'),
+      ).resolves.toBe('inst@example.com')
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/resolveEmails')
+      expect(JSON.parse(init.body)).toEqual({
+        intent: 'classInstructors',
+        uids: ['inst-uid'],
+        context: { classId: 'class-1' },
+      })
+    })
+
+    it('returns null when the uid names no account', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ emails: { 'inst-uid': null } }),
+      })
+
+      await expect(
+        studentService.fetchClassInstructorEmail('class-1', 'inst-uid'),
+      ).resolves.toBeNull()
+    })
+
+    // Must throw rather than return null: null means "no such account", and a
+    // refused or failed lookup must not reach the view looking like one.
+    it("throws the server's message when the lookup is refused", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ message: 'Not allowed' }),
+      })
+
+      await expect(
+        studentService.fetchClassInstructorEmail('class-1', 'inst-uid'),
+      ).rejects.toThrow('Not allowed')
+    })
+  })
+
   describe('fetchStudentFullDetails', () => {
     interface BaseMocksOptions {
       studentExists?: boolean

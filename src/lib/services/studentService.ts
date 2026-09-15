@@ -13,6 +13,7 @@ import {
   parseAttendanceRecords,
   parseStudentProfileData,
 } from '$lib/helpers/studentDetails'
+import { accountEmailService } from '$lib/services/accountEmailService'
 import {
   arrayRemove,
   arrayUnion,
@@ -32,6 +33,24 @@ import { cloneDeep } from 'lodash-es'
  * Service providing Data Access Layer for student details, class enrollment, and attendance.
  */
 export const studentService = {
+  /**
+   * The current address of a class's instructor, for StudentDetails'
+   * Instructor Email column. Null if the uid names no account. Throws if the
+   * request fails, or is refused because the uid isn't one of the class's
+   * instructors.
+   */
+  async fetchClassInstructorEmail(
+    classId: string,
+    instructorUid: string,
+  ): Promise<string | null> {
+    const emails = await accountEmailService.resolveEmails({
+      intent: 'classInstructors',
+      uids: [instructorUid],
+      context: { classId },
+    })
+    return emails[instructorUid] ?? null
+  },
+
   /**
    * Fetches full student details including check-in status, classes, and attendance.
    */
