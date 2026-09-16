@@ -111,16 +111,14 @@ export default defineConfig({
           }
         },
         // Writes an interview slot doc directly, bypassing the app's own
-        // create flow, so a spec can seed a slot with an arbitrary
-        // interviewerEmail/interviewerUid combination - e.g. one belonging to
-        // a different interviewer, or one simulating a slot created before
-        // its owner changed their account's email.
+        // create flow, so a spec can seed a slot belonging to an arbitrary
+        // interviewer. A slot records one as `interviewerUid` and stores no
+        // address, exactly as the app writes it.
         async setInterviewSlot(slot: {
           collectionPath: string
           id: string
           date: string
           interviewerName: string
-          interviewerEmail: string
           interviewerUid?: string
           meetingLink: string
           semester?: string
@@ -138,11 +136,9 @@ export default defineConfig({
               id: slot.id,
               date: Timestamp.fromDate(new Date(slot.date)),
               interviewerName: slot.interviewerName,
-              interviewerEmail: slot.interviewerEmail,
               interviewerUid: slot.interviewerUid ?? '',
               intervieweeFirstName: '',
               intervieweeLastName: '',
-              intervieweeEmail: '',
               intervieweeId: slot.intervieweeId ?? '',
               interviewSlotStatus: slot.intervieweeId ? 'pending' : 'available',
               meetingLink: slot.meetingLink,
@@ -160,7 +156,6 @@ export default defineConfig({
           uid: string
           firstName: string
           lastName: string
-          email: string
           date: string
         }) {
           if (getApps().length === 0) {

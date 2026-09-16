@@ -9,9 +9,14 @@ const mockQuery = {
 const mockCollection = jest.fn()
 const mockSearchIndex = jest.fn()
 
+const mockGetUsers = jest.fn()
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+  },
+  adminAuth: {
+    getUsers: (...args: any[]) => mockGetUsers(...args),
   },
 }))
 
@@ -29,11 +34,13 @@ const storedSubRequest = (overrides: Record<string, unknown> = {}) => ({
   classNumber: 2,
   course: 'Python 1',
   dateOfClass: { toDate: () => new Date('2026-09-30T18:00:00Z') },
-  originalInstructorEmail: 'instructor@gbstem.org',
+  // The addresses the request was stored with, which the rows must ignore:
+  // both instructors have since changed their accounts'.
+  originalInstructorEmail: 'old-instructor@gbstem.org',
   originalInstructorUid: 'instructor-uid',
   subInstructorId: 'sub-uid',
   subInstructorFirstName: 'Patricia',
-  subInstructorEmail: 'sub@gbstem.org',
+  subInstructorEmail: 'old-sub@gbstem.org',
   subRequestStatus: 'SubstituteFound',
   link: 'https://zoom.us/j/123',
   notes: 'Dentist appointment.',
@@ -49,6 +56,12 @@ describe('subRequestService (Data Access Layer)', () => {
     mockQuery.limit.mockReturnValue(mockQuery)
     mockQuery.offset.mockReturnValue(mockQuery)
     mockGet.mockResolvedValue({ docs: [] })
+    mockGetUsers.mockResolvedValue({
+      users: [
+        { uid: 'instructor-uid', email: 'instructor@gbstem.org' },
+        { uid: 'sub-uid', email: 'sub@gbstem.org' },
+      ],
+    })
   })
 
   describe('currentSemesterCutoff', () => {

@@ -129,18 +129,23 @@ describe('Section H: Interview Timeslots Configuration', () => {
       uid: 'app-david',
       firstName: 'David',
       lastName: 'Miller',
-      email: 'applicant1@gmail.com',
       date: requestDate,
     })
     cy.reload()
 
-    // Each request is a row of date, name and address, found by the name.
+    // Each request is a row of date, name and address, found by the name. The
+    // request stores no address: the one shown is what Auth holds for its
+    // uid, fetched through /api/resolveEmails.
+    cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
     cy.contains('h2', 'Interview Time Requests')
       .parent()
       .contains('div', 'David Miller', { timeout: 10000 })
       .find('p')
       .last()
       .should('have.text', 'applicant1@gmail.com')
+    cy.wait('@resolveEmails')
+      .its('response.body.emails')
+      .should('deep.equal', { 'app-david': 'applicant1@gmail.com' })
 
     cy.task('deleteFirestoreDoc', `interviewTimeRequests/${requestId}`)
   })
@@ -224,14 +229,13 @@ describe('Section F: Interview Slot Field Coverage', () => {
             id: docId,
             meetingLink: SLOT_LINK,
             interviewerName: 'Demo Admin',
-            interviewerEmail: 'demo@gbstem.org',
             // Stamped from the signed-in user's Firebase Auth uid on
-            // creation, so "Only include my interviews" keeps matching this
-            // slot even if the interviewer later changes their email.
+            // creation, and the only record of who owns the slot: no address
+            // is written, so "Only include my interviews" keeps matching it
+            // after the interviewer changes their account email.
             interviewerUid: uid,
             intervieweeFirstName: '',
             intervieweeLastName: '',
-            intervieweeEmail: '',
             intervieweeId: '',
             interviewSlotStatus: 'available',
           })
@@ -296,7 +300,6 @@ describe('Section F: Interview Slot Field Coverage', () => {
           id: 'slot-1',
           meetingLink: editedLink,
           interviewerName: 'Demo Admin',
-          interviewerEmail: 'demo@gbstem.org',
           // scripts/seed.ts stamps this - never rendered by the edit card, so
           // this pins that the edit path doesn't drop it, same as the
           // interviewee fields below.
@@ -304,7 +307,6 @@ describe('Section F: Interview Slot Field Coverage', () => {
           // Never rendered by the edit card - these are the fields at risk.
           intervieweeFirstName: 'David',
           intervieweeLastName: 'Miller',
-          intervieweeEmail: 'applicant1@gmail.com',
           intervieweeId: 'app-david',
           interviewSlotStatus: 'available',
         })
@@ -337,7 +339,6 @@ describe('Section H: Interview Slot Ownership Filtering', () => {
       id: 'other-interviewer-slot-16e',
       date: '2028-04-01T09:00',
       interviewerName: 'Other Interviewer',
-      interviewerEmail: 'other-interviewer@gbstem.org',
       interviewerUid: 'other-interviewer-uid',
       meetingLink: otherLink,
       semester: currentSemester,
@@ -359,10 +360,10 @@ describe('Section H: Interview Slot Ownership Filtering', () => {
     // Reproduces the reported production bug: the admin's screencast showed
     // /interviews empty with "Only include my interviews" checked, and her
     // own slot ("Interviewer" showing her name) appeared only once she
-    // unchecked it. That matches a slot created before she changed her
-    // account's email -- its stored interviewerEmail is stale, so the old
-    // pure-email comparison no longer matched her current Firebase Auth
-    // email. Only interviewerUid, stamped once at creation, still does.
+    // unchecked it. That matched a slot created before she changed her
+    // account's email, back when the filter compared addresses. It now
+    // compares interviewerUid, stamped once at creation, and a slot stores no
+    // address that could disagree with it.
     const staleEmailLink = 'https://zoom.us/j/3333333333'
 
     getDemoAdminUid().then((uid: string) => {
@@ -371,7 +372,6 @@ describe('Section H: Interview Slot Ownership Filtering', () => {
         id: 'stale-email-own-slot-16f',
         date: '2028-04-02T09:00',
         interviewerName: 'Demo Admin',
-        interviewerEmail: 'old-demo@gbstem.org',
         interviewerUid: uid,
         meetingLink: staleEmailLink,
         semester: currentSemester,

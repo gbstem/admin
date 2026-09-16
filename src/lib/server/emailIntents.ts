@@ -17,9 +17,8 @@ import { z } from 'zod'
  * the context is defence in depth rather than the gate itself: one stolen
  * reviewer session still can't turn a list of uids into a list of addresses.
  *
- * A policy should grant no more than its view showed back when it read the
- * address straight off a document. See notes/EMAIL_TO_UID_AUDIT.md, Phase 5
- * item 4.
+ * A policy should grant no more than the view it serves showed back when it
+ * read the address straight off a document.
  *
  * To add a use case: add its request shape to `resolveEmailsSchema` and its
  * policy to `policies` (which won't typecheck until both exist), then give the
@@ -35,6 +34,12 @@ import { z } from 'zod'
 const MAX_UIDS = 500
 const uids = z.array(z.string().min(1).max(128)).min(1).max(MAX_UIDS)
 
+/**
+ * A list view asks about the documents it has on screen in one request, so
+ * its context names them all rather than one per round trip.
+ */
+const documentIds = z.array(z.string().min(1)).min(1).max(MAX_UIDS)
+
 export const resolveEmailsSchema = z.discriminatedUnion('intent', [
   // StudentDetails' "Instructor Email" column, one row per enrolled class.
   // TODO: add an optional `semesterId` to the context when a past-semester
@@ -43,6 +48,13 @@ export const resolveEmailsSchema = z.discriminatedUnion('intent', [
     intent: z.literal('classInstructors'),
     uids,
     context: z.object({ classId: z.string().min(1) }),
+  }),
+  // The "Interview Time Requests" list in SetInterviewTimesForm, where an
+  // applicant asks for a slot on a date none of the offered ones covers.
+  z.object({
+    intent: z.literal('slotRequestApplicants'),
+    uids,
+    context: z.object({ requestIds: documentIds }),
   }),
 ])
 
@@ -76,6 +88,28 @@ const policies: { [I in Intent]: IntentPolicy<I> } = {
         classData.instructorUid,
         ...(classData.otherInstructorUids ?? []),
       ].filter((uid): uid is string => Boolean(uid))
+    },
+  },
+  slotRequestApplicants: {
+    roles: ['admin', 'reviewer'],
+    // The applicant who filed each request. The uid is the document's own
+    // `uid` field, or the prefix of its `${uid}-${date}` id on requests
+    // written before that field existed - the same two places
+    // parseSlotRequestDoc reads it from.
+    async resolvableUids(_caller, { requestIds }) {
+      // Not semester-scoped, and named by literal in both repos - there is
+      // no constant for it in $lib/data/collections.
+      const snaps = await adminDb.getAll(
+        ...requestIds.map((id) => adminDb.doc(`interviewTimeRequests/${id}`)),
+      )
+      return snaps
+        .map((snap) => {
+          if (!snap.exists) return ''
+          return (
+            snap.data()?.uid || snap.id.replace(/-\d{4}-\d{2}-\d{2}.*$/, '')
+          )
+        })
+        .filter(Boolean)
     },
   },
 }

@@ -34,7 +34,6 @@
     course: '',
     instructorFirstName: '',
     instructorLastName: '',
-    instructorEmail: '',
     instructorUid: '',
     otherInstructorUids: [],
     classDay1: '',

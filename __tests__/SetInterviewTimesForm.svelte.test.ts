@@ -74,25 +74,22 @@ const futureSlot: Data.InterviewSlot = {
   id: 'slot-1',
   date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   interviewerName: 'Jane Interviewer',
-  interviewerEmail: 'interviewer@example.com',
-  // Fallback to email when uid is missing (e.g. if an account is deleted).
+  // No uid: a slot written before ownership was recorded belongs to nobody,
+  // so only an admin can modify it.
   interviewerUid: '',
   intervieweeFirstName: '',
   intervieweeLastName: '',
-  intervieweeEmail: '',
   intervieweeId: '',
   interviewSlotStatus: 'available',
   meetingLink: 'https://meet.example.com/slot-1',
 }
 
-// Mirrors the production bug: `authUser` created this slot, then changed
-// their account's email. The slot's `interviewerEmail` is still the old
-// address, but `interviewerUid` - stamped at creation and never touched
-// again - still points at them.
-const staleEmailOwnSlot: Data.InterviewSlot = {
+// A slot `authUser` owns. Ownership is the `interviewerUid` stamped at
+// creation; the slot stores no address, so changing their account email
+// cannot cost them their own slot - the production bug this guards against.
+const ownSlot: Data.InterviewSlot = {
   ...futureSlot,
   id: 'slot-2',
-  interviewerEmail: 'old-interviewer@example.com',
   interviewerUid: authUser.object.uid,
   meetingLink: 'https://meet.example.com/slot-2',
 }
@@ -183,13 +180,13 @@ describe('SetInterviewTimesForm Component', () => {
 
   it('renders an existing interview slot belonging to the signed-in user', async () => {
     ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
-      futureSlot,
+      ownSlot,
     ])
     const app = await mountAuthenticated()
 
     await waitFor(() => {
       expect(
-        within(container).getByText(futureSlot.meetingLink),
+        within(container).getByText(ownSlot.meetingLink),
       ).toBeInTheDocument()
     })
     expect(within(container).getByText('available')).toBeInTheDocument()
@@ -212,7 +209,7 @@ describe('SetInterviewTimesForm Component', () => {
 
   it('deletes a timeslot the signed-in user owns', async () => {
     ;(interviewService.fetchInterviewSlots as jest.Mock)
-      .mockResolvedValueOnce([futureSlot])
+      .mockResolvedValueOnce([ownSlot])
       .mockResolvedValue([])
     const app = await mountAuthenticated()
 
@@ -229,16 +226,14 @@ describe('SetInterviewTimesForm Component', () => {
     flushSync()
 
     await waitFor(() => {
-      expect(interviewService.deleteInterviewSlot).toHaveBeenCalledWith(
-        futureSlot,
-      )
+      expect(interviewService.deleteInterviewSlot).toHaveBeenCalledWith(ownSlot)
     })
 
     // The deleted slot's card must actually leave the DOM, not just have
     // triggered the delete call -- this is what a slow/stale refetch would miss.
     await waitFor(() => {
       expect(
-        within(container).queryByText(futureSlot.meetingLink),
+        within(container).queryByText(ownSlot.meetingLink),
       ).not.toBeInTheDocument()
     })
 
@@ -289,13 +284,13 @@ describe('SetInterviewTimesForm Component', () => {
     unmount(app)
   })
 
-  it('still shows an owned slot, with Edit available, after the owner changes email', async () => {
+  it('shows an owned slot under "Only include my interviews", by uid', async () => {
     // Regression test for a production bug: an admin whose account email had
     // changed found her own slot missing under "Only include my interviews"
-    // until she unchecked it. `staleEmailOwnSlot`'s `interviewerEmail` no
-    // longer matches `authUser`, but its `interviewerUid` does.
+    // until she unchecked it. The filter matches `interviewerUid`, and no
+    // address is stored to disagree with it.
     ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
-      staleEmailOwnSlot,
+      ownSlot,
     ])
     const app = await mountAuthenticated(authUser)
 
@@ -303,7 +298,7 @@ describe('SetInterviewTimesForm Component', () => {
     // still surface without unchecking it.
     await waitFor(() => {
       expect(
-        within(container).getByText(staleEmailOwnSlot.meetingLink),
+        within(container).getByText(ownSlot.meetingLink),
       ).toBeInTheDocument()
     })
     expect(within(container).getByText('Edit')).toBeInTheDocument()

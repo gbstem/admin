@@ -400,7 +400,6 @@ describe('studentService (Data Access Layer)', () => {
       id: 'c-1',
       instructorFirstName: 'Jane',
       instructorLastName: 'Doe',
-      instructorEmail: 'jane@example.com',
       instructorUid: 'jane-uid',
       classTime1: '4:00 PM',
       classTime2: '4:00 PM',

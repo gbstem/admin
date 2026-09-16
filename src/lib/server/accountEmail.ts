@@ -9,8 +9,7 @@ import { error } from '@sveltejs/kit'
  * stored one goes stale the moment its owner changes their account email, and
  * one taken from the request lets the caller choose who gets official gbSTEM
  * mail. A uid that names no Auth account, or an account with no email, is a
- * 400: the document behind the request needs fixing, not guessing around. See
- * notes/EMAIL_TO_UID_AUDIT.md section 7, Phase 4.
+ * 400: the document behind the request needs fixing, not guessing around.
  *
  * `who` names the person in the error message ("Interviewer", "Applicant").
  */

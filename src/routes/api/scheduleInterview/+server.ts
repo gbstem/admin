@@ -9,8 +9,7 @@ import { z } from 'zod'
 
 // `applicantUid` is the application document's id. The applicant's current
 // address is resolved from Auth; the one they typed on their application goes
-// stale the moment they change their account email, so it is not accepted -
-// see notes/EMAIL_TO_UID_AUDIT.md section 7, Phase 4.
+// stale the moment they change their account email, so it is not accepted.
 const scheduleInterviewSchema = z.object({
   applicantUid: z.string().min(1, 'Applicant uid is required'),
   name: z.string().min(1, 'Name is required'),

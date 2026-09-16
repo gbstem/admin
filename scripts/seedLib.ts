@@ -240,6 +240,16 @@ export async function seedEmulator(): Promise<void> {
     'Interview Instructor',
     'instructor',
   )
+  // Owns class-scratch. Every production class carries an instructorUid, and
+  // its instructor's address is resolved from that uid, so a seeded class
+  // whose owner has no account would show a blank address in the admin views.
+  await createOrUpdateUser(
+    'instructor-bob-uid',
+    'instructor2@gbstem.org',
+    'penguin',
+    'Bob Jones',
+    'instructor',
+  )
   await createOrUpdateUser(
     'instructor-cohost-uid',
     'cohost@gbstem.org',
@@ -341,13 +351,10 @@ export async function seedEmulator(): Promise<void> {
     classTime1: '16:00',
     classTime2: '16:00',
     course: 'Python 1',
-    instructorEmail: 'instructor@gbstem.org',
-    // Every production class carries an instructorUid - the backfill stamped
-    // the historical ones and new class ids are `${instructorUid}-${n}` - and
-    // firestore.rules now grants class writes on uid alone, having dropped its
-    // instructorEmail fallback. A seeded class without one is therefore not a
-    // shape production has any more, and would leave its own instructor unable
-    // to edit it in the emulator.
+    // A class identifies its instructor by uid alone - firestore.rules grants
+    // class writes on it, and whoever needs an address resolves it from Auth.
+    // A seeded class without one is not a shape production has, and would
+    // leave its own instructor unable to edit it in the emulator.
     instructorUid: 'instructor-demo-uid',
     instructorFirstName: 'Demo',
     instructorLastName: 'Instructor',
@@ -377,7 +384,7 @@ export async function seedEmulator(): Promise<void> {
     classTime1: '17:00',
     classTime2: '17:00',
     course: 'Scratch 1',
-    instructorEmail: 'instructor2@gbstem.org',
+    instructorUid: 'instructor-bob-uid',
     otherInstructorUids: ['instructor-cohost-uid'],
     instructorFirstName: 'Bob',
     instructorLastName: 'Jones',
@@ -1252,11 +1259,11 @@ export async function seedEmulator(): Promise<void> {
       classStatuses = ['EverythingComplete', 'ClassInFuture']
     }
 
-    // Every instructor gets a real Auth account at the stored address. Since
-    // Phase 4 of the uid migration, a notification to an instructor resolves
-    // their address from instructorUid alone, and a uid no account backs
-    // gets no email - so an unbacked uid would make enrolling in, or
-    // reminding, one of these classes fail in e2e.
+    // Every instructor gets a real Auth account. Their address is resolved
+    // from instructorUid wherever one is needed - to notify them, and to show
+    // one in the admin views - so a uid no account backs would make enrolling
+    // in, or reminding, one of these classes fail in e2e, and would leave the
+    // classes page with a blank address column.
     await createOrUpdateUser(
       `instructor-fake-${i}`,
       `instructor-fake-${i}@gbstem.org`,
@@ -1272,7 +1279,6 @@ export async function seedEmulator(): Promise<void> {
       classTime1: '16:00',
       classTime2: '16:00',
       course: course,
-      instructorEmail: `instructor-fake-${i}@gbstem.org`,
       instructorUid: `instructor-fake-${i}`,
       instructorFirstName: firstNames[i % firstNames.length],
       instructorLastName: lastNames[i % lastNames.length],
@@ -1320,6 +1326,18 @@ export async function seedEmulator(): Promise<void> {
   for (let i = 0; i < 30; i++) {
     const id = `sub-req-fake-${i}`
     const status = i % 3 === 0 ? 'open' : i % 3 === 1 ? 'accepted' : 'completed'
+    // A claimed request's substitute is a real account, for the same reason
+    // its instructor is: the admin log shows the address Auth holds for the
+    // uid, so an unbacked one leaves the column blank.
+    if (i % 3 !== 0) {
+      await createOrUpdateUser(
+        `sub-inst-id-${i}`,
+        `sub-${i}@gbstem.org`,
+        'penguin',
+        `${firstNames[(i + 2) % firstNames.length]} ${lastNames[i % lastNames.length]}`,
+        'instructor',
+      )
+    }
     await db
       .collection(subRequestsCollection)
       .doc(id)
@@ -1329,13 +1347,12 @@ export async function seedEmulator(): Promise<void> {
         dateOfClass: admin.firestore.Timestamp.fromDate(
           new Date(newestSubRequestTime - (30 - i) * 24 * 60 * 60 * 1000),
         ),
-        originalInstructorEmail: `instructor-fake-${i}@gbstem.org`,
-        // Claiming a sub request resolves the instructor from this uid alone.
+        // Both instructors are named by uid alone; claiming a request and
+        // the admin log both resolve their addresses from Auth.
         originalInstructorUid: `instructor-fake-${i}`,
         subInstructorId: i % 3 !== 0 ? `sub-inst-id-${i}` : '',
         subInstructorFirstName:
           i % 3 !== 0 ? firstNames[(i + 2) % firstNames.length] : '',
-        subInstructorEmail: i % 3 !== 0 ? `sub-${i}@gbstem.org` : '',
         subRequestStatus: status,
         link: 'https://zoom.us/j/123456789',
         notes: `Dentist appointment fake #${i}.`,
@@ -1356,12 +1373,8 @@ export async function seedEmulator(): Promise<void> {
       interviewerName: 'Demo Admin',
       intervieweeFirstName: 'David',
       intervieweeLastName: 'Miller',
-      intervieweeEmail: 'applicant1@gmail.com',
       intervieweeId: 'app-david',
-      interviewerEmail: 'demo@gbstem.org',
-      // Keyed primarily by uid. Stored email is unreliable because the interviewer
-      // could change it later, so code should avoid using it; it is retained as a
-      // permanent record if an account is deleted, though fallback is rare.
+      // Both people are named by uid alone; a slot stores no address.
       interviewerUid: adminUser.uid,
       interviewSlotStatus: 'available',
       meetingLink: 'https://zoom.us/j/555555555',

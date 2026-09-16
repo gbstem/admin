@@ -351,9 +351,8 @@ Cypress.Commands.add(
 )
 
 // Writes an interview slot doc directly via a Firestore Admin SDK task, so a
-// spec can seed a slot owned by a different interviewer, or one whose
-// interviewerEmail is stale relative to interviewerUid (simulating a slot
-// created before its owner changed their account's email).
+// spec can seed a slot owned by a different interviewer. A slot records its
+// interviewer as `interviewerUid` and stores no address.
 Cypress.Commands.add(
   'setInterviewSlot',
   (slot: {
@@ -361,7 +360,6 @@ Cypress.Commands.add(
     id: string
     date: string
     interviewerName: string
-    interviewerEmail: string
     interviewerUid?: string
     meetingLink: string
     semester?: string

@@ -111,16 +111,52 @@ describe('interviewService (Data Access Layer)', () => {
     })
   })
 
+  describe('fetchSlotRequestEmails', () => {
+    const requests = [
+      { id: 'uid-a-2026-09-30', uid: 'uid-a' },
+      { id: 'uid-b-2026-10-01', uid: 'uid-b' },
+    ] as Data.SlotRequest[]
+
+    it('asks once for every request and keys the addresses by request', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            emails: { 'uid-a': 'a@example.com', 'uid-b': null },
+          }),
+      })
+
+      await expect(
+        interviewService.fetchSlotRequestEmails(requests),
+      ).resolves.toEqual({ 'uid-a-2026-09-30': 'a@example.com' })
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/resolveEmails')
+      expect(JSON.parse(init.body)).toEqual({
+        intent: 'slotRequestApplicants',
+        uids: ['uid-a', 'uid-b'],
+        context: { requestIds: ['uid-a-2026-09-30', 'uid-b-2026-10-01'] },
+      })
+    })
+
+    it('makes no request when none of them records a uid', async () => {
+      await expect(
+        interviewService.fetchSlotRequestEmails([
+          { id: 'legacy' } as Data.SlotRequest,
+        ]),
+      ).resolves.toEqual({})
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+  })
+
   describe('createOrAssignInterviewSlot', () => {
     const slotToAdd = {
       date: '2026-08-01T15:00:00.000Z',
       meetingLink: 'https://zoom.us/1',
       interviewerName: 'Alice',
-      interviewerEmail: 'alice@example.com',
       intervieweeId: 'uid-123',
-      intervieweeEmail: 'student@example.com',
       intervieweeFirstName: 'Timmy',
-    } as Data.InterviewSlot
+    } as unknown as Data.InterviewSlot
 
     it("writes an assigned slot and its applicant's meta.interview in one batch, then emails", async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })

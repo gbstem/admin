@@ -6,7 +6,7 @@
   longer matches the one this tab loaded. Without that signal a tab left open
   across a deploy keeps posting the old request shapes indefinitely, which is
   exactly what forces a migration that changes an API payload to sit behind a
-  multi-week compatibility window - see notes/EMAIL_TO_UID_AUDIT.md section 8.
+  multi-week compatibility window.
 
   Two things happen once the tab is stale. `beforeNavigate` turns the next
   client-side navigation into a full page load, which quietly picks up the new

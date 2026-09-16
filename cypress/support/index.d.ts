@@ -44,10 +44,10 @@ declare namespace Cypress {
       id: string
       date: string
       interviewerName: string
-      interviewerEmail: string
       interviewerUid?: string
       meetingLink: string
       semester?: string
+      intervieweeId?: string
     }): Chainable<any>
     createTestToken(
       id: string,

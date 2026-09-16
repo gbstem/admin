@@ -1,4 +1,5 @@
 import { semesterDates, subRequestsCollection } from '$lib/data/collections'
+import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
 import type { DocumentData, Query } from 'firebase-admin/firestore'
@@ -10,6 +11,12 @@ export interface AdminSubRequest {
   course: string
   /** Null when the record has no usable session date. */
   dateOfClass: Date | null
+  /**
+   * Both addresses are resolved from the uids beside them, and are empty when
+   * there is no uid or its account is gone. Sub request documents store no
+   * address: a stored copy went stale whenever either instructor changed
+   * their account email.
+   */
   originalInstructorEmail: string
   originalInstructorUid: string
   subInstructorId: string
@@ -46,21 +53,39 @@ function toDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toAdminSubRequest(id: string, data: DocumentData): AdminSubRequest {
+function toAdminSubRequest(
+  id: string,
+  data: DocumentData,
+  emails: Map<string, string>,
+): AdminSubRequest {
   return {
     id,
     classNumber: data.classNumber,
     course: data.course,
     dateOfClass: toDate(data.dateOfClass),
-    originalInstructorEmail: data.originalInstructorEmail,
+    originalInstructorEmail: emails.get(data.originalInstructorUid) ?? '',
     originalInstructorUid: data.originalInstructorUid ?? '',
     subInstructorId: data.subInstructorId,
     subInstructorFirstName: data.subInstructorFirstName,
-    subInstructorEmail: data.subInstructorEmail,
+    subInstructorEmail: emails.get(data.subInstructorId) ?? '',
     subRequestStatus: data.subRequestStatus,
     link: data.link,
     notes: data.notes,
   }
+}
+
+/**
+ * The current address of every instructor named on these requests, in one
+ * batched Auth lookup for the page rather than one per row.
+ */
+function resolveInstructorEmails(
+  requests: DocumentData[],
+): Promise<Map<string, string>> {
+  return resolveAccountEmails(
+    requests
+      .flatMap((data) => [data.originalInstructorUid, data.subInstructorId])
+      .filter(Boolean),
+  )
 }
 
 /**
@@ -94,7 +119,14 @@ export const subRequestService = {
       .offset(offset)
       .get()
 
-    return snapshot.docs.map((doc) => toAdminSubRequest(doc.id, doc.data()))
+    const requests = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data(),
+    }))
+    const emails = await resolveInstructorEmails(
+      requests.map(({ data }) => data),
+    )
+    return requests.map(({ id, data }) => toAdminSubRequest(id, data, emails))
   },
 
   /**
@@ -103,6 +135,7 @@ export const subRequestService = {
    */
   async searchSubRequests(query: string): Promise<AdminSubRequest[]> {
     const hits = await searchIndex<DocumentData>(subRequestsCollection, query)
-    return hits.map((hit) => toAdminSubRequest(hit.objectID, hit))
+    const emails = await resolveInstructorEmails(hits)
+    return hits.map((hit) => toAdminSubRequest(hit.objectID, hit, emails))
   },
 }

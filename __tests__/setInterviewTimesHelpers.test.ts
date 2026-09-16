@@ -107,13 +107,8 @@ describe('SetInterviewTimes Helpers', () => {
 
   describe('buildAssignInterviewApiPayload & resetInterviewSlotToAdd', () => {
     test('sends uids and none of the stored addresses', () => {
-      const slot = resetInterviewSlotToAdd(
-        'Jane Doe',
-        'jane@example.com',
-        'interviewer-uid-1',
-      )
+      const slot = resetInterviewSlotToAdd('Jane Doe', 'interviewer-uid-1')
       slot.intervieweeFirstName = 'Alice'
-      slot.intervieweeEmail = 'alice@example.com'
       slot.intervieweeId = 'interviewee-uid-1'
       slot.date = '2026-05-28T10:00'
 
@@ -129,9 +124,8 @@ describe('SetInterviewTimes Helpers', () => {
     })
 
     test('sends empty uids for a slot carrying none, for the server to refuse', () => {
-      const slot = resetInterviewSlotToAdd('Jane Doe', 'jane@example.com', '')
+      const slot = resetInterviewSlotToAdd('Jane Doe', '')
       slot.intervieweeFirstName = 'Alice'
-      slot.intervieweeEmail = 'alice@example.com'
       slot.intervieweeId = ''
       slot.date = '2026-05-28T10:00'
 
@@ -144,46 +138,25 @@ describe('SetInterviewTimes Helpers', () => {
   })
 
   describe('canUserModifySlot', () => {
-    test('allows modification if user is slot owner or admin', () => {
-      const slot = { interviewerEmail: 'owner@example.com', interviewerUid: '' }
-      expect(
-        canUserModifySlot(slot, 'owner@example.com', 'uid-owner', 'reviewer'),
-      ).toBe(true)
-      expect(
-        canUserModifySlot(slot, 'other@example.com', 'uid-other', 'admin'),
-      ).toBe(true)
-      expect(
-        canUserModifySlot(slot, 'other@example.com', 'uid-other', 'reviewer'),
-      ).toBe(false)
+    // The production bug this guards against: the owner changed their
+    // account's email after creating the slot. Ownership is the uid stamped
+    // at creation, so the change is irrelevant - and no address is stored to
+    // go stale in the first place.
+    test('lets the slot owner and any admin modify it, by uid', () => {
+      const slot = { interviewerUid: 'uid-owner' }
+      expect(canUserModifySlot(slot, 'uid-owner', 'reviewer')).toBe(true)
+      expect(canUserModifySlot(slot, 'uid-other', 'admin')).toBe(true)
+      expect(canUserModifySlot(slot, 'uid-other', 'reviewer')).toBe(false)
     })
 
-    test('matches by uid, not stale email, once the slot has a uid on file', () => {
-      // The scenario from the production bug this guards against: the owner
-      // changed their account's email after the slot was created, so
-      // `interviewerEmail` is stale, but `interviewerUid` - a stable Firebase
-      // Auth id - still identifies them.
-      const slot = {
-        interviewerEmail: 'old-owner@example.com',
-        interviewerUid: 'uid-owner',
-      }
-      expect(
-        canUserModifySlot(
-          slot,
-          'new-owner@example.com',
-          'uid-owner',
-          'reviewer',
-        ),
-      ).toBe(true)
-      // A uid on the slot is authoritative - a different person's uid isn't
-      // let in just because their email happens to match the stale one.
-      expect(
-        canUserModifySlot(
-          slot,
-          'old-owner@example.com',
-          'uid-imposter',
-          'reviewer',
-        ),
-      ).toBe(false)
+    // A slot written before `interviewerUid` existed names nobody this can
+    // identify, so only an admin can touch it. It must not fall open to
+    // whoever happens to be signed in.
+    test("treats a slot with no uid as nobody's", () => {
+      const slot = { interviewerUid: '' }
+      expect(canUserModifySlot(slot, 'uid-owner', 'reviewer')).toBe(false)
+      expect(canUserModifySlot(slot, undefined, 'reviewer')).toBe(false)
+      expect(canUserModifySlot(slot, 'uid-owner', 'admin')).toBe(true)
     })
   })
 })

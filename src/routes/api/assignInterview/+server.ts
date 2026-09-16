@@ -9,8 +9,7 @@ import { z } from 'zod'
 
 // Both people are named by uid, and their current addresses are resolved from
 // Auth. The endpoint no longer accepts an address for either, which would let
-// the caller pick the recipient - see notes/EMAIL_TO_UID_AUDIT.md section 7,
-// Phase 4.
+// the caller pick the recipient.
 const assignInterviewSchema = z.object({
   interviewerUid: z.string().min(1, 'Interviewer uid is required'),
   date: z.string().min(1, 'Date is required'),

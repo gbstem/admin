@@ -15,7 +15,7 @@ const enrollSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   instructor: z.string().min(1, 'Instructor name is required'),
   // Resolved to the instructor's current address server-side; there is no
-  // instructor address parameter (notes/EMAIL_TO_UID_AUDIT.md, Phase 4).
+  // instructor address parameter.
   instructorUid: z.string().min(1, 'Instructor uid is required'),
   classTimes: z.array(z.string()).min(1, 'At least one class time is required'),
   classDays: z.array(z.string()).min(1, 'At least one class day is required'),

@@ -303,6 +303,7 @@ interface ClassInput {
 const SEEDED_CLASS_ID = 'class-scratch'
 const SEEDED_CLASS_INSTRUCTOR = 'Bob Jones'
 const SEEDED_CLASS_INSTRUCTOR_EMAIL = 'instructor2@gbstem.org'
+const SEEDED_CLASS_INSTRUCTOR_UID = 'instructor-bob-uid'
 /** Search matches one name field at a time, so a full name matches nothing. */
 const SEEDED_CLASS_SEARCH = 'Bob'
 
@@ -363,8 +364,9 @@ function expectedClassDoc(input: ClassInput) {
     classDay2: input.classDay2,
     classTime2: input.classTime2,
     online: input.online,
-    // None of these are rendered by this form.
-    instructorEmail: SEEDED_CLASS_INSTRUCTOR_EMAIL,
+    // None of these are rendered by this form. The class names its
+    // instructor by uid alone; the page shows the address Auth holds for it.
+    instructorUid: SEEDED_CLASS_INSTRUCTOR_UID,
     instructorFirstName: 'Bob',
     instructorLastName: 'Jones',
     otherInstructorUids: ['instructor-cohost-uid'],

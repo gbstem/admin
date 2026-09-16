@@ -12,10 +12,9 @@ type ClassData = {
   classStatuses: string[]
   instructorFirstName: string
   instructorLastName: string
-  instructorEmail: string
   // The class's owner, and the only way to reach them: rules grant class
   // writes on it and the notification endpoints resolve the instructor's
-  // address from it. instructorEmail is a stored copy kept for display.
+  // address from it; no address is stored on the class.
   instructorUid: string
   otherInstructorUids: string[]
   classCap: number

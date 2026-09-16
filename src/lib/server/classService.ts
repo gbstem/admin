@@ -1,4 +1,5 @@
 import { classesCollection } from '$lib/data/collections'
+import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
 import { formatClassTimes } from '$lib/utils'
@@ -8,6 +9,12 @@ import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 export interface AdminClassRow {
   id: string
   name: string
+  /**
+   * The instructor's current address, resolved from `instructorUid`. Empty
+   * when the class records no uid, or the account it names is gone - no
+   * address is read off the class document, where a stored copy went stale
+   * the moment its owner changed their account email.
+   */
   email: string
   courses: string[]
   students: string[]
@@ -45,7 +52,7 @@ function toClassRow(
     Data.Class,
     | 'instructorFirstName'
     | 'instructorLastName'
-    | 'instructorEmail'
+    | 'instructorUid'
     | 'course'
     | 'students'
     | 'meetingLink'
@@ -55,11 +62,12 @@ function toClassRow(
     | 'classTime1'
     | 'classTime2'
   >,
+  emails: Map<string, string>,
 ): AdminClassRow {
   return {
     id,
     name: `${data.instructorFirstName} ${data.instructorLastName}`,
-    email: data.instructorEmail,
+    email: emails.get(data.instructorUid) ?? '',
     courses: Array.of(data.course),
     students: data.students,
     meetingLink: data.meetingLink,
@@ -94,15 +102,24 @@ export const classService = {
     dbQuery = dbQuery.limit(limit).offset(offset)
 
     const snapshot = await dbQuery.get()
+    const classes = snapshot.docs.map((doc: QueryDocumentSnapshot) => ({
+      id: doc.id,
+      data: doc.data() as Data.Class,
+    }))
 
-    return snapshot.docs.map((doc: QueryDocumentSnapshot) =>
-      toClassRow(doc.id, doc.data() as Data.Class),
+    // One batched Auth lookup for the page, not one per row.
+    const emails = await resolveAccountEmails(
+      classes.map(({ data }) => data.instructorUid).filter(Boolean),
     )
+    return classes.map(({ id, data }) => toClassRow(id, data, emails))
   },
 
   /** Full-text search over classes. */
   async searchClasses(query: string): Promise<AdminClassRow[]> {
     const hits = await searchIndex<ClassSearchHit>(classesCollection, query)
-    return hits.map((hit) => toClassRow(hit.objectID, hit))
+    const emails = await resolveAccountEmails(
+      hits.map((hit) => hit.instructorUid).filter(Boolean),
+    )
+    return hits.map((hit) => toClassRow(hit.objectID, hit, emails))
   },
 }

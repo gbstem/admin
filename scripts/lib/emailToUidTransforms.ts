@@ -20,11 +20,11 @@
  * A stored address and the uid field that replaces it, named from the `Data`
  * schema so the two can't drift apart.
  *
- * When Phase 4 of notes/EMAIL_TO_UID_AUDIT.md deletes an address from its
- * `Data` type, the list naming it stops typechecking (`yarn check` reaches this
- * module through its tests). Widen the type there rather than dropping the
- * pair - e.g. `SchemaField<Data.Class & { instructorEmail?: string }>` -
- * because stored documents keep the address until --strip-emails has run.
+ * The app no longer writes or reads any of these addresses, so the `Data`
+ * types have dropped them and each pair below widens its type to name one -
+ * e.g. `Data.Class & { instructorEmail?: string }`. Keep them: stored
+ * documents carry the address until `--strip-emails` has run here, and this is
+ * the tooling that removes it.
  */
 type SchemaField<T> = {
   readonly email: Extract<keyof T, string>
@@ -40,19 +40,31 @@ export type EmailUidField = { readonly email: string; readonly uid: string }
  */
 export const classEmailFields = [
   { email: 'instructorEmail', uid: 'instructorUid' },
-] as const satisfies readonly SchemaField<Data.Class>[]
+] as const satisfies readonly SchemaField<
+  Data.Class & { instructorEmail?: string }
+>[]
 
 /** The top-level `subRequests` collection. */
 export const subRequestEmailFields = [
   { email: 'originalInstructorEmail', uid: 'originalInstructorUid' },
   { email: 'subInstructorEmail', uid: 'subInstructorId' },
-] as const satisfies readonly SchemaField<Data.SubRequest>[]
+] as const satisfies readonly SchemaField<
+  Data.SubRequest & {
+    originalInstructorEmail?: string
+    subInstructorEmail?: string
+  }
+>[]
 
 /** `semesters/{id}/instructorInterviewTimes`. */
 export const interviewSlotEmailFields = [
   { email: 'interviewerEmail', uid: 'interviewerUid' },
   { email: 'intervieweeEmail', uid: 'intervieweeId' },
-] as const satisfies readonly SchemaField<Data.InterviewSlot>[]
+] as const satisfies readonly SchemaField<
+  Data.InterviewSlot & {
+    interviewerEmail?: string
+    intervieweeEmail?: string
+  }
+>[]
 
 /**
  * The top-level `interviewTimeRequests` collection. `Data.SlotRequest` is
@@ -60,7 +72,9 @@ export const interviewSlotEmailFields = [
  */
 export const slotRequestEmailFields = [
   { email: 'email', uid: 'uid' },
-] as const satisfies readonly SchemaField<Data.SlotRequest>[]
+] as const satisfies readonly SchemaField<
+  Data.SlotRequest & { email?: string }
+>[]
 
 /** A uid found for a document, with anything worth reporting about how. */
 export type Resolution = { uid: string; note?: string } | { reason: string }

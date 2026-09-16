@@ -9,9 +9,14 @@ const mockQuery = {
 const mockCollection = jest.fn()
 const mockSearchIndex = jest.fn()
 
+const mockGetUsers = jest.fn()
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+  },
+  adminAuth: {
+    getUsers: (...args: any[]) => mockGetUsers(...args),
   },
 }))
 
@@ -25,7 +30,10 @@ import { classService } from '$lib/server/classService'
 const storedClass = (overrides: Record<string, unknown> = {}) => ({
   instructorFirstName: 'Grace',
   instructorLastName: 'Hopper',
-  instructorEmail: 'grace@gbstem.org',
+  instructorUid: 'grace-uid',
+  // The address the class was stored with, which the row must ignore: Grace
+  // has since changed her account's to grace@gbstem.org.
+  instructorEmail: 'old-grace@gbstem.org',
   course: 'Python 1',
   students: ['student-1'],
   meetingLink: 'https://zoom.us/j/123',
@@ -46,6 +54,9 @@ describe('classService (server Data Access Layer)', () => {
     mockQuery.limit.mockReturnValue(mockQuery)
     mockQuery.offset.mockReturnValue(mockQuery)
     mockGet.mockResolvedValue({ docs: [] })
+    mockGetUsers.mockResolvedValue({
+      users: [{ uid: 'grace-uid', email: 'grace@gbstem.org' }],
+    })
   })
 
   describe('fetchClasses', () => {
