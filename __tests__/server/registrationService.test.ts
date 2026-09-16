@@ -13,9 +13,14 @@ mockToDateSafe.mockImplementation((ts: any) =>
   ts && typeof ts.toDate === 'function' ? ts.toDate() : ts,
 )
 
+const mockGetUsers = jest.fn()
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+  },
+  adminAuth: {
+    getUsers: (...args: any[]) => mockGetUsers(...args),
   },
   toDateSafe: (...args: any[]) => mockToDateSafe(...args),
 }))
@@ -27,7 +32,11 @@ jest.mock('$lib/server/search', () => ({
 import { registrationService } from '$lib/server/registrationService'
 
 const storedRegistration = (overrides: Record<string, unknown> = {}) => ({
-  personal: { studentFirstName: 'Ada', studentLastName: 'Lovelace' },
+  personal: {
+    studentFirstName: 'Ada',
+    studentLastName: 'Lovelace',
+    email: 'submitted@example.com',
+  },
   academic: { school: 'MIT', grade: '10' },
   program: { inPerson: false },
   inPerson: {},
@@ -48,6 +57,9 @@ describe('registrationService (server Data Access Layer)', () => {
     mockQuery.orderBy.mockReturnValue(mockQuery)
     mockQuery.limit.mockReturnValue(mockQuery)
     mockQuery.offset.mockReturnValue(mockQuery)
+    mockGetUsers.mockImplementation(async (ids: { uid: string }[]) => ({
+      users: ids.map(({ uid }) => ({ uid, email: `${uid}@current.example` })),
+    }))
     mockGet.mockResolvedValue({ docs: [] })
   })
 
@@ -216,6 +228,24 @@ describe('registrationService (server Data Access Layer)', () => {
 
       expect(row.id).toBe('reg-9')
       expect(row.values.personal.studentFirstName).toBe('Ada')
+    })
+
+    // A registration is keyed `${parentUid}-${n}`; the row carries that parent
+    // account's current address and none of the one stored on the
+    // registration, which is only an audit record.
+    it("shows the parent account's current address, not the stored one", async () => {
+      mockSearchIndex.mockResolvedValue([
+        { ...storedRegistration(), objectID: 'parent-uid-2' },
+      ])
+
+      const [row] = await registrationService.searchRegistrations(
+        'Fall26',
+        'Ada',
+      )
+
+      expect(mockGetUsers).toHaveBeenCalledWith([{ uid: 'parent-uid' }])
+      expect(row.email).toBe('parent-uid@current.example')
+      expect(row.values.personal).not.toHaveProperty('email')
     })
 
     it('propagates a failed search so the page can report it', async () => {

@@ -18,9 +18,14 @@ mockToDateSafe.mockImplementation((ts: any) =>
   ts && typeof ts.toDate === 'function' ? ts.toDate() : ts,
 )
 
+const mockGetUsers = jest.fn()
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+  },
+  adminAuth: {
+    getUsers: (...args: any[]) => mockGetUsers(...args),
   },
   toDateSafe: (...args: any[]) => mockToDateSafe(...args),
 }))
@@ -52,6 +57,9 @@ const storedRegistration = (overrides: Record<string, unknown> = {}) => ({
 describe('studentService (server Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGetUsers.mockImplementation(async (ids: { uid: string }[]) => ({
+      users: ids.map(({ uid }) => ({ uid, email: `${uid}@current.example` })),
+    }))
     mockCollection.mockImplementation((collectionName: string) =>
       collectionName === classesCollection ? mockClassesQuery : mockQuery,
     )
@@ -227,5 +235,26 @@ describe('studentService (server Data Access Layer)', () => {
         'search boom',
       )
     })
+  })
+
+  // Same row as the registrations page: the parent account's current
+  // address, never the one stored on the registration.
+  it("shows the parent account's current address, not the stored one", async () => {
+    mockSearchIndex.mockResolvedValue([
+      {
+        ...storedRegistration({
+          personal: {
+            studentFirstName: 'Ada',
+            email: 'submitted@example.com',
+          },
+        }),
+        objectID: 'parent-uid-1',
+      },
+    ])
+
+    const [row] = await studentService.searchStudents('Ada')
+
+    expect(row.email).toBe('parent-uid@current.example')
+    expect(row.values.personal).not.toHaveProperty('email')
   })
 })

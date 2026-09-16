@@ -15,6 +15,7 @@
 //   `instructorInterviewTimesSpring26`, ...) are an unreachable read-only backup
 //   awaiting deletion - no rule matches them - see notes/DEAD_COLLECTION_ANALYSIS.md.
 //   Deleting them is the migration for those.
+import { slotRequestUid } from '../../src/lib/data/docIds'
 
 /**
  * A stored address and the uid field that replaces it, named from the `Data`
@@ -162,7 +163,7 @@ export function decideEmailStrip(
 
 /**
  * The class ID a sub request is for. Sub requests are keyed
- * `${classId}---${classNumber}` (see portal's subRequestClassId), and a class
+ * `${classId}---${classNumber}` (see parseSubRequestDocId in src/lib/data/docIds.ts), and a class
  * ID in turn starts with its owner's uid - see instructorUidFromClassId.
  *
  * Null when the ID has no `---`, rather than portal's whole-ID fallback: then
@@ -182,7 +183,7 @@ export function classIdFromSubRequestId(subRequestId: string): string | null {
  * asks Auth whether it is a real account.
  */
 export function uidFromSlotRequestId(requestId: string): string | null {
-  return requestId.match(/^(.+?)-\d{4}-\d{2}-\d{2}/)?.[1] ?? null
+  return slotRequestUid(requestId)
 }
 
 /**

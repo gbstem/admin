@@ -403,27 +403,17 @@ describe('Zod Validation Schemas', () => {
       expect(result.success).toBe(true)
     })
 
-    it('denies invalid email addresses', () => {
-      const invalidEmails = [
-        'plainaddress',
-        '@missingusername.com',
-        'username@.com',
-        'username@com',
-      ]
-      invalidEmails.forEach((email) => {
-        const result = registrationSchema.safeParse({
-          ...validRegistration,
-          personal: {
-            ...validRegistration.personal,
-            email: email,
-          },
-        })
-        expect(result.success).toBe(false)
-        if (!result.success) {
-          expect(result.error.issues[0].path).toEqual(['personal', 'email'])
-          expect(result.error.issues[0].message).toBe('Invalid email address')
-        }
+    // The address stored on a registration is an audit record of what was
+    // submitted, so the admin form neither shows nor validates one.
+    it('does not carry the parent account address', () => {
+      const result = registrationSchema.safeParse({
+        ...validRegistration,
+        personal: { ...validRegistration.personal, email: 'not-an-address' },
       })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.personal).not.toHaveProperty('email')
+      }
     })
 
     it('denies missing required personal info fields', () => {

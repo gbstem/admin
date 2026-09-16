@@ -2,15 +2,20 @@ import {
   registrationsCollection,
   classesCollection,
 } from '$lib/data/collections'
+import { resolveRegistrationParentEmails } from '$lib/server/accountEmails'
 import { adminDb, toDateSafe } from '$lib/server/firebase'
+import {
+  toRegistrationRow,
+  type AdminRegistrationRow,
+} from '$lib/server/registrationService'
 import { searchIndex } from '$lib/server/search'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
-/** A registration as the admin students page shows it. */
-export interface AdminStudentRow {
-  id: string
-  values: Data.Registration<'pojo'>
-}
+/**
+ * A registration as the admin students page shows it - the same row the
+ * registrations page uses, parent account address included.
+ */
+export type AdminStudentRow = AdminRegistrationRow
 
 export interface FetchStudentsOptions {
   /** `'submitted' | 'enrolled'`; anything else (including null) shows submitted registrations. */
@@ -32,24 +37,6 @@ type StudentSearchHit = Omit<
   timestamps: {
     updated: Date
     created: Date
-  }
-}
-
-function toStudentRow(
-  id: string,
-  data: Data.Registration<'pojo'>,
-): AdminStudentRow {
-  return {
-    id,
-    values: {
-      personal: data.personal,
-      academic: data.academic,
-      program: data.program,
-      inPerson: data.inPerson,
-      agreements: data.agreements,
-      meta: data.meta,
-      timestamps: data.timestamps,
-    },
   }
 }
 
@@ -105,24 +92,31 @@ export const studentService = {
       .offset(offset)
 
     const snapshot = await dbQuery.get()
+    const emails = await resolveRegistrationParentEmails(
+      snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id),
+    )
 
     return snapshot.docs.map((doc: QueryDocumentSnapshot) => {
       const data = doc.data() as Data.Registration<'server'>
-      return toStudentRow(doc.id, {
-        ...data,
-        timestamps: {
-          updated: toDateSafe(
-            data.timestamps.updated,
-            doc.id,
-            'timestamps.updated',
-          ),
-          created: toDateSafe(
-            data.timestamps.created,
-            doc.id,
-            'timestamps.created',
-          ),
+      return toRegistrationRow(
+        doc.id,
+        {
+          ...data,
+          timestamps: {
+            updated: toDateSafe(
+              data.timestamps.updated,
+              doc.id,
+              'timestamps.updated',
+            ),
+            created: toDateSafe(
+              data.timestamps.created,
+              doc.id,
+              'timestamps.created',
+            ),
+          },
         },
-      })
+        emails,
+      )
     })
   },
 
@@ -132,16 +126,23 @@ export const studentService = {
       registrationsCollection,
       query,
     )
+    const emails = await resolveRegistrationParentEmails(
+      hits.map((hit) => hit.objectID),
+    )
     return hits.map((hit) =>
-      toStudentRow(hit.objectID, {
-        personal: hit.personal,
-        academic: hit.academic,
-        program: hit.program,
-        inPerson: hit.inPerson,
-        agreements: hit.agreements,
-        meta: hit.meta,
-        timestamps: hit.timestamps,
-      }),
+      toRegistrationRow(
+        hit.objectID,
+        {
+          personal: hit.personal,
+          academic: hit.academic,
+          program: hit.program,
+          inPerson: hit.inPerson,
+          agreements: hit.agreements,
+          meta: hit.meta,
+          timestamps: hit.timestamps,
+        },
+        emails,
+      ),
     )
   },
 }

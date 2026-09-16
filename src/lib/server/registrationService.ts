@@ -1,4 +1,5 @@
 import { semesterCollectionPath } from '$lib/data/collections'
+import { resolveRegistrationParentEmails } from '$lib/server/accountEmails'
 import { adminDb, toDateSafe } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
@@ -6,7 +7,15 @@ import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 /** A registration as the admin registrations page shows it. */
 export interface AdminRegistrationRow {
   id: string
-  values: Data.Registration<'pojo'>
+  /**
+   * The parent account's current address, resolved from the registration id;
+   * empty if that account is gone. The address stored on the registration is
+   * left out of `values` - it is only an audit record of what was submitted.
+   */
+  email: string
+  values: Omit<Data.Registration<'pojo'>, 'personal'> & {
+    personal: Omit<Data.Registration<'pojo'>['personal'], 'email'>
+  }
 }
 
 export interface FetchRegistrationsOptions {
@@ -31,14 +40,27 @@ type RegistrationSearchHit = Omit<
   }
 }
 
-function toRegistrationRow(
+/**
+ * `personal` without the address stored on the document, which is only an
+ * audit record of what was submitted.
+ */
+function withoutSubmittedAddress<T extends { email: string }>(
+  personal: T | undefined,
+): Omit<T, 'email'> {
+  const { email: _submittedAddress, ...rest } = personal ?? ({} as T)
+  return rest
+}
+
+export function toRegistrationRow(
   id: string,
   data: Data.Registration<'pojo'>,
+  emails: Map<string, string>,
 ): AdminRegistrationRow {
   return {
     id,
+    email: emails.get(id) ?? '',
     values: {
-      personal: data.personal,
+      personal: withoutSubmittedAddress(data.personal),
       academic: data.academic,
       program: data.program,
       inPerson: data.inPerson,
@@ -86,24 +108,31 @@ export const registrationService = {
       .offset(offset)
 
     const snapshot = await dbQuery.get()
+    const emails = await resolveRegistrationParentEmails(
+      snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id),
+    )
 
     return snapshot.docs.map((doc: QueryDocumentSnapshot) => {
       const data = doc.data() as Data.Registration<'server'>
-      return toRegistrationRow(doc.id, {
-        ...data,
-        timestamps: {
-          updated: toDateSafe(
-            data.timestamps.updated,
-            doc.id,
-            'timestamps.updated',
-          ),
-          created: toDateSafe(
-            data.timestamps.created,
-            doc.id,
-            'timestamps.created',
-          ),
+      return toRegistrationRow(
+        doc.id,
+        {
+          ...data,
+          timestamps: {
+            updated: toDateSafe(
+              data.timestamps.updated,
+              doc.id,
+              'timestamps.updated',
+            ),
+            created: toDateSafe(
+              data.timestamps.created,
+              doc.id,
+              'timestamps.created',
+            ),
+          },
         },
-      })
+        emails,
+      )
     })
   },
 
@@ -114,16 +143,23 @@ export const registrationService = {
   ): Promise<AdminRegistrationRow[]> {
     const collectionName = semesterCollectionPath(semesterId, 'registrations')
     const hits = await searchIndex<RegistrationSearchHit>(collectionName, query)
+    const emails = await resolveRegistrationParentEmails(
+      hits.map((hit) => hit.objectID),
+    )
     return hits.map((hit) =>
-      toRegistrationRow(hit.objectID, {
-        personal: hit.personal,
-        academic: hit.academic,
-        program: hit.program,
-        inPerson: hit.inPerson,
-        agreements: hit.agreements,
-        meta: hit.meta,
-        timestamps: hit.timestamps,
-      }),
+      toRegistrationRow(
+        hit.objectID,
+        {
+          personal: hit.personal,
+          academic: hit.academic,
+          program: hit.program,
+          inPerson: hit.inPerson,
+          agreements: hit.agreements,
+          meta: hit.meta,
+          timestamps: hit.timestamps,
+        },
+        emails,
+      ),
     )
   },
 }

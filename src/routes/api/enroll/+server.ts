@@ -2,6 +2,7 @@ import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { renderEmail } from '$lib/emails/render'
 import { formatTime24to12 } from '$lib/utils'
+import { registrationParentUid } from '$lib/data/docIds'
 import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
@@ -9,9 +10,10 @@ import type { RequestHandler } from './$types'
 import { z } from 'zod'
 
 const enrollSchema = z.object({
-  // The student's address stays: students are registered under a parent
-  // account and have no Auth uid of their own to resolve one from.
-  email: z.string().email('Invalid email address'),
+  // The registration to write about, not an address: the family is mailed at
+  // the parent account's current address, resolved from the registration's
+  // id. The address stored on the registration is only an audit record.
+  registrationId: z.string().min(1, 'Registration id is required'),
   firstName: z.string().min(1, 'First name is required'),
   instructor: z.string().min(1, 'Instructor name is required'),
   // Resolved to the instructor's current address server-side; there is no
@@ -32,11 +34,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     verifyAdmin(locals)
     const body = enrollSchema.parse(await request.json())
 
-    const instructorEmail = await resolveAccountEmail(
-      body.instructorUid,
-      'Instructor',
-      '/api/enroll',
-    )
+    const [parentEmail, instructorEmail] = await Promise.all([
+      resolveAccountEmail(
+        registrationParentUid(body.registrationId),
+        'Parent',
+        '/api/enroll',
+      ),
+      resolveAccountEmail(body.instructorUid, 'Instructor', '/api/enroll'),
+    ])
 
     const classes = body.classDays.map(
       (day: string, index: number) =>
@@ -74,7 +79,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     try {
       await sendEmail({
-        to: body.email,
+        to: parentEmail,
         cc: instructorEmail,
         subject: String(template.data.subject),
         html: htmlBody,

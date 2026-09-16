@@ -25,7 +25,10 @@ function registration(
     ...values.personal,
     studentFirstName: 'Sally',
     studentLastName: 'Brown',
+    // Stale on purpose: the form shows the parent account's current address,
+    // resolved from the registration id, and never this one.
     email: 'stored@example.com',
+    secondaryEmail: 'stored-secondary@example.com',
     ...overrides,
   }
   values.academic = { school: 'Riverdale Charter', grade: '3' }
@@ -52,6 +55,10 @@ describe('EditRegistrationForm seeding', () => {
   })
 
   beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ emails: { 'reg-sally': 'current@example.com' } }),
+    }) as jest.Mock
     target = document.createElement('div')
     document.body.appendChild(target)
     props.values = registration()
@@ -67,10 +74,31 @@ describe('EditRegistrationForm seeding', () => {
   })
 
   const emailInput = () =>
-    target.querySelector('input[name="personal.email"]') as HTMLInputElement
+    target.querySelector(
+      'input[name="personal.secondaryEmail"]',
+    ) as HTMLInputElement
 
   it('seeds the form from the initial values', () => {
-    expect(emailInput().value).toBe('stored@example.com')
+    expect(emailInput().value).toBe('stored-secondary@example.com')
+  })
+
+  // The address stored on a registration is only an audit record, so the form
+  // neither shows nor edits it.
+  it("shows the parent account's current address, read-only", async () => {
+    await new Promise(process.nextTick)
+    flushSync()
+
+    expect(
+      target.querySelector('[data-testid="parent-account-email"]')?.textContent,
+    ).toContain('current@example.com')
+    expect(target.textContent).not.toContain('stored@example.com')
+    expect(target.querySelector('input[name="personal.email"]')).toBeNull()
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+    expect(JSON.parse(init.body)).toMatchObject({
+      intent: 'registrationParents',
+      uids: ['reg-sally'],
+      context: { registrationIds: ['reg-sally'] },
+    })
   })
 
   it('does not discard edits when values change without a reseed', () => {
@@ -80,7 +108,9 @@ describe('EditRegistrationForm seeding', () => {
     flushSync()
 
     // ...and the parent's fetch lands a moment later.
-    props.values = registration({ email: 'stored@example.com' })
+    props.values = registration({
+      secondaryEmail: 'stored-secondary@example.com',
+    })
     flushSync()
 
     expect(emailInput().value).toBe('typed@example.com')
@@ -92,7 +122,7 @@ describe('EditRegistrationForm seeding', () => {
     flushSync()
 
     // What the parent does on load-complete and on "Delete changes".
-    props.values = registration({ email: 'reloaded@example.com' })
+    props.values = registration({ secondaryEmail: 'reloaded@example.com' })
     props.seedVersion = props.seedVersion + 1
     flushSync()
 

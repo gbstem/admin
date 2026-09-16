@@ -1,4 +1,5 @@
 import { getInterviewSlotDefaults } from '$lib/components/forms/schemas'
+import { slotRequestUid } from '$lib/data/docIds'
 import { formatDateLocal, toLocalISOString } from '$lib/utils'
 import type {} from '../../data.d.ts'
 import type { AssignInterviewRequestBody } from '../../routes/api/assignInterview/+server'
@@ -35,9 +36,9 @@ export function parseSlotRequestDoc(
   return {
     date: new Date(timestampSeconds * 1000),
     id,
-    // New slot requests will have a UID, but legacy ones may not, and in that case
-    // we parse it out of the ${intervieweeUid}-${dateToAdd} format document ID.
-    uid: data.uid || id.replace(/-\d{4}-\d{2}-\d{2}.*$/, ''),
+    // Requests written before the `uid` field existed only record the
+    // applicant in their id.
+    uid: data.uid || slotRequestUid(id) || '',
     firstName: data.firstName ?? '',
     lastName: data.lastName ?? '',
   }
@@ -80,14 +81,6 @@ export function filterEligibleInterviewees(docs: any[]): {
 
   names.sort((a, b) => a.name.localeCompare(b.name))
   return { names, options }
-}
-
-/**
- * Generates a unique slot ID based on date and user UID.
- */
-export function generateInterviewSlotId(dateISO: string, uid?: string): string {
-  const time = new Date(dateISO).getTime()
-  return `${time}${uid ?? ''}`
 }
 
 /**
@@ -146,7 +139,7 @@ export function canUserModifySlot(
  * Maps an interview slot into superform-compatible values.
  *
  * `id` is deliberately absent: `interviewSlotSchema` doesn't describe it and
- * `generateInterviewSlotId` produces it at write time, so it is carried
+ * `interviewSlotDocId` produces it at write time, so it is carried
  * alongside the form data rather than through it.
  *
  * Same hazard as the other forms' mappers - a schema field missing here shows

@@ -1,8 +1,13 @@
 <script lang="ts">
   import { alert } from '$lib/stores'
   import { invalidate } from '$app/navigation'
-  import { registrationsCollection } from '$lib/data/collections'
+  import {
+    currentSemester,
+    registrationsCollection,
+    semesterIdFromPath,
+  } from '$lib/data/collections'
   import { registrationService } from '$lib/services/registrationService'
+  import { studentService } from '$lib/services/studentService'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { registrationSchema } from './schemas'
@@ -56,6 +61,26 @@
   }: Props = $props()
 
   const schema = registrationSchema
+
+  // The parent account's current address, shown read-only. The registration's
+  // own `personal.email` is an audit record of what was submitted: never shown,
+  // and not editable here.
+  let parentEmail = $state('')
+  $effect(() => {
+    const registrationId = id
+    const semesterId = semesterIdFromPath(collection) ?? currentSemester
+    parentEmail = ''
+    if (!registrationId) return
+    studentService
+      .fetchParentEmails([registrationId], semesterId)
+      .then((emails) => {
+        // A late reply for a registration the dialog has since moved on from.
+        if (id === registrationId) parentEmail = emails[registrationId] ?? ''
+      })
+      .catch((err) =>
+        console.error('Could not resolve the parent address:', err),
+      )
+  })
 
   const formResult = superForm(
     defaults(toFormValues(values) as any, zod(schema as any) as any) as any,
@@ -147,13 +172,13 @@
 
       <div class="grid gap-1 sm:grid-cols-2 sm:gap-3">
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormInput
-            form={formResult}
-            name="personal.email"
-            label="Student email"
-            type="email"
-            bind:value={$form.personal.email}
-          />
+          <span class="text-sm font-medium">Parent account email</span>
+          <div
+            class="rounded-md bg-gray-100 px-3 py-2 shadow-xs"
+            data-testid="parent-account-email"
+          >
+            {parentEmail}
+          </div>
         </div>
 
         <div class="mt-2 flex flex-col gap-1.5">

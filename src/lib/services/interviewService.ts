@@ -1,14 +1,15 @@
 import { db } from '$lib/client/firebase'
+import { interviewSlotDocId } from '$lib/data/docIds'
 import { accountEmailService } from '$lib/services/accountEmailService'
 import {
   applicationsCollection,
+  interviewTimeRequestsCollection,
   interviewTimesCollection,
   withSemester,
 } from '$lib/data/collections'
 import {
   buildAssignInterviewApiPayload,
   filterEligibleInterviewees,
-  generateInterviewSlotId,
   parseInterviewSlotDoc,
   parseSlotRequestDoc,
   sortSlotRequestsByDate,
@@ -52,29 +53,22 @@ export const interviewService = {
    * request id. A request whose applicant account is gone is absent, and the
    * list shows no address - requests store none.
    */
-  async fetchSlotRequestEmails(
+  fetchSlotRequestEmails(
     requests: Data.SlotRequest[],
   ): Promise<Record<string, string>> {
-    const identified = requests.filter((request) => request.uid)
-    if (identified.length === 0) return {}
-
-    const emails = await accountEmailService.resolveEmails({
-      intent: 'slotRequestApplicants',
-      uids: [...new Set(identified.map((request) => request.uid))],
-      context: { requestIds: identified.map((request) => request.id) },
-    })
-
-    const byRequest: Record<string, string> = {}
-    for (const request of identified) {
-      const email = emails[request.uid]
-      if (email) byRequest[request.id] = email
-    }
-    return byRequest
+    return accountEmailService.resolveEmailsByDocument(
+      requests,
+      ({ ids, uids }) => ({
+        intent: 'slotRequestApplicants',
+        uids,
+        context: { requestIds: ids },
+      }),
+    )
   },
 
   async fetchSlotRequests(): Promise<Data.SlotRequest[]> {
     const slotRequests: Data.SlotRequest[] = []
-    const q = query(collection(db, 'interviewTimeRequests'))
+    const q = query(collection(db, interviewTimeRequestsCollection))
     const querySnapshot = await getDocs(q)
     querySnapshot.forEach((docSnap) => {
       const req = parseSlotRequestDoc(docSnap.id, docSnap.data())
@@ -110,7 +104,7 @@ export const interviewService = {
     selectedIntervieweeDocId?: string,
     userUid?: string,
   ): Promise<Data.InterviewSlot> {
-    const slotId = generateInterviewSlotId(slotToAdd.date, userUid)
+    const slotId = interviewSlotDocId(slotToAdd.date, userUid)
     const finalSlot = { ...slotToAdd, id: slotId }
 
     const assigned = Boolean(

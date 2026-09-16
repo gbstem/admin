@@ -20,11 +20,13 @@ import {
   currentSemester,
   decisionsCollection,
   instructorFeedbackCollection,
+  interviewTimeRequestsCollection,
   interviewTimesCollection,
   registrationsCollection,
   subRequestsCollection,
 } from '../src/lib/data/collections'
 import collectionsList from '../src/lib/data/collectionsList.json'
+import { registrationDocId } from '../src/lib/data/docIds'
 import courses from '../src/lib/data/courses.json'
 
 /**
@@ -203,7 +205,7 @@ export async function seedEmulator(): Promise<void> {
     'checkIns',
     'users',
     'instructorClasses',
-    'interviewTimeRequests',
+    interviewTimeRequestsCollection,
     'mail',
     'semesterDates',
   ]
@@ -408,7 +410,29 @@ export async function seedEmulator(): Promise<void> {
   await db.collection(classesCollection).doc('class-scratch').set(classScratch)
 
   // Create Mock Registrations
+  //
+  // A registration is keyed `${parentUid}-${n}`, or plain `${parentUid}` on
+  // older documents, and its family is reached at that parent account's
+  // current address - the address stored on the registration is only an audit
+  // record. So each seeded registration's key names a real account: the named
+  // ones below use the plain form, and the account holds the address they
+  // were stored with.
   console.log(`Seeding mock registrations in "${registrationsCollection}"...`)
+  for (const [parentUid, email, displayName] of [
+    ['reg-charlie', 'parent1@gmail.com', 'Lucy Brown'],
+    ['reg-sally', 'parent2@gmail.com', 'Linus Brown'],
+    ['student1', 'student1@gbstem.org', 'Student One Parent'],
+    ['student2', 'student2@gbstem.org', 'Student Two Parent'],
+    ['student3', 'student3@gbstem.org', 'Student Three Parent'],
+  ]) {
+    await createOrUpdateUser(
+      parentUid,
+      email,
+      'penguin',
+      displayName,
+      'student',
+    )
+  }
   const regCharlie = {
     personal: {
       email: 'parent1@gmail.com',
@@ -811,10 +835,20 @@ export async function seedEmulator(): Promise<void> {
   ]
 
   for (let i = 0; i < 30; i++) {
-    const id = `reg-fake-${i}`
+    // Keyed `${parentUid}-${n}` as in production: the key is the only link
+    // from a registration to the parent account whose address is used.
+    const parentUid = `reg-fake${i}`
+    const id = registrationDocId(parentUid, 1)
     const studentFirstName = firstNames[i % firstNames.length]
     const studentLastName = lastNames[i % lastNames.length]
     const email = `student-${i}@gmail.com`
+    await createOrUpdateUser(
+      parentUid,
+      email,
+      'penguin',
+      `Parent ${studentLastName}`,
+      'student',
+    )
     const isEnrolled = i % 2 === 0 // 15 enrolled, 15 only submitted
     const inPerson = i % 5 === 0 // 6 inPerson = true
     const submitted = i % 7 !== 0 // 26 submitted = true, 4 incomplete/submitted = false

@@ -31,6 +31,7 @@
   let studentID = ''
   let loading = $state(true)
   let studentData: Student = $state({
+    id: '',
     name: '',
     email: '',
     secondaryEmail: '',
@@ -234,7 +235,7 @@
                   sendClassReminder({
                     studentList: [studentData],
                     studentName: studentData.name,
-                    studentEmail: studentData.email,
+                    studentId: studentData.id,
                     instructorName: value.instructorFirstName,
                     instructorUid: value.instructorUid,
                     otherInstructorUids: value.otherInstructorUids ?? [],

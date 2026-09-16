@@ -12,6 +12,7 @@ jest.mock('firebase/firestore', () => ({
 describe('admin classService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn() as jest.Mock
   })
 
   describe('fetchClassData', () => {
@@ -77,6 +78,60 @@ describe('admin classService (Data Access Layer)', () => {
       const list = await classService.fetchStudentList(['s1'])
       expect(list.length).toBe(1)
       expect(list[0].name).toBe('Alice Smith')
+    })
+
+    // `email` is the parent account's current address, resolved from the
+    // registration id in one request for the whole list - never the address
+    // stored on the registration.
+    it("fills each student's email from their parent account", async () => {
+      ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          personal: {
+            studentFirstName: 'alice',
+            studentLastName: 'smith',
+            email: 'stale@example.com',
+          },
+        }),
+      })
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ emails: { 'parent-uid': 'current@example.com' } }),
+      })
+
+      const [student] = await classService.fetchStudentList(['parent-uid-1'])
+
+      expect(student).toMatchObject({
+        id: 'parent-uid-1',
+        email: 'current@example.com',
+      })
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/resolveEmails')
+      expect(JSON.parse(init.body)).toEqual({
+        intent: 'registrationParents',
+        uids: ['parent-uid'],
+        context: { registrationIds: ['parent-uid-1'] },
+      })
+    })
+
+    it('leaves the email empty when the lookup fails', async () => {
+      ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          personal: { studentFirstName: 'a', email: 'stale@example.com' },
+        }),
+      })
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      })
+      jest.spyOn(console, 'error').mockImplementation(() => {})
+
+      const [student] = await classService.fetchStudentList(['parent-uid-1'])
+
+      expect(student.email).toBe('')
     })
 
     it('skips student UIDs whose document does not exist', async () => {

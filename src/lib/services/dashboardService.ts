@@ -4,6 +4,9 @@ import {
   classesCollection,
   registrationsCollection,
 } from '$lib/data/collections'
+import { registrationParentUid } from '$lib/data/docIds'
+import { applicationService } from '$lib/services/applicationService'
+import { studentService } from '$lib/services/studentService'
 import { timestampToDate } from '$lib/utils'
 import {
   collection,
@@ -54,9 +57,22 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   })
 }
 
-function extractEmail(docSnap: any): string | null {
-  const email = docSnap.data().personal?.email
-  return typeof email === 'string' ? email : null
+/**
+ * A lookup for the copy-emails buttons. They are a convenience, so a failed
+ * lookup leaves them empty rather than failing the whole dashboard.
+ */
+function orNoEmails(
+  lookup: Promise<Record<string, string>>,
+): Promise<Record<string, string>> {
+  return lookup.catch((err) => {
+    console.error('Could not resolve dashboard addresses:', err)
+    return {}
+  })
+}
+
+/** The unique addresses among `emails`, in the order the ids gave them. */
+function uniqueEmails(ids: string[], emails: Record<string, string>) {
+  return [...new Set(ids.map((id) => emails[id]).filter(Boolean))]
 }
 
 /**
@@ -92,11 +108,16 @@ export const dashboardService = {
         timeoutMs,
       )
 
-      const appEmails: string[] = []
-      uncompletedApplicationsSnapshot.forEach((docSnap: any) => {
-        const email = extractEmail(docSnap)
-        if (email) appEmails.push(email)
-      })
+      // Each application's current applicant address, not the stored one.
+      const draftApplicationIds = uncompletedApplicationsSnapshot.docs.map(
+        (docSnap: any) => docSnap.id,
+      )
+      const appEmails = uniqueEmails(
+        draftApplicationIds,
+        await orNoEmails(
+          applicationService.fetchApplicantEmails(draftApplicationIds),
+        ),
+      )
 
       const [
         totalApplicationsSnapshot,
@@ -156,34 +177,25 @@ export const dashboardService = {
       timeoutMs,
     )
 
-    // Process submitted registration emails for filtering
-    const submittedRegEmails = new Set<string>()
-    submittedRegistrationsSnapshot.forEach((docSnap: any) => {
-      const email = extractEmail(docSnap)
-      if (email) submittedRegEmails.add(email.trim().toLowerCase())
-    })
+    // Parents with an unfinished registration, less those who have submitted
+    // one for another child - matched by parent account, not by address.
+    const submittedParents = new Set(
+      submittedRegistrationsSnapshot.docs.map((docSnap: any) =>
+        registrationParentUid(docSnap.id),
+      ),
+    )
+    const draftRegistrationIds = uncompletedRegistrationsSnapshot.docs
+      .map((docSnap: any) => docSnap.id as string)
+      .filter((id) => !submittedParents.has(registrationParentUid(id)))
+    const draftApplicationIds = uncompletedApplicationsSnapshot.docs.map(
+      (docSnap: any) => docSnap.id as string,
+    )
 
-    // Process uncompleted registration emails (exclude users with an already submitted registration)
-    const regEmailsSet = new Set<string>()
-    uncompletedRegistrationsSnapshot.forEach((docSnap: any) => {
-      const email = extractEmail(docSnap)
-      if (email) {
-        const clean = email.trim()
-        if (clean && !submittedRegEmails.has(clean.toLowerCase())) {
-          regEmailsSet.add(clean)
-        }
-      }
-    })
-
-    // Process uncompleted application emails
-    const appEmailsSet = new Set<string>()
-    uncompletedApplicationsSnapshot.forEach((docSnap: any) => {
-      const email = extractEmail(docSnap)
-      if (email) {
-        const clean = email.trim()
-        if (clean) appEmailsSet.add(clean)
-      }
-    })
+    // Each account's current address, not the one stored on its document.
+    const [parentEmails, applicantEmails] = await Promise.all([
+      orNoEmails(studentService.fetchParentEmails(draftRegistrationIds)),
+      orNoEmails(applicationService.fetchApplicantEmails(draftApplicationIds)),
+    ])
 
     const [
       totalApplicationsSnapshot,
@@ -233,8 +245,14 @@ export const dashboardService = {
         users: { total: totalUsersSnapshot.data().count },
       },
       classesToday: todayClasses,
-      uncompletedRegistrationsEmails: Array.from(regEmailsSet),
-      uncompletedApplicationsEmails: Array.from(appEmailsSet),
+      uncompletedRegistrationsEmails: uniqueEmails(
+        draftRegistrationIds,
+        parentEmails,
+      ),
+      uncompletedApplicationsEmails: uniqueEmails(
+        draftApplicationIds,
+        applicantEmails,
+      ),
     }
   },
 }

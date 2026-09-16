@@ -472,7 +472,7 @@ describe.each([
 /**
  * `getInterviewSlotDefaults` also carries `id`, which `interviewSlotSchema`
  * does not describe. That is deliberate - the id is generated at write time by
- * `generateInterviewSlotId` - but it means the slot defaults are the one place
+ * `interviewSlotDocId` - but it means the slot defaults are the one place
  * where "not in the schema" is expected rather than a drift signal.
  */
 test('interview slot defaults expose only id beyond the schema', () => {

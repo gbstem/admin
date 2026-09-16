@@ -412,3 +412,28 @@ describe('admin applicationService (Data Access Layer)', () => {
     })
   })
 })
+
+describe('applicationService.fetchApplicantEmails', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn() as jest.Mock
+  })
+
+  // An application's id is its applicant's uid.
+  it('asks for the applicant account behind each application', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({ emails: { 'app-uid': 'applicant@example.com' } }),
+    })
+
+    await expect(
+      applicationService.fetchApplicantEmails(['app-uid']),
+    ).resolves.toEqual({ 'app-uid': 'applicant@example.com' })
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+    expect(JSON.parse(init.body)).toEqual({
+      intent: 'applicants',
+      uids: ['app-uid'],
+      context: { applicationIds: ['app-uid'] },
+    })
+  })
+})

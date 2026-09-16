@@ -5,7 +5,6 @@ import {
   parseSlotRequestDoc,
   sortSlotRequestsByDate,
   filterEligibleInterviewees,
-  generateInterviewSlotId,
   buildAssignInterviewApiPayload,
   resetInterviewSlotToAdd,
   canUserModifySlot,
@@ -94,14 +93,6 @@ describe('SetInterviewTimes Helpers', () => {
       const { names, options } = filterEligibleInterviewees(docs)
       expect(names).toEqual([{ name: 'Alice Zimmerman' }])
       expect(options).toHaveLength(1)
-    })
-  })
-
-  describe('generateInterviewSlotId', () => {
-    test('constructs unique ID combining timestamp and user UID', () => {
-      const id = generateInterviewSlotId('2026-05-28T10:00:00Z', 'user456')
-      expect(id).toContain('user456')
-      expect(typeof id).toBe('string')
     })
   })
 

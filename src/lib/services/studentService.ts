@@ -13,6 +13,7 @@ import {
   parseAttendanceRecords,
   parseStudentProfileData,
 } from '$lib/helpers/studentDetails'
+import { registrationParentUid } from '$lib/data/docIds'
 import { accountEmailService } from '$lib/services/accountEmailService'
 import {
   arrayRemove,
@@ -33,6 +34,25 @@ import { cloneDeep } from 'lodash-es'
  * Service providing Data Access Layer for student details, class enrollment, and attendance.
  */
 export const studentService = {
+  /**
+   * The current address of the parent account behind each registration,
+   * keyed by registration id. A registration whose parent account is gone is
+   * absent.
+   */
+  fetchParentEmails(
+    registrationIds: string[],
+    semesterId?: string,
+  ): Promise<Record<string, string>> {
+    return accountEmailService.resolveEmailsByDocument(
+      registrationIds.map((id) => ({ id, uid: registrationParentUid(id) })),
+      ({ ids, uids }) => ({
+        intent: 'registrationParents',
+        uids,
+        context: { registrationIds: ids, semesterId },
+      }),
+    )
+  },
+
   /**
    * The current address of a class's instructor, for StudentDetails'
    * Instructor Email column. Null if the uid names no account. Throws if the
@@ -85,7 +105,17 @@ export const studentService = {
     if (studentDoc.exists()) {
       const data = studentDoc.data()
       if (data) {
-        studentData = parseStudentProfileData(data)
+        studentData = parseStudentProfileData(studentId, data)
+        studentData.email = await studentService
+          .fetchParentEmails([studentId])
+          .then((emails) => emails[studentId] ?? '')
+          .catch((err) => {
+            console.error(
+              `Could not resolve the parent address for ${studentId}:`,
+              err,
+            )
+            return ''
+          })
       }
     }
 
@@ -145,18 +175,6 @@ export const studentService = {
       unenrolledClasses,
       attendance,
     }
-  },
-
-  /**
-   * Fetches student profile details from registrationsCollection.
-   */
-  async fetchStudentProfile(studentId: string): Promise<Student | null> {
-    const docRef = doc(db, registrationsCollection, studentId)
-    const snap = await getDoc(docRef)
-    if (snap.exists()) {
-      return parseStudentProfileData(snap.data())
-    }
-    return null
   },
 
   /**
@@ -226,7 +244,10 @@ export const studentService = {
     })
     await batch.commit()
 
-    const payload = buildEnrollApiPayload(studentData, selectedClass)
+    const payload = buildEnrollApiPayload(
+      { ...studentData, id: studentId },
+      selectedClass,
+    )
     const res = await fetch('/api/enroll', {
       method: 'POST',
       headers: {

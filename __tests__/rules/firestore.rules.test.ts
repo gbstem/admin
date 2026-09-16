@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   currentSemester,
+  interviewTimeRequestsCollection,
   semesterCollectionPath,
 } from '../../src/lib/data/collections'
 
@@ -1185,7 +1186,11 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
   async function seedRequest(uid: string) {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(
-        doc(context.firestore(), 'interviewTimeRequests', requestId(uid)),
+        doc(
+          context.firestore(),
+          interviewTimeRequestsCollection,
+          requestId(uid),
+        ),
         request(uid),
       )
     })
@@ -1195,7 +1200,7 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     const db = as(UIDS.undecided, 'instructor')
     await assertSucceeds(
       setDoc(
-        doc(db, 'interviewTimeRequests', requestId(UIDS.undecided)),
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
         request(UIDS.undecided),
       ),
     )
@@ -1205,7 +1210,7 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
       setDoc(
-        doc(db, 'interviewTimeRequests', requestId(UIDS.interviewing)),
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.interviewing)),
         request(UIDS.undecided),
       ),
     )
@@ -1215,7 +1220,7 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
       setDoc(
-        doc(db, 'interviewTimeRequests', requestId(UIDS.undecided)),
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
         request(UIDS.interviewing),
       ),
     )
@@ -1226,17 +1231,25 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     await seedRequest(UIDS.interviewing)
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
-      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))),
+      getDoc(
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
+      ),
     )
     await assertFails(
-      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.interviewing))),
+      getDoc(
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.interviewing)),
+      ),
     )
   })
 
   it('refuses an instructor applicant updating or deleting their own request', async () => {
     await seedRequest(UIDS.undecided)
     const db = as(UIDS.undecided, 'instructor')
-    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    const ref = doc(
+      db,
+      interviewTimeRequestsCollection,
+      requestId(UIDS.undecided),
+    )
     await assertFails(
       updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
     )
@@ -1246,7 +1259,11 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
   it('lets an admin read, update and delete requests', async () => {
     await seedRequest(UIDS.undecided)
     const db = as(UIDS.admin, 'admin')
-    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    const ref = doc(
+      db,
+      interviewTimeRequestsCollection,
+      requestId(UIDS.undecided),
+    )
     await assertSucceeds(getDoc(ref))
     await assertSucceeds(
       updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
@@ -1257,7 +1274,11 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
   it('lets a reviewer read, update and delete requests', async () => {
     await seedRequest(UIDS.undecided)
     const db = as(UIDS.reviewer, 'reviewer')
-    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    const ref = doc(
+      db,
+      interviewTimeRequestsCollection,
+      requestId(UIDS.undecided),
+    )
     await assertSucceeds(getDoc(ref))
     await assertSucceeds(
       updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
@@ -1269,14 +1290,20 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     await seedRequest(UIDS.undecided)
     const db = as(UIDS.student, 'student')
     await assertFails(
-      getDoc(doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))),
+      getDoc(
+        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
+      ),
     )
   })
 
   it('refuses an unauthenticated user', async () => {
     await seedRequest(UIDS.undecided)
     const db = testEnv.unauthenticatedContext().firestore()
-    const ref = doc(db, 'interviewTimeRequests', requestId(UIDS.undecided))
+    const ref = doc(
+      db,
+      interviewTimeRequestsCollection,
+      requestId(UIDS.undecided),
+    )
     await assertFails(getDoc(ref))
     await assertFails(setDoc(ref, request(UIDS.undecided)))
   })
