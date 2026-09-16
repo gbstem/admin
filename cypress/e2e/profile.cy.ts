@@ -234,7 +234,6 @@ describe('Section L: Account Deletion Eligibility', () => {
         id: `future-booked-slot-${emailPrefix}`,
         date: '2028-05-01T09:00',
         interviewerName: 'Blocked Reviewer',
-        interviewerEmail: email,
         interviewerUid: uid as string,
         intervieweeId: 'some-applicant-uid',
         meetingLink: 'https://zoom.us/j/1111111111',
@@ -286,7 +285,6 @@ describe('Section L: Account Deletion Eligibility', () => {
         id: slotId,
         date: '2028-05-01T09:00',
         interviewerName: 'Eligible Reviewer',
-        interviewerEmail: email,
         interviewerUid: uid as string,
         meetingLink: 'https://zoom.us/j/2222222222',
       })

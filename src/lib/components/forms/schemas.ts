@@ -170,15 +170,12 @@ export const interviewSlotSchema = z.object({
   date: z.string().min(1, 'Date and time is required'),
   meetingLink: z.string().min(1, 'Meeting link is required'),
   interviewerName: z.string().min(1, 'Interviewer name is required'),
-  interviewerEmail: z.string().email('Invalid interviewer email address'),
-  // Stamped from Auth uid at creation so ownership survives email changes.
-  // Stored email is unreliable because the interviewer could change it later,
-  // so code should avoid using it; it is retained as a permanent record of
-  // the interviewer if an account is deleted, though fallback is rare.
+  // Both people are named by uid alone. A slot stores no address: whoever
+  // needs one resolves it from the uid, so it can't go stale when either
+  // changes their account email.
   interviewerUid: z.string().optional().default(''),
   intervieweeFirstName: z.string().optional().default(''),
   intervieweeLastName: z.string().optional().default(''),
-  intervieweeEmail: z.string().optional().default(''),
   intervieweeId: z.string().optional().default(''),
   interviewSlotStatus: z
     .enum(['available', 'pending', 'confirmed', 'completed', 'canceled'])
@@ -277,18 +274,15 @@ export function getRegistrationFormDefaults() {
 
 export function getInterviewSlotDefaults(
   interviewerName = '',
-  interviewerEmail = '',
   interviewerUid = '',
 ) {
   return {
     id: '',
     date: '',
     interviewerName,
-    interviewerEmail,
     interviewerUid,
     intervieweeFirstName: '',
     intervieweeLastName: '',
-    intervieweeEmail: '',
     intervieweeId: '',
     meetingLink: '',
     interviewSlotStatus: 'available' as const,
@@ -301,7 +295,6 @@ export function getClassDataDefaults() {
     course: '',
     instructorFirstName: '',
     instructorLastName: '',
-    instructorEmail: '',
     instructorUid: '',
     otherInstructorUids: [] as string[],
     classDay1: '',

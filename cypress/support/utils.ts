@@ -20,9 +20,9 @@ export const generateDateHash = (prefix: string): string => {
  *
  * Checking the cell by its column, rather than that the row contains the text
  * somewhere, is what gives an address assertion teeth: a row found by an
- * instructor's name also holds their name, course and link. These pin what
- * each view should show while Phase 5 item 4 of notes/EMAIL_TO_UID_AUDIT.md
- * changes where the address comes from.
+ * instructor's name also holds their name, course and link. Each address a
+ * view shows is resolved from a uid rather than read off a document, so these
+ * pin that the resolution reaches the right column.
  *
  * Headers are matched on `textContent` and case-insensitively, because the
  * admin `Table` uppercases them with CSS.

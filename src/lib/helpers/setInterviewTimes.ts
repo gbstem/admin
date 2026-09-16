@@ -40,7 +40,6 @@ export function parseSlotRequestDoc(
     uid: data.uid || id.replace(/-\d{4}-\d{2}-\d{2}.*$/, ''),
     firstName: data.firstName ?? '',
     lastName: data.lastName ?? '',
-    email: data.email ?? '',
   }
 }
 
@@ -114,43 +113,33 @@ export function buildAssignInterviewApiPayload(
  */
 export function resetInterviewSlotToAdd(
   interviewerName: string = '',
-  interviewerEmail: string = '',
   interviewerUid: string = '',
 ): Data.InterviewSlot {
-  return getInterviewSlotDefaults(
-    interviewerName,
-    interviewerEmail,
-    interviewerUid,
-  )
+  return getInterviewSlotDefaults(interviewerName, interviewerUid)
 }
 
 /**
- * True when `slot` belongs to the signed-in user: matched by uid, falling
- * back to email if uid is missing. Stored email is unreliable because the
- * interviewer could change their email later, so code should avoid using it;
- * it is retained as a permanent record if an account is deleted, though fallback is rare.
+ * True when `slot` belongs to the signed-in user.
+ *
+ * By uid alone: a slot records no address to match on, and one written before
+ * `interviewerUid` existed belongs to nobody this can identify.
  */
 export function isOwnInterviewSlot(
-  slot: Pick<Data.InterviewSlot, 'interviewerEmail' | 'interviewerUid'>,
-  userEmail?: string | null,
+  slot: Pick<Data.InterviewSlot, 'interviewerUid'>,
   userUid?: string | null,
 ): boolean {
-  if (slot.interviewerUid) {
-    return slot.interviewerUid === userUid
-  }
-  return slot.interviewerEmail === userEmail
+  return Boolean(slot.interviewerUid) && slot.interviewerUid === userUid
 }
 
 /**
  * Checks whether a user has permissions to modify a given interview slot.
  */
 export function canUserModifySlot(
-  slot: Pick<Data.InterviewSlot, 'interviewerEmail' | 'interviewerUid'>,
-  userEmail?: string | null,
+  slot: Pick<Data.InterviewSlot, 'interviewerUid'>,
   userUid?: string | null,
   userRole?: string | null,
 ): boolean {
-  return isOwnInterviewSlot(slot, userEmail, userUid) || userRole === 'admin'
+  return isOwnInterviewSlot(slot, userUid) || userRole === 'admin'
 }
 
 /**
@@ -163,23 +152,15 @@ export function canUserModifySlot(
  * Same hazard as the other forms' mappers - a schema field missing here shows
  * the schema's default instead of the stored value, and both slot writes are
  * `setDoc` with no `{ merge: true }`, so that default is then stored.
- *
- * TODO(uid migration, Phase 5 item 4): `interviewerEmail` and
- * `intervieweeEmail` are no longer sent to any endpoint, but they are still
- * saved because the interview views display them. Stop saving them only once
- * those views resolve the addresses from the uids - dropping them first blanks
- * the views. See notes/EMAIL_TO_UID_AUDIT.md.
  */
 export function toInterviewSlotFormValues(slot: Data.InterviewSlot) {
   return {
     date: slot.date || '',
     meetingLink: slot.meetingLink || '',
     interviewerName: slot.interviewerName || '',
-    interviewerEmail: slot.interviewerEmail || '',
     interviewerUid: slot.interviewerUid || '',
     intervieweeFirstName: slot.intervieweeFirstName || '',
     intervieweeLastName: slot.intervieweeLastName || '',
-    intervieweeEmail: slot.intervieweeEmail || '',
     intervieweeId: slot.intervieweeId || '',
     interviewSlotStatus: slot.interviewSlotStatus || ('available' as const),
   }

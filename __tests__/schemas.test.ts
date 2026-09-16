@@ -571,12 +571,13 @@ describe('Zod Validation Schemas', () => {
     it('returns valid initial defaults for InterviewSlot', () => {
       const defaults = getInterviewSlotDefaults(
         'Interviewer Name',
-        'interviewer@example.com',
         'interviewer-uid',
       )
       expect(defaults.interviewerName).toBe('Interviewer Name')
-      expect(defaults.interviewerEmail).toBe('interviewer@example.com')
       expect(defaults.interviewerUid).toBe('interviewer-uid')
+      // A slot identifies both people by uid and stores no address.
+      expect(defaults).not.toHaveProperty('interviewerEmail')
+      expect(defaults).not.toHaveProperty('intervieweeEmail')
       expect(defaults.interviewSlotStatus).toBe('available')
     })
 

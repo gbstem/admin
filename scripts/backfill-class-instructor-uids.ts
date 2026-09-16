@@ -72,10 +72,9 @@
 // class to carry an instructorUid, as an earlier version of this comment
 // claimed: the classes that can't get one are exactly the ones whose
 // instructorEmail is missing or owned by no account, so the fallback granted
-// nobody access to them anyway - notes/EMAIL_TO_UID_AUDIT.md section 9.)
+// nobody access to them anyway.)
 //
-// STRIPPING ADDRESSES (notes/EMAIL_TO_UID_AUDIT.md Phase 5) - again the data
-// has to outlive the code that reads it:
+// STRIPPING ADDRESSES - again the data has to outlive the code that read it:
 //
 //   1. Run phase 1, --dry-run first, and review every UNRESOLVED line: an
 //      address no account owns, so no uid could be stamped for it. Fix what
@@ -396,8 +395,8 @@ async function backfillClasses(semesterId: string) {
       // Not fatal, and not a blocker for retiring the rules clause either:
       // a class only reaches this branch when its instructorEmail is absent
       // or owned by no account, so the clause already granted nobody access
-      // to it. See notes/EMAIL_TO_UID_AUDIT.md section 9. One with an address
-      // was just flagged UNRESOLVED; this reports the ones with none.
+      // to it. One with an address was just flagged UNRESOLVED; this
+      // reports the ones with none.
       result.ownerless += 1
       if (primary.email === null) {
         console.log(`    NO OWNER ${where}: ${primary.unresolved}`)
@@ -508,8 +507,7 @@ async function main() {
       `${totalOwnerless} class(es) could not be given an instructorUid - see the NO OWNER ` +
         `and UNRESOLVED instructorEmail lines above. This did NOT block retiring the rules ` +
         `email fallback: a class lands here only when its instructorEmail is missing or ` +
-        `owned by no account, so the fallback granted nobody access to it. See ` +
-        `notes/EMAIL_TO_UID_AUDIT.md section 9.`,
+        `owned by no account, so the fallback granted nobody access to it.`,
     )
   }
   const unresolved = unresolvedSummary(totals.unresolved, ctx)

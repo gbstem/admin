@@ -81,12 +81,9 @@ declare global {
       interviewerName: string
       intervieweeFirstName: string
       intervieweeLastName: string
-      intervieweeEmail: string
       intervieweeId: string
-      interviewerEmail: string
-      // Keyed primarily by uid. Stored email is unreliable because the interviewer
-      // could change their email later, so code should avoid using it; it is retained
-      // as a permanent record if their account is deleted, though fallback is rare.
+      // The interviewer's account. Their current address is resolved from it
+      // when the slot needs one; no address is stored on the slot.
       interviewerUid: string
       interviewSlotStatus: string
       meetingLink: string
@@ -98,7 +95,6 @@ declare global {
       uid: string
       firstName: string
       lastName: string
-      email: string
     }
 
     type Registration<T extends 'client' | 'server' | 'pojo'> = {
@@ -254,10 +250,9 @@ declare global {
       classTime1: string
       classTime2: string
       course: string
-      instructorEmail: string
-      // Absent on classes written before this field existed - callers must
-      // fall back to instructorEmail rather than treat '' as "no owner". See
-      // firestore.rules's isInstructorOfClass().
+      // Absent on classes written before this field existed. Such a class has
+      // no owner any code can act on: firestore.rules grants class writes on
+      // this alone, and notifications resolve the instructor's address from it.
       instructorUid: string
       otherInstructorUids: string[]
       instructorFirstName: string
@@ -276,11 +271,9 @@ declare global {
       classNumber: number
       course: string
       dateOfClass: Date
-      originalInstructorEmail: string
       originalInstructorUid?: string
       subInstructorId: string
       subInstructorFirstName: string
-      subInstructorEmail: string
       subRequestStatus: SubRequestStatus
       link: string
       notes: string

@@ -425,11 +425,9 @@ describe.each([
       'date',
       'meetingLink',
       'interviewerName',
-      'interviewerEmail',
       'interviewerUid',
       'intervieweeFirstName',
       'intervieweeLastName',
-      'intervieweeEmail',
       'intervieweeId',
       'interviewSlotStatus',
     ],
@@ -437,12 +435,7 @@ describe.each([
     // the interviewer has to supply. Listing them is the point - if a fifth
     // appears, or one of the others stops having a usable default, that is a
     // change worth seeing.
-    expectedInvalidPaths: [
-      'date',
-      'meetingLink',
-      'interviewerName',
-      'interviewerEmail',
-    ],
+    expectedInvalidPaths: ['date', 'meetingLink', 'interviewerName'],
   },
 ])(
   '$label defaults',

@@ -15,7 +15,7 @@
 // unbooked slot has neither, and is left alone.
 //
 // It also covers the top-level `interviewTimeRequests` collection, whose
-// documents gained an explicit `uid` in Phase 2 of notes/EMAIL_TO_UID_AUDIT.md.
+// documents gained an explicit `uid` partway through the uid migration.
 // Older ones carry only `email`, and admin recovers the requester by parsing
 // the `${uid}-${date}` document ID (parseSlotRequestDoc). This stamps that same
 // uid when an account still has it - firestore.rules only lets a client create
@@ -40,8 +40,7 @@
 //   ... --dry-run       Preview counts + a sample, no writes
 //   ... --production    Target production instead of the emulator
 //
-// STRIPPING ADDRESSES (notes/EMAIL_TO_UID_AUDIT.md Phase 5) - the data has to
-// outlive the code that reads it:
+// STRIPPING ADDRESSES - the data has to outlive the code that read it:
 //
 //   1. Run without --strip-emails, --dry-run first, and review every
 //      UNRESOLVED line: an address no account owns, so no uid could be stamped

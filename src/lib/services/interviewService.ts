@@ -1,4 +1,5 @@
 import { db } from '$lib/client/firebase'
+import { accountEmailService } from '$lib/services/accountEmailService'
 import {
   applicationsCollection,
   interviewTimesCollection,
@@ -46,6 +47,31 @@ export const interviewService = {
   /**
    * Fetches all slot requests from Firestore sorted by date.
    */
+  /**
+   * The current addresses of the applicants who filed `requests`, keyed by
+   * request id. A request whose applicant account is gone is absent, and the
+   * list shows no address - requests store none.
+   */
+  async fetchSlotRequestEmails(
+    requests: Data.SlotRequest[],
+  ): Promise<Record<string, string>> {
+    const identified = requests.filter((request) => request.uid)
+    if (identified.length === 0) return {}
+
+    const emails = await accountEmailService.resolveEmails({
+      intent: 'slotRequestApplicants',
+      uids: [...new Set(identified.map((request) => request.uid))],
+      context: { requestIds: identified.map((request) => request.id) },
+    })
+
+    const byRequest: Record<string, string> = {}
+    for (const request of identified) {
+      const email = emails[request.uid]
+      if (email) byRequest[request.id] = email
+    }
+    return byRequest
+  },
+
   async fetchSlotRequests(): Promise<Data.SlotRequest[]> {
     const slotRequests: Data.SlotRequest[] = []
     const q = query(collection(db, 'interviewTimeRequests'))

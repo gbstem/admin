@@ -138,6 +138,21 @@
     return interviewService.fetchSlotRequests()
   }
 
+  // requestId -> the applicant's current address, resolved from the uid on
+  // the request. Requests store no address: a stored copy went stale as soon
+  // as the applicant changed their account email.
+  let slotRequestEmails: Record<string, string> = $state({})
+
+  async function loadSlotRequestEmails() {
+    try {
+      slotRequestEmails = await interviewService.fetchSlotRequestEmails(
+        interviewSlotRequests,
+      )
+    } catch (err) {
+      console.error('Failed to resolve slot request addresses:', err)
+    }
+  }
+
   async function getInterviewees() {
     return interviewService.fetchEligibleInterviewees()
   }
@@ -152,7 +167,7 @@
       )
       if (selectedInterviewee) {
         const {
-          personal: { email, firstName, lastName },
+          personal: { firstName, lastName },
           meta: { uid },
         } = selectedInterviewee
         selectedIntervieweeDocId = (selectedInterviewee as any).docId || ''
@@ -161,7 +176,6 @@
         addFormData.update((current: any) => ({
           ...current,
           intervieweeId: uid,
-          intervieweeEmail: email,
           intervieweeFirstName: firstName,
           intervieweeLastName: lastName,
           interviewSlotStatus: 'pending',
@@ -177,13 +191,13 @@
           currentUser = user
           await refetchSlots()
           interviewSlotRequests = await getTimeRequests()
+          void loadSlotRequestEmails()
           const intervieweeInfo = await getInterviewees()
           intervieweeNames = intervieweeInfo.names
           intervieweeOptions = intervieweeInfo.options
           addFormData.update((current: any) => ({
             ...current,
             interviewerName: currentUser?.object.displayName ?? '',
-            interviewerEmail: currentUser?.object.email ?? '',
             interviewerUid: currentUser?.object.uid ?? '',
           }))
           loadError = null
@@ -198,11 +212,7 @@
   })
 
   function isMyInterview(interview: Data.InterviewSlot): boolean {
-    return isOwnInterviewSlot(
-      interview,
-      currentUser?.object?.email,
-      currentUser?.object?.uid,
-    )
+    return isOwnInterviewSlot(interview, currentUser?.object?.uid)
   }
 
   const addTime = async (formData: any) => {
@@ -236,7 +246,6 @@
 
     interviewSlotToAdd = resetInterviewSlotToAdd(
       currentUser?.object?.displayName ?? '',
-      currentUser?.object?.email ?? '',
       currentUser?.object?.uid ?? '',
     )
     addFormData.set(toInterviewSlotFormValues(interviewSlotToAdd))
@@ -251,7 +260,6 @@
       ...toInterviewSlotFormValues(
         resetInterviewSlotToAdd(
           current.interviewerName,
-          current.interviewerEmail,
           current.interviewerUid,
         ),
       ),
@@ -267,7 +275,6 @@
     if (
       !canUserModifySlot(
         interview,
-        currentUser?.object?.email,
         currentUser?.object?.uid,
         page.data.user?.role,
       )
@@ -292,7 +299,6 @@
     if (
       !canUserModifySlot(
         interview,
-        currentUser?.object?.email,
         currentUser?.object?.uid,
         page.data.user?.role,
       )
@@ -350,7 +356,7 @@
                 >
                   <p>{formatDateLocal(request.date)}</p>
                   <p>{request.firstName} {request.lastName}</p>
-                  <p>{request.email}</p>
+                  <p>{slotRequestEmails[request.id] ?? ''}</p>
                 </div>
               {:else if request.date > new Date(new Date().setDate(new Date().getDate() - 30))}
                 <div
@@ -358,7 +364,7 @@
                 >
                   <p>{formatDateLocal(request.date)}</p>
                   <p>{request.firstName} {request.lastName}</p>
-                  <p>{request.email}</p>
+                  <p>{slotRequestEmails[request.id] ?? ''}</p>
                 </div>
               {/if}
             {/if}
