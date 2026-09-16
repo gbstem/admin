@@ -269,7 +269,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each studentList as student (student.email)}
+                {#each studentList as student (student.id)}
                   <tr
                     style="border-bottom: 1px solid #ccc;"
                     class="whitespace-nowrap"

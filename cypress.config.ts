@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { seedEmulator } from './scripts/seedLib'
+import { interviewTimeRequestsCollection } from './src/lib/data/collections'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -146,7 +147,7 @@ export default defineConfig({
             })
           return null
         },
-        // Writes an `interviewTimeRequests` doc in the shape portal's
+        // Writes a slot request doc in the shape portal's
         // interviewService.requestInterviewSlot writes. A task of its own
         // rather than `mergeFirestoreDoc`, because `date` has to be stored as
         // a Timestamp and task arguments arrive as JSON, which turns a Date
@@ -165,7 +166,7 @@ export default defineConfig({
           }
           const { id, date, ...fields } = request
           await getFirestore()
-            .collection('interviewTimeRequests')
+            .collection(interviewTimeRequestsCollection)
             .doc(id)
             .set({ ...fields, date: Timestamp.fromDate(new Date(date)) })
           return null

@@ -350,7 +350,7 @@ describe('sendClassReminders', () => {
     expect(alert.trigger).toHaveBeenCalledWith('error', 'Some error')
   })
 
-  it('sends to all students if no studentName/studentEmail specified in opts but studentList exists', async () => {
+  it('sends to all students if no studentName/studentId specified in opts but studentList exists', async () => {
     ;(global.confirm as jest.Mock).mockReturnValue(true)
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -359,8 +359,8 @@ describe('sendClassReminders', () => {
 
     sendClassReminder({
       studentList: [
-        { name: 'john doe', email: 'john@test.com' },
-        { name: 'jane smith', email: 'jane@test.com' },
+        { id: 'john-parent-1', name: 'john doe', email: 'john@test.com' },
+        { id: 'jane-parent-1', name: 'jane smith', email: 'jane@test.com' },
       ] as any,
       instructorName: 'test instructor',
       instructorUid: 'inst-uid',
@@ -373,6 +373,16 @@ describe('sendClassReminders', () => {
       'Send class reminder to all students?',
     )
     expect(global.fetch).toHaveBeenCalledTimes(2)
+    // Each reminder names its registration; the server mails the parent
+    // account behind it at that account's current address.
+    const bodies = (global.fetch as jest.Mock).mock.calls.map(([, init]) =>
+      JSON.parse(init.body),
+    )
+    expect(bodies.map((body) => body.registrationId)).toEqual([
+      'john-parent-1',
+      'jane-parent-1',
+    ])
+    expect(bodies[0]).not.toHaveProperty('email')
 
     await new Promise(process.nextTick)
     expect(alert.trigger).toHaveBeenCalledWith(
@@ -389,7 +399,9 @@ describe('sendClassReminders', () => {
     })
 
     sendClassReminder({
-      studentList: [{ name: 'john doe', email: 'john@test.com' }] as any,
+      studentList: [
+        { id: 'john-parent-1', name: 'john doe', email: 'john@test.com' },
+      ] as any,
       instructorName: 'test instructor',
       instructorUid: 'inst-uid',
       otherInstructorUids: [],
@@ -401,7 +413,7 @@ describe('sendClassReminders', () => {
     expect(alert.trigger).toHaveBeenCalledWith('error', 'Failed student')
   })
 
-  it('sends to single student if studentName and studentEmail are specified', async () => {
+  it('sends to single student if studentName and studentId are specified', async () => {
     ;(global.confirm as jest.Mock).mockReturnValue(true)
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -409,9 +421,11 @@ describe('sendClassReminders', () => {
     })
 
     sendClassReminder({
-      studentList: [{ name: 'john doe', email: 'john@test.com' }] as any,
+      studentList: [
+        { id: 'john-parent-1', name: 'john doe', email: 'john@test.com' },
+      ] as any,
       studentName: 'john doe',
-      studentEmail: 'john@test.com',
+      studentId: 'john-parent-1',
       instructorName: 'test instructor',
       instructorUid: 'inst-uid',
       otherInstructorUids: [],
@@ -438,9 +452,11 @@ describe('sendClassReminders', () => {
     })
 
     sendClassReminder({
-      studentList: [{ name: 'john doe', email: 'john@test.com' }] as any,
+      studentList: [
+        { id: 'john-parent-1', name: 'john doe', email: 'john@test.com' },
+      ] as any,
       studentName: 'john doe',
-      studentEmail: 'john@test.com',
+      studentId: 'john-parent-1',
       instructorName: 'test instructor',
       instructorUid: 'inst-uid',
       otherInstructorUids: [],

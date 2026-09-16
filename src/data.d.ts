@@ -99,11 +99,21 @@ declare global {
 
     type Registration<T extends 'client' | 'server' | 'pojo'> = {
       personal: {
+        // The parent account's address as of submission - the account that
+        // registers a student is a parent's, though it holds the `student`
+        // role. Kept only as an audit record of what was submitted. Never read
+        // it: an account's address changes, and the current one is resolved
+        // from the registration's id (see registrationParentUid) wherever it
+        // is needed.
         email: string
         studentFirstName: string
         studentLastName: string
         parentFirstName: string
         parentLastName: string
+        // A second guardian's address, typed on the form. Not backed by a
+        // Firebase Auth account, so nothing keeps it current and it is frozen
+        // at submission - but it is the only way to reach that guardian, so
+        // it is read to reach a student's family.
         secondaryEmail: string
         dateOfBirth: string
         gender: string
@@ -175,6 +185,10 @@ declare global {
 
     type Application<T extends 'client' | 'server' | 'pojo'> = {
       personal: {
+        // The applicant account's address as of submission, kept only as an
+        // audit record of what was submitted. Never read it: an account's
+        // address changes, and the current one is resolved from the
+        // application's id (the applicant's uid) wherever it is needed.
         email: string
         firstName: string
         lastName: string

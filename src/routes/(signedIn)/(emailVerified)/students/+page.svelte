@@ -48,13 +48,9 @@
     data.registrations.map((registration) => {
       const {
         id,
+        email,
         values: {
-          personal: {
-            studentFirstName,
-            studentLastName,
-            email,
-            secondaryEmail,
-          },
+          personal: { studentFirstName, studentLastName, secondaryEmail },
           academic: { school, grade },
           program: {
             csCourse,
@@ -223,7 +219,7 @@
                 : 'Error'}
           {/await}
         </td>
-        <td class="px-6 py-4"> {registration.values.personal.email} </td>
+        <td class="px-6 py-4"> {registration.email} </td>
         <td class="px-6 py-4">
           {registration.values.academic.school}
         </td>

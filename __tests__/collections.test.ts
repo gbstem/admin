@@ -12,6 +12,7 @@ import {
   semesterDates,
   semesterIdFromPath,
   subRequestsCollection,
+  interviewTimeRequestsCollection,
   withSemester,
 } from '../src/lib/data/collections'
 
@@ -47,6 +48,7 @@ describe('collections.ts', () => {
 
   it('leaves non-semesterized collections unchanged', () => {
     expect(subRequestsCollection).toBe('subRequests')
+    expect(interviewTimeRequestsCollection).toBe('interviewTimeRequests')
   })
 
   // semesterDates.json is hand-edited each semester rollover (no more Firestore document -

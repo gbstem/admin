@@ -249,7 +249,10 @@ jest.mock('firebase/storage', () => ({ getStorage: jest.fn() }))
 import { recordNewAccount } from '$lib/server/accountService'
 import { verifyToken } from '$lib/server/firebase'
 import { handle } from '../src/hooks.server'
-import { currentSemester } from '../src/lib/data/collections'
+import {
+  currentSemester,
+  interviewTimeRequestsCollection,
+} from '../src/lib/data/collections'
 import { load as emailVerifiedLayoutLoad } from '../src/routes/(signedIn)/(emailVerified)/+layout.server'
 import { load as announcementsLoad } from '../src/routes/(signedIn)/(emailVerified)/announcements/+page.server'
 import { load as applicationsLoad } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
@@ -997,11 +1000,29 @@ describe('signup load and actions', () => {
   })
 })
 
+/**
+ * Points adminAuth.getUser at `accounts` (uid -> current email); any other uid
+ * names no Auth account. Keyed by uid rather than queued, because a route may
+ * resolve several people at once in either order.
+ */
+function mockAuthUsers(accounts: Record<string, string>) {
+  mockAdminAuth.getUser.mockImplementation(async (uid: string) => {
+    if (!(uid in accounts)) throw new Error('user-not-found')
+    return { uid, email: accounts[uid] }
+  })
+}
+
 describe('API routes POST endpoints', () => {
   let mockRequest: any
 
+  afterEach(() => {
+    // Nothing queued here may reach a later describe block.
+    mockAdminAuth.getUser.mockReset()
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
+    mockAdminAuth.getUser.mockReset()
     mockRequest = {
       json: jest.fn(),
     }
@@ -1301,9 +1322,9 @@ describe('API routes POST endpoints', () => {
   })
 
   it('enrollPOST returns 400 and sends nothing when the instructorUid names no Auth account', async () => {
-    mockAdminAuth.getUser.mockRejectedValueOnce(new Error('user-not-found'))
+    mockAuthUsers({ 'parent-uid': 'parent@test.com' })
     mockRequest.json.mockResolvedValue({
-      email: 'student@test.com',
+      registrationId: 'parent-uid-1',
       firstName: 'StudentFirst',
       instructor: 'InstructorName',
       instructorUid: 'deleted-uid',
@@ -1323,12 +1344,12 @@ describe('API routes POST endpoints', () => {
   })
 
   it('enrollPOST successfully resolves instructor email via instructorUid', async () => {
-    mockAdminAuth.getUser.mockResolvedValueOnce({
-      uid: 'inst-uid-1',
-      email: 'inst-from-uid@test.com',
+    mockAuthUsers({
+      'inst-uid-1': 'inst-from-uid@test.com',
+      'parent-uid': 'parent-current@test.com',
     })
     mockRequest.json.mockResolvedValue({
-      email: 'student@test.com',
+      registrationId: 'parent-uid-1',
       firstName: 'StudentFirst',
       instructor: 'InstructorName',
       instructorUid: 'inst-uid-1',
@@ -1344,9 +1365,57 @@ describe('API routes POST endpoints', () => {
     } as any)
     expect(mockAdminAuth.getUser).toHaveBeenCalledWith('inst-uid-1')
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    // The family is mailed at the parent account behind the registration.
     expect(MailService.send).toHaveBeenCalledWith(
-      expect.objectContaining({ cc: ['inst-from-uid@test.com'] }),
+      expect.objectContaining({
+        to: ['parent-current@test.com'],
+        cc: ['inst-from-uid@test.com'],
+      }),
     )
+  })
+
+  it('enrollPOST refuses a payload that names an address rather than a registration', async () => {
+    mockAuthUsers({ 'inst-uid-1': 'inst@test.com' })
+    mockRequest.json.mockResolvedValue({
+      email: 'anyone@example.com',
+      firstName: 'StudentFirst',
+      instructor: 'InstructorName',
+      instructorUid: 'inst-uid-1',
+      classTimes: ['14:00'],
+      classDays: ['Monday'],
+      course: 'Math',
+      studentName: 'StudentFull',
+      online: true,
+    })
+    await expect(
+      enrollPOST({
+        request: mockRequest as any,
+        locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      } as any),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(MailService.send).not.toHaveBeenCalled()
+  })
+
+  it('enrollPOST returns 400 and sends nothing when the parent account is gone', async () => {
+    mockAuthUsers({ 'inst-uid-1': 'inst@test.com' })
+    mockRequest.json.mockResolvedValue({
+      registrationId: 'deleted-parent-1',
+      firstName: 'StudentFirst',
+      instructor: 'InstructorName',
+      instructorUid: 'inst-uid-1',
+      classTimes: ['14:00'],
+      classDays: ['Monday'],
+      course: 'Math',
+      studentName: 'StudentFull',
+      online: true,
+    })
+    await expect(
+      enrollPOST({
+        request: mockRequest as any,
+        locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      } as any),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(MailService.send).not.toHaveBeenCalled()
   })
 
   it('remindInstructorPOST rejects a legacy payload with an address but no instructorUid', async () => {
@@ -1390,9 +1459,13 @@ describe('API routes POST endpoints', () => {
   })
 
   it('remindStudentsPOST successfully', async () => {
+    mockAuthUsers({ 'parent-uid': 'parent-current@test.com' })
     mockRequest.json.mockResolvedValue({
       name: 'Student',
-      email: 'student@test.com',
+      // A stale address the route must ignore, beside the registration it
+      // actually uses.
+      email: 'stale@test.com',
+      registrationId: 'parent-uid-1',
       instructorName: 'Instructor',
       instructorEmail: 'inst@test.com',
       otherInstructorUids: [],
@@ -1404,6 +1477,9 @@ describe('API routes POST endpoints', () => {
       locals: { user: { email: 'admin@test.com', role: 'admin' } },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(MailService.send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: ['parent-current@test.com'] }),
+    )
   })
 
   it('remindInstructorPOST resolves otherInstructorUids to current emails, dropping a uid with no account', async () => {
@@ -1541,13 +1617,123 @@ describe('api/resolveEmails', () => {
     await expect(post({ user: null })).rejects.toMatchObject({ status: 401 })
   })
 
+  describe('applicants and registrationParents', () => {
+    /** Serves the listed document paths through getAll; others are missing. */
+    function mockExistingDocs(paths: string[]) {
+      mockAdminDb.doc.mockImplementation((path: string) => ({ path }))
+      mockAdminDb.getAll.mockImplementation(
+        async (...refs: { path: string }[]) =>
+          refs.map((ref) => ({
+            id: ref.path.split('/').pop(),
+            exists: paths.includes(ref.path),
+          })),
+      )
+    }
+
+    beforeEach(() => {
+      mockAdminAuth.getUsers.mockImplementation(
+        async (ids: { uid: string }[]) => ({
+          users: ids.map(({ uid }) => ({ uid, email: `${uid}@current.test` })),
+        }),
+      )
+    })
+
+    it("returns an application's applicant, whose uid is its id", async () => {
+      mockExistingDocs([`semesters/${currentSemester}/applications/app-uid`])
+      mockRequest.json.mockResolvedValue({
+        intent: 'applicants',
+        uids: ['app-uid'],
+        context: { applicationIds: ['app-uid'] },
+      })
+
+      const res: any = await post()
+
+      expect(res.body).toEqual({
+        emails: { 'app-uid': 'app-uid@current.test' },
+      })
+    })
+
+    it('returns the parent account behind each registration', async () => {
+      mockExistingDocs([
+        `semesters/${currentSemester}/registrations/parent-uid-1`,
+        `semesters/${currentSemester}/registrations/parent-uid-2`,
+      ])
+      mockRequest.json.mockResolvedValue({
+        intent: 'registrationParents',
+        uids: ['parent-uid'],
+        context: { registrationIds: ['parent-uid-1', 'parent-uid-2'] },
+      })
+
+      const res: any = await post()
+
+      expect(res.body).toEqual({
+        emails: { 'parent-uid': 'parent-uid@current.test' },
+      })
+    })
+
+    // Admin can browse a past semester, and the context says which.
+    it('looks in the semester the context names', async () => {
+      mockExistingDocs(['semesters/Spring26/registrations/parent-uid-1'])
+      mockRequest.json.mockResolvedValue({
+        intent: 'registrationParents',
+        uids: ['parent-uid'],
+        context: { registrationIds: ['parent-uid-1'], semesterId: 'Spring26' },
+      })
+
+      const res: any = await post()
+
+      expect(res.body.emails['parent-uid']).toBe('parent-uid@current.test')
+    })
+
+    it.each([
+      [
+        'a uid that is not the parent of any named registration',
+        {
+          intent: 'registrationParents',
+          uids: ['someone-else'],
+          context: { registrationIds: ['parent-uid-1'] },
+        },
+      ],
+      [
+        'a registration that does not exist',
+        {
+          intent: 'registrationParents',
+          uids: ['ghost-uid'],
+          context: { registrationIds: ['ghost-uid-1'] },
+        },
+      ],
+      [
+        'an application that does not exist',
+        {
+          intent: 'applicants',
+          uids: ['ghost-uid'],
+          context: { applicationIds: ['ghost-uid'] },
+        },
+      ],
+    ])('refuses %s', async (_label, body) => {
+      mockExistingDocs([
+        `semesters/${currentSemester}/registrations/parent-uid-1`,
+      ])
+      mockRequest.json.mockResolvedValue(body)
+
+      await expect(post()).rejects.toMatchObject({
+        status: 403,
+        message: EMAIL_LOOKUP_REFUSED,
+      })
+      expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
+    })
+  })
+
   describe('slotRequestApplicants', () => {
-    /** Serves `requests` by document id from interviewTimeRequests. */
+    /** Serves `requests` by document id from the slot request collection. */
     function mockSlotRequests(requests: Record<string, any>) {
       mockAdminDb.getAll.mockImplementation(
         async (...refs: { path: string }[]) =>
           refs.map((ref) => {
-            const id = ref.path.replace('interviewTimeRequests/', '')
+            const id = ref.path.replace(
+              `${interviewTimeRequestsCollection}/`,
+              '',
+            )
             return {
               id,
               exists: id in requests,

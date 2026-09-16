@@ -146,8 +146,9 @@
     data.applications.map((application: PageData['applications'][number]) => {
       const {
         id,
+        email,
         values: {
-          personal: { firstName, lastName, email },
+          personal: { firstName, lastName },
           academic: { school, graduationYear },
           program: { courses, timeSlots, inPerson },
           essay: { taughtBefore },
@@ -379,7 +380,7 @@
         <td class="px-6 py-4">
           {`${application.values.personal.firstName} ${application.values.personal.lastName}`}
         </td>
-        <td class="px-6 py-4"> {application.values.personal.email} </td>
+        <td class="px-6 py-4"> {application.email} </td>
         <td class="px-6 py-4">
           {application.values.academic.school}
         </td>

@@ -43,6 +43,35 @@ describe('studentService (Data Access Layer)', () => {
     global.fetch = jest.fn() as jest.Mock
   })
 
+  describe('fetchParentEmails', () => {
+    it('asks for the parent account behind each registration', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ emails: { 'parent-uid': 'parent@example.com' } }),
+      })
+
+      await expect(
+        studentService.fetchParentEmails(
+          ['parent-uid-1', 'parent-uid-2'],
+          'Spring26',
+        ),
+      ).resolves.toEqual({
+        'parent-uid-1': 'parent@example.com',
+        'parent-uid-2': 'parent@example.com',
+      })
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(JSON.parse(init.body)).toEqual({
+        intent: 'registrationParents',
+        uids: ['parent-uid'],
+        context: {
+          registrationIds: ['parent-uid-1', 'parent-uid-2'],
+          semesterId: 'Spring26',
+        },
+      })
+    })
+  })
+
   describe('fetchClassInstructorEmail', () => {
     it('asks for the instructor under the class-instructors intent', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -271,46 +300,6 @@ describe('studentService (Data Access Layer)', () => {
     })
   })
 
-  describe('fetchStudentProfile', () => {
-    it('returns student profile if record exists', async () => {
-      const mockData = {
-        personal: {
-          studentFirstName: 'Bobby',
-          studentLastName: 'Tables',
-          email: 'bobby@example.com',
-        },
-        academic: { grade: 6, school: 'Lincoln' },
-      }
-      ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
-        exists: () => true,
-        data: () => mockData,
-      })
-
-      const profile = await studentService.fetchStudentProfile('s-1')
-      expect(profile).not.toBeNull()
-      expect(profile?.name).toBe('Bobby Tables')
-    })
-
-    it('returns null if profile doc does not exist', async () => {
-      ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
-        exists: () => false,
-      })
-
-      const profile = await studentService.fetchStudentProfile('s-1')
-      expect(profile).toBeNull()
-    })
-
-    it('propagates errors from getDoc', async () => {
-      ;(firestore.getDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
-      )
-
-      await expect(studentService.fetchStudentProfile('s-1')).rejects.toThrow(
-        'permission-denied',
-      )
-    })
-  })
-
   describe('fetchStudentCoursesMap', () => {
     it('maps each enrolled student uid to their course names', async () => {
       ;(firestore.getDocs as jest.Mock).mockResolvedValueOnce(
@@ -387,6 +376,7 @@ describe('studentService (Data Access Layer)', () => {
 
   describe('enrollStudent', () => {
     const student: Student = {
+      id: 'stale-id-the-caller-overrides',
       name: 'Bobby Tables',
       email: 'bobby@example.com',
       secondaryEmail: 'parent@example.com',
@@ -428,6 +418,9 @@ describe('studentService (Data Access Layer)', () => {
       const body = JSON.parse(init.body)
       expect(body.instructorUid).toBe('jane-uid')
       expect(body).not.toHaveProperty('instructorEmail')
+      // The registration the caller named, not an address.
+      expect(body.registrationId).toBe('s-1')
+      expect(body).not.toHaveProperty('email')
     })
 
     it('throws if the enrollment email API responds not-ok', async () => {

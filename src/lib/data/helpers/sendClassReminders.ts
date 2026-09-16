@@ -7,7 +7,7 @@ import type Student from '../types/Student'
 /**
  * Send a class reminder email to the student
  * @param studentName The name of the student to send the email to, use "all" if you want to send it ot all of them
- * @param studentEmail The email of the student to send the email to
+ * @param studentId The registration to remind; the server mails its parent account
  * @param instructorName The name of the instructor
  * @param instructorUid The uid of the instructor, resolved to their current email server-side
  * @param otherInstructorUids The uids of other instructors, resolved to current emails server-side
@@ -17,7 +17,7 @@ import type Student from '../types/Student'
 function sendClassReminder(opts: {
   studentList?: Student[]
   studentName?: string
-  studentEmail?: string
+  studentId?: string
   instructorName: string
   instructorUid: string
   otherInstructorUids: string[]
@@ -28,7 +28,7 @@ function sendClassReminder(opts: {
   const {
     studentList,
     studentName,
-    studentEmail,
+    studentId,
     instructorName,
     instructorUid,
     otherInstructorUids,
@@ -71,7 +71,7 @@ function sendClassReminder(opts: {
       })
     }
   } else {
-    if (!studentEmail || !studentEmail) {
+    if (!studentId) {
       const confirmSend = confirm('Send class reminder to all students?')
       if (confirmSend) {
         if (nextMeetingTime === 'No Upcoming Classes') {
@@ -81,7 +81,7 @@ function sendClassReminder(opts: {
         studentList.map((student) => {
           const payload: RemindStudentsRequestBody = {
             name: normalizeCapitals(student.name),
-            email: student.email,
+            registrationId: student.id,
             otherInstructorUids: otherInstructorUids,
             class: className,
             classTime: nextMeetingTime,
@@ -114,7 +114,7 @@ function sendClassReminder(opts: {
         }
         const payload: RemindStudentsRequestBody = {
           name: studentName || '',
-          email: studentEmail || '',
+          registrationId: studentId,
           otherInstructorUids: otherInstructorUids,
           class: className,
           classTime: nextMeetingTime,

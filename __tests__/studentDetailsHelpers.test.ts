@@ -30,7 +30,8 @@ describe('StudentDetails Helpers', () => {
 
   describe('parseStudentProfileData', () => {
     test('returns empty student structure when input is null or missing personal field', () => {
-      const empty = parseStudentProfileData(null)
+      const empty = parseStudentProfileData('parent-uid-1', null)
+      expect(empty.id).toBe('parent-uid-1')
       expect(empty.name).toBe('')
       expect(empty.parentName).toBe('')
     })
@@ -52,10 +53,13 @@ describe('StudentDetails Helpers', () => {
         },
       }
 
-      const profile = parseStudentProfileData(data)
+      const profile = parseStudentProfileData('parent-uid-1', data)
+      // The stored address is left out: callers fill `email` with the parent
+      // account's current address.
       expect(profile).toEqual({
+        id: 'parent-uid-1',
         name: 'Bobby Tables',
-        email: 'bobby@example.com',
+        email: '',
         secondaryEmail: 'parent@example.com',
         phone: '555-1234',
         grade: 6,
@@ -68,6 +72,7 @@ describe('StudentDetails Helpers', () => {
   describe('buildEnrollApiPayload', () => {
     test('constructs API payload for student enrollment', () => {
       const student: Student = {
+        id: 'parent-uid-1',
         name: 'Bobby Tables',
         email: 'bobby@example.com',
         secondaryEmail: 'parent@example.com',
@@ -92,11 +97,10 @@ describe('StudentDetails Helpers', () => {
 
       const payload = buildEnrollApiPayload(student, classSelected as ClassData)
 
-      // The student's own address stays because students are children
-      // registered under a parent account, with no Auth uid to resolve from.
-      // The instructor's is resolved server-side from instructorUid.
+      // No addresses: the server resolves the parent account's from the
+      // registration id, and the instructor's from instructorUid.
       expect(payload).toEqual({
-        email: 'bobby@example.com',
+        registrationId: 'parent-uid-1',
         firstName: 'Sarah',
         instructor: 'Jane Doe',
         instructorUid: 'inst-123',
@@ -111,6 +115,7 @@ describe('StudentDetails Helpers', () => {
 
     test('sends an empty instructorUid for a class with none, for the server to refuse', () => {
       const student: Student = {
+        id: 'parent-uid-1',
         name: 'Bobby Tables',
         email: 'bobby@example.com',
         secondaryEmail: '',

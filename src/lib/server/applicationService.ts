@@ -1,4 +1,5 @@
 import { semesterCollectionPath } from '$lib/data/collections'
+import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb, toDateSafe } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
 import type {
@@ -17,8 +18,15 @@ export interface AdminDecision {
 /** An application as the admin applications page shows it. */
 export interface AdminApplicationRow {
   id: string
+  /**
+   * The applicant account's current address, resolved from the application
+   * id (the applicant's uid); empty if that account is gone. The address
+   * stored on the application is left out of `values` - it is only an audit
+   * record of what was submitted.
+   */
+  email: string
   values: {
-    personal: Data.Application<'pojo'>['personal']
+    personal: Omit<Data.Application<'pojo'>['personal'], 'email'>
     academic: Data.Application<'pojo'>['academic']
     program: Data.Application<'pojo'>['program']
     essay: Data.Application<'pojo'>['essay']
@@ -53,17 +61,31 @@ type ApplicationSearchHit = Omit<
   }
 }
 
+/**
+ * `personal` without the address stored on the document, which is only an
+ * audit record of what was submitted.
+ */
+function withoutSubmittedAddress<T extends { email: string }>(
+  personal: T | undefined,
+): Omit<T, 'email'> {
+  const { email: _submittedAddress, ...rest } = personal ?? ({} as T)
+  return rest
+}
+
 function toApplicationRow(
   id: string,
-  data: Omit<AdminApplicationRow['values'], 'meta'> & {
+  data: Omit<AdminApplicationRow['values'], 'meta' | 'personal'> & {
+    personal: Data.Application<'pojo'>['personal']
     meta: Data.Application<'pojo'>['meta']
   },
   decision: AdminDecision | null,
+  emails: Map<string, string>,
 ): AdminApplicationRow {
   return {
     id,
+    email: emails.get(id) ?? '',
     values: {
-      personal: data.personal,
+      personal: withoutSubmittedAddress(data.personal),
       academic: data.academic,
       program: data.program,
       essay: data.essay,
@@ -136,13 +158,17 @@ export const applicationService = {
     const docsData = snapshot.docs.map(
       (doc: QueryDocumentSnapshot) => doc.data() as Data.Application<'server'>,
     )
-    const decisions = await fetchDecisions(
-      decisionsCollectionName,
-      docsData.map((data, i) => ({
-        id: snapshot.docs[i].id,
-        decided: data.meta.decided,
-      })),
-    )
+    const [decisions, emails] = await Promise.all([
+      fetchDecisions(
+        decisionsCollectionName,
+        docsData.map((data, i) => ({
+          id: snapshot.docs[i].id,
+          decided: data.meta.decided,
+        })),
+      ),
+      // An application's id is its applicant's uid.
+      resolveAccountEmails(snapshot.docs.map((doc) => doc.id)),
+    ])
 
     return snapshot.docs.map((doc: QueryDocumentSnapshot, i: number) => {
       const data = docsData[i]
@@ -169,6 +195,7 @@ export const applicationService = {
           },
         },
         decisions[i],
+        emails,
       )
     })
   },
@@ -185,10 +212,13 @@ export const applicationService = {
     )
 
     const hits = await searchIndex<ApplicationSearchHit>(collectionName, query)
-    const decisions = await fetchDecisions(
-      decisionsCollectionName,
-      hits.map((hit) => ({ id: hit.objectID, decided: hit.meta.decided })),
-    )
+    const [decisions, emails] = await Promise.all([
+      fetchDecisions(
+        decisionsCollectionName,
+        hits.map((hit) => ({ id: hit.objectID, decided: hit.meta.decided })),
+      ),
+      resolveAccountEmails(hits.map((hit) => hit.objectID)),
+    ])
 
     return hits.map((hit, i) =>
       toApplicationRow(
@@ -203,6 +233,7 @@ export const applicationService = {
           timestamps: hit.timestamps,
         },
         decisions[i],
+        emails,
       ),
     )
   },

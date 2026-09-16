@@ -349,7 +349,7 @@
         <Card class="mb-4">
           <h2 class="font-bold">Interview Time Requests</h2>
           {#each interviewSlotRequests as request (request.id)}
-            {#if intervieweeOptions.find((option) => option.meta.uid === (request.uid || request.id.replace(/-\d{4}-\d{2}-\d{2}.*$/, '')))?.meta.interview === false}
+            {#if intervieweeOptions.find((option) => option.meta.uid === request.uid)?.meta.interview === false}
               {#if request.date > new Date()}
                 <div
                   class="mt-2 flex items-center justify-between rounded-lg bg-blue-100 p-4"

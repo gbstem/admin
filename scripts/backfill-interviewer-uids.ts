@@ -62,7 +62,10 @@
 // Idempotent: only updates documents that still need changing, so re-running
 // after a partial failure is safe.
 import admin from 'firebase-admin'
-import { semesterCollectionPath } from '../src/lib/data/collections'
+import {
+  interviewTimeRequestsCollection,
+  semesterCollectionPath,
+} from '../src/lib/data/collections'
 import collectionsList from '../src/lib/data/collectionsList.json'
 import {
   interviewSlotEmailFields,
@@ -154,10 +157,6 @@ const ctx: BackfillContext = {
   deleteField: admin.firestore.FieldValue.delete(),
 }
 
-// Not semester-scoped, and has no constant in collections.ts: admin's
-// interviewService and portal's name it inline too.
-const SLOT_REQUESTS_COLLECTION = 'interviewTimeRequests'
-
 /**
  * Decides what uid to stamp on an interview time request: the one in its
  * document ID while that account exists, since that is who created it and who
@@ -210,7 +209,7 @@ async function main() {
   )
   console.log(
     `${isDryRun ? '[DRY RUN] ' : ''}Backfilling interview uids across ` +
-      `${semesters.length} semester(s): ${semesters.join(', ')}; and ${SLOT_REQUESTS_COLLECTION}`,
+      `${semesters.length} semester(s): ${semesters.join(', ')}; and ${interviewTimeRequestsCollection}`,
   )
   console.log(
     stripEmails
@@ -235,7 +234,7 @@ async function main() {
   console.log('Interview time requests:')
   const requestTotals = await backfillEmailFields(
     ctx,
-    SLOT_REQUESTS_COLLECTION,
+    interviewTimeRequestsCollection,
     slotRequestEmailFields,
     {
       resolveUid: (docId) => ({

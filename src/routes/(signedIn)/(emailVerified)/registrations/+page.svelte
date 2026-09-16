@@ -58,13 +58,13 @@
     data.registrations.map((registration) => {
       const {
         id,
+        email,
         values: {
           personal: {
             studentFirstName,
             studentLastName,
             parentFirstName,
             parentLastName,
-            email,
             secondaryEmail,
           },
           academic: { school, grade },
@@ -301,7 +301,7 @@
         <td class="px-6 py-4">
           {`${normalizeCapitals(registration.values.personal.studentFirstName + ' ' + registration.values.personal.studentLastName)}`}
         </td>
-        <td class="px-6 py-4"> {registration.values.personal.email} </td>
+        <td class="px-6 py-4"> {registration.email} </td>
         <td class="px-6 py-4">
           {registration.values.academic.school}
         </td>

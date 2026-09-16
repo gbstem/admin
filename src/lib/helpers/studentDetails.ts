@@ -11,11 +11,15 @@ export function formatClassName(data: ClassData): string {
 }
 
 /**
- * Normalizes raw registration document data from Firestore into a Student profile object.
+ * Normalizes raw registration document data from Firestore into a Student
+ * profile object. `email` is left empty: the caller fills it with the parent
+ * account's current address, because the one stored on the registration is
+ * only an audit record.
  */
-export function parseStudentProfileData(data: any): Student {
+export function parseStudentProfileData(id: string, data: any): Student {
   if (!data || !data.personal) {
     return {
+      id,
       name: '',
       email: '',
       secondaryEmail: '',
@@ -27,8 +31,9 @@ export function parseStudentProfileData(data: any): Student {
   }
 
   return {
+    id,
     name: `${data.personal.studentFirstName ?? ''} ${data.personal.studentLastName ?? ''}`.trim(),
-    email: data.personal.email ?? '',
+    email: '',
     secondaryEmail: data.personal.secondaryEmail ?? '',
     phone: data.personal.phoneNumber ?? '',
     grade: data.academic?.grade ?? 0,
@@ -47,7 +52,9 @@ export function buildEnrollApiPayload(
 ): EnrollRequestBody {
   const parentFirstName = (studentData.parentName || '').split(' ')[0]
   return {
-    email: studentData.email,
+    // The registration, not an address: the server mails the parent account
+    // behind it at that account's current address.
+    registrationId: studentData.id,
     firstName: parentFirstName,
     instructor: `${classSelected.instructorFirstName} ${classSelected.instructorLastName}`,
     // The uid only: the server resolves the instructor's current address from

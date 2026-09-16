@@ -1,4 +1,10 @@
-import { classesCollection } from '$lib/data/collections'
+import {
+  classesCollection,
+  interviewTimeRequestsCollection,
+  resolveSemester,
+  semesterCollectionPath,
+} from '$lib/data/collections'
+import { registrationParentUid, slotRequestUid } from '$lib/data/docIds'
 import type ClassData from '$lib/data/types/ClassData'
 import { adminDb } from '$lib/server/firebase'
 import { error } from '@sveltejs/kit'
@@ -40,6 +46,22 @@ const uids = z.array(z.string().min(1).max(128)).min(1).max(MAX_UIDS)
  */
 const documentIds = z.array(z.string().min(1)).min(1).max(MAX_UIDS)
 
+/** Admin can browse past semesters; omitted means the current one. */
+const semesterId = z.string().optional()
+
+/** The existing documents among `ids` in one semester's `name` collection. */
+async function existingDocuments(
+  name: string,
+  semester: string | undefined,
+  ids: string[],
+) {
+  const collection = semesterCollectionPath(resolveSemester(semester), name)
+  const snaps = await adminDb.getAll(
+    ...ids.map((id) => adminDb.doc(`${collection}/${id}`)),
+  )
+  return snaps.filter((snap) => snap.exists).map((snap) => snap.id)
+}
+
 export const resolveEmailsSchema = z.discriminatedUnion('intent', [
   // StudentDetails' "Instructor Email" column, one row per enrolled class.
   // TODO: add an optional `semesterId` to the context when a past-semester
@@ -55,6 +77,21 @@ export const resolveEmailsSchema = z.discriminatedUnion('intent', [
     intent: z.literal('slotRequestApplicants'),
     uids,
     context: z.object({ requestIds: documentIds }),
+  }),
+  // An applicant's address wherever the browser shows one: an application's
+  // detail view and the dashboard's unfinished applications.
+  z.object({
+    intent: z.literal('applicants'),
+    uids,
+    context: z.object({ applicationIds: documentIds, semesterId }),
+  }),
+  // The parent account behind a registration, wherever the browser shows or
+  // mails one: a student's details, a class list, the dashboard's unfinished
+  // registrations.
+  z.object({
+    intent: z.literal('registrationParents'),
+    uids,
+    context: z.object({ registrationIds: documentIds, semesterId }),
   }),
 ])
 
@@ -92,24 +129,39 @@ const policies: { [I in Intent]: IntentPolicy<I> } = {
   },
   slotRequestApplicants: {
     roles: ['admin', 'reviewer'],
-    // The applicant who filed each request. The uid is the document's own
-    // `uid` field, or the prefix of its `${uid}-${date}` id on requests
-    // written before that field existed - the same two places
-    // parseSlotRequestDoc reads it from.
+    // The applicant who filed each request: the document's own `uid` field,
+    // or on requests written before that field existed, the uid its id was
+    // built from - the same two places parseSlotRequestDoc reads.
     async resolvableUids(_caller, { requestIds }) {
-      // Not semester-scoped, and named by literal in both repos - there is
-      // no constant for it in $lib/data/collections.
       const snaps = await adminDb.getAll(
-        ...requestIds.map((id) => adminDb.doc(`interviewTimeRequests/${id}`)),
+        ...requestIds.map((id) =>
+          adminDb.doc(`${interviewTimeRequestsCollection}/${id}`),
+        ),
       )
       return snaps
         .map((snap) => {
           if (!snap.exists) return ''
-          return (
-            snap.data()?.uid || snap.id.replace(/-\d{4}-\d{2}-\d{2}.*$/, '')
-          )
+          return snap.data()?.uid || slotRequestUid(snap.id) || ''
         })
         .filter(Boolean)
+    },
+  },
+  applicants: {
+    roles: ['admin', 'reviewer'],
+    // An application's id is its applicant's uid.
+    async resolvableUids(_caller, { applicationIds, semesterId }) {
+      return existingDocuments('applications', semesterId, applicationIds)
+    },
+  },
+  registrationParents: {
+    roles: ['admin', 'reviewer'],
+    async resolvableUids(_caller, { registrationIds, semesterId }) {
+      const ids = await existingDocuments(
+        'registrations',
+        semesterId,
+        registrationIds,
+      )
+      return ids.map(registrationParentUid)
     },
   },
 }

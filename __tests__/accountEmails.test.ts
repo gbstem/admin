@@ -6,7 +6,10 @@ jest.mock('$lib/server/firebase', () => ({
   },
 }))
 
-import { resolveAccountEmails } from '$lib/server/accountEmails'
+import {
+  resolveAccountEmails,
+  resolveRegistrationParentEmails,
+} from '$lib/server/accountEmails'
 
 /** Answers getUsers with an account, and an address, for every uid asked. */
 function everyUidHasAnAccount() {
@@ -64,5 +67,41 @@ describe('resolveAccountEmails', () => {
   test('makes no Auth call for no uids', async () => {
     await expect(resolveAccountEmails([])).resolves.toEqual(new Map())
     expect(mockGetUsers).not.toHaveBeenCalled()
+  })
+})
+
+describe('resolveRegistrationParentEmails', () => {
+  beforeEach(() => {
+    mockGetUsers.mockReset()
+  })
+
+  // Siblings share a parent account, so its address is looked up once and
+  // reported against each registration.
+  test("keys each parent account's current address by registration", async () => {
+    everyUidHasAnAccount()
+
+    const emails = await resolveRegistrationParentEmails([
+      'parent-a-1',
+      'parent-a-2',
+      'parent-b',
+    ])
+
+    expect(mockGetUsers).toHaveBeenCalledWith([
+      { uid: 'parent-a' },
+      { uid: 'parent-b' },
+    ])
+    expect(Object.fromEntries(emails)).toEqual({
+      'parent-a-1': 'parent-a@example.com',
+      'parent-a-2': 'parent-a@example.com',
+      'parent-b': 'parent-b@example.com',
+    })
+  })
+
+  test('leaves out a registration whose parent account is gone', async () => {
+    mockGetUsers.mockResolvedValue({ users: [] })
+
+    const emails = await resolveRegistrationParentEmails(['parent-gone-1'])
+
+    expect(emails.size).toBe(0)
   })
 })

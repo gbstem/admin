@@ -134,7 +134,7 @@ describe('Section G: Pre-Registrations Directory', () => {
               'No',
             ],
             [
-              'reg-fake-0',
+              'reg-fake0-1',
               'James',
               'Smith',
               'Parent',
@@ -150,7 +150,7 @@ describe('Section G: Pre-Registrations Directory', () => {
               'Yes',
             ],
             [
-              'reg-fake-1',
+              'reg-fake1-1',
               'Mary',
               'Johnson',
               'Parent',
@@ -166,7 +166,7 @@ describe('Section G: Pre-Registrations Directory', () => {
               'No',
             ],
             [
-              'reg-fake-10',
+              'reg-fake10-1',
               'David',
               'Hernandez',
               'Parent',
@@ -182,7 +182,7 @@ describe('Section G: Pre-Registrations Directory', () => {
               'Yes',
             ],
             [
-              'reg-fake-11',
+              'reg-fake11-1',
               'Barbara',
               'Lopez',
               'Parent',
@@ -294,7 +294,6 @@ describe('Section G: Pre-Registrations Directory', () => {
 interface RegistrationInput {
   studentFirstName: string
   studentLastName: string
-  email: string
   secondaryEmail: string
   phoneNumber: string
   dateOfBirth: string
@@ -341,7 +340,6 @@ function fillRegistrationForm(input: RegistrationInput) {
     'input[name="personal.studentLastName"]',
     input.studentLastName,
   )
-  cy.setFieldValue('input[name="personal.email"]', input.email)
   cy.setFieldValue(
     'input[name="personal.secondaryEmail"]',
     input.secondaryEmail,
@@ -405,7 +403,9 @@ function expectedRegistrationDoc(input: RegistrationInput) {
     personal: {
       studentFirstName: input.studentFirstName,
       studentLastName: input.studentLastName,
-      email: input.email,
+      // The audit record of what the parent submitted: the form neither shows
+      // nor writes it, so the seeded value stands.
+      email: 'parent2@gmail.com',
       secondaryEmail: input.secondaryEmail,
       phoneNumber: input.phoneNumber,
       dateOfBirth: input.dateOfBirth,
@@ -491,6 +491,14 @@ function openRegistrationForEdit(name = 'Sally Brown') {
   // controls overlap it. The click only has to reach the row's handler.
   cy.contains('td', name).click({ force: true })
   cy.get('[role="dialog"]').should('exist')
+  // The parent account's current address, looked up from the registration -
+  // not the address stored on it.
+  if (name === 'Sally Brown') {
+    cy.get('[data-testid="parent-account-email"]').should(
+      'contain.text',
+      'parent2@gmail.com',
+    )
+  }
   cy.contains('button', 'Edit').click()
   cy.contains('button', 'Save changes').should('be.visible')
   cy.get('input[name="personal.studentFirstName"]').should('not.be.disabled')
@@ -512,7 +520,6 @@ const REGISTRATION_INITIAL: RegistrationInput = {
   // Held at the seeded values on purpose - see `openRegistrationForEdit`.
   studentFirstName: 'Sally',
   studentLastName: 'Brown',
-  email: 'edited-parent@example.com',
   secondaryEmail: 'edited-secondary@example.com',
   phoneNumber: '555-0142',
   dateOfBirth: '2017-03-09',
@@ -541,7 +548,6 @@ const REGISTRATION_INITIAL: RegistrationInput = {
 const REGISTRATION_MODIFIED: RegistrationInput = {
   studentFirstName: 'Sally',
   studentLastName: 'Brown',
-  email: 'second-parent@example.com',
   secondaryEmail: 'second-secondary@example.com',
   phoneNumber: '555-0188',
   dateOfBirth: '2015-11-22',

@@ -105,7 +105,8 @@ export const registrationSchema = z.object({
   personal: z.object({
     studentFirstName: z.string().min(1, 'First name is required'),
     studentLastName: z.string().min(1, 'Last name is required'),
-    email: z.string().email('Invalid email address'),
+    // No `email`: the parent account's address stored on a registration is an
+    // audit record of what was submitted, not something admin edits.
     secondaryEmail: z.string().optional().default(''),
     phoneNumber: z
       .string()
@@ -237,7 +238,6 @@ export function getRegistrationFormDefaults() {
     personal: {
       studentFirstName: '',
       studentLastName: '',
-      email: '',
       secondaryEmail: '',
       phoneNumber: '',
       dateOfBirth: '',

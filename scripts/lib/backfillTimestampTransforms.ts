@@ -10,6 +10,7 @@
 // on their next save), but documents that won't be saved again by their owner (submitted,
 // enrolled, decided) stay broken until backfilled here. This module decides which documents
 // still need that backfill.
+import { registrationParentUid } from '../../src/lib/data/docIds'
 
 // Whether a document's timestamps.created is a real Firestore Timestamp (as opposed to
 // null, missing, or the pre-fix `null as any` default that was actually written to
@@ -44,7 +45,7 @@ export type BackfillIdentity = {
 // so the slot suffix has to come off before the uid means anything to Auth. Firebase uids
 // are alphanumeric, so a trailing `-<digits>` is unambiguously a slot suffix.
 export function authUidFromDocId(docId: string): string {
-  return docId.replace(/-\d+$/, '')
+  return registrationParentUid(docId)
 }
 
 // Pulls whatever the document itself knows about its owner. Everything is optional: these

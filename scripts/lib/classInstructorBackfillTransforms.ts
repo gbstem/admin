@@ -23,6 +23,7 @@
 // This module decides what a pre-existing class document should end up with;
 // the script itself does the Auth and decision lookups that can't be pure.
 
+import { parseClassDocId } from '../../src/lib/data/docIds'
 /**
  * Splits a legacy `otherInstructorEmails` value into individual addresses.
  *
@@ -65,7 +66,7 @@ export function classNeedsCoInstructorBackfill(
 /**
  * Recovers the owning instructor's uid from a class document's ID.
  *
- * The portal names a new class `${uid}-${n}` (see generateNewClassId), and
+ * The portal names a new class `${uid}-${n}` (see nextClassDocId in src/lib/data/docIds.ts), and
  * firestore.rules's isInstructorOwnerOrAdmin() only lets an instructor create
  * a class under their own uid - so for any class the portal created, the ID
  * *is* a record of who owns it, and unlike the stored email it can't go stale
@@ -83,8 +84,7 @@ export function classNeedsCoInstructorBackfill(
  * since then nothing in the ID is a candidate.
  */
 export function instructorUidFromClassId(classId: string): string | null {
-  const match = classId.match(/^(.+)-(\d+)$/)
-  return match ? match[1] : null
+  return parseClassDocId(classId)?.instructorUid ?? null
 }
 
 /**

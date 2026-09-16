@@ -1,8 +1,10 @@
 import {
   applicationsCollection,
   currentSemester,
+  interviewTimeRequestsCollection,
   interviewTimesCollection,
 } from '../../src/lib/data/collections'
+import { interviewSlotDocId, slotRequestDocId } from '../../src/lib/data/docIds'
 import { prepareDocForCompare } from '../support/utils'
 
 describe('Section H: Interview Timeslots Configuration', () => {
@@ -119,7 +121,7 @@ describe('Section H: Interview Timeslots Configuration', () => {
     // still waiting for an interview, and Test Case 16 books David Miller, so
     // he is put back first.
     const requestDate = '2030-01-15T10:00'
-    const requestId = `app-david-${requestDate}`
+    const requestId = slotRequestDocId('app-david', requestDate)
     cy.task('mergeFirestoreDoc', {
       docPath: `${applicationsCollection}/app-david`,
       data: { meta: { interview: false } },
@@ -147,14 +149,17 @@ describe('Section H: Interview Timeslots Configuration', () => {
       .its('response.body.emails')
       .should('deep.equal', { 'app-david': 'applicant1@gmail.com' })
 
-    cy.task('deleteFirestoreDoc', `interviewTimeRequests/${requestId}`)
+    cy.task(
+      'deleteFirestoreDoc',
+      `${interviewTimeRequestsCollection}/${requestId}`,
+    )
   })
 })
 
 /**
- * `generateInterviewSlotId` builds the document id from the slot's local time
- * and the signed-in uid, so the test computes it the same way rather than
- * scraping it back out of the UI.
+ * `interviewSlotDocId` builds the document id from the slot's local time and
+ * the signed-in uid, so the test computes it the same way rather than scraping
+ * it back out of the UI.
  */
 const SLOT_DATE_LOCAL = '2028-03-14T09:30'
 const SLOT_LINK = 'https://zoom.us/j/1231231234'
@@ -171,8 +176,8 @@ function getDemoAdminUid(): Cypress.Chainable<string> {
 }
 
 function addSlotDocId(): Cypress.Chainable<string> {
-  return getDemoAdminUid().then(
-    (uid: string) => `${new Date(SLOT_DATE_LOCAL).getTime()}${uid}`,
+  return getDemoAdminUid().then((uid: string) =>
+    interviewSlotDocId(SLOT_DATE_LOCAL, uid),
   )
 }
 

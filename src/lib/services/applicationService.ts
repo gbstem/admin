@@ -1,4 +1,5 @@
 import { db } from '$lib/client/firebase'
+import { accountEmailService } from '$lib/services/accountEmailService'
 import {
   decisionsCollection,
   semesterCollectionPath,
@@ -82,6 +83,25 @@ export type ApplicationEditableFields = {
  * Data Access Layer for Admin Application Review & Decision Workflows.
  */
 export const applicationService = {
+  /**
+   * The current address of the applicant account behind each application,
+   * keyed by application id - which is the applicant's uid. An application
+   * whose account is gone is absent.
+   */
+  fetchApplicantEmails(
+    applicationIds: string[],
+    semesterId?: string,
+  ): Promise<Record<string, string>> {
+    return accountEmailService.resolveEmailsByDocument(
+      applicationIds.map((id) => ({ id, uid: id })),
+      ({ ids, uids }) => ({
+        intent: 'applicants',
+        uids,
+        context: { applicationIds: ids, semesterId },
+      }),
+    )
+  },
+
   /**
    * Loads an application and its attached decision document.
    */

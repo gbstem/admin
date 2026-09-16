@@ -1,3 +1,4 @@
+import { registrationParentUid } from '$lib/data/docIds'
 import { adminAuth } from '$lib/server/firebase'
 
 /** `auth.getUsers()` accepts at most this many identifiers per call. */
@@ -35,4 +36,24 @@ export async function resolveAccountEmails(
     }
   }
   return emails
+}
+
+/**
+ * The current address of the parent account behind each registration, keyed
+ * by registration id - the address to reach a registered student's family at.
+ * A registration whose parent account is gone is absent. See
+ * `registrationParentUid`.
+ */
+export async function resolveRegistrationParentEmails(
+  registrationIds: string[],
+): Promise<Map<string, string>> {
+  const emails = await resolveAccountEmails(
+    registrationIds.map(registrationParentUid),
+  )
+  const byRegistration = new Map<string, string>()
+  for (const id of registrationIds) {
+    const email = emails.get(registrationParentUid(id))
+    if (email) byRegistration.set(id, email)
+  }
+  return byRegistration
 }

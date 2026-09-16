@@ -89,7 +89,7 @@ describe('Section F: Students Directory', () => {
               'No',
             ],
             [
-              'reg-fake-10',
+              'reg-fake10-1',
               'David',
               'Hernandez',
               'student-10@gmail.com',
@@ -103,7 +103,7 @@ describe('Section F: Students Directory', () => {
               'Yes',
             ],
             [
-              'reg-fake-11',
+              'reg-fake11-1',
               'Barbara',
               'Lopez',
               'student-11@gmail.com',
@@ -117,7 +117,7 @@ describe('Section F: Students Directory', () => {
               'No',
             ],
             [
-              'reg-fake-12',
+              'reg-fake12-1',
               'Richard',
               'Gonzalez',
               'student-12@gmail.com',
@@ -131,7 +131,7 @@ describe('Section F: Students Directory', () => {
               'No',
             ],
             [
-              'reg-fake-13',
+              'reg-fake13-1',
               'Susan',
               'Wilson',
               'student-13@gmail.com',
@@ -177,7 +177,11 @@ describe('Section F: Students Directory', () => {
       .click({ force: true })
 
     // Click Add Class
-    cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
+    // The dialog makes two lookups - the parent account's address and the
+    // class instructor's - so each is aliased by what it asks for.
+    cy.intercept('POST', '/api/resolveEmails', (req) => {
+      req.alias = req.body.intent
+    })
     cy.contains('button', 'Add Class').click({ force: true })
     cy.waitForNotification('Enrolled in class successfully!')
     cy.verifyEmailSent(
@@ -199,9 +203,14 @@ describe('Section F: Students Directory', () => {
     // The seed stores the same address on the class that the instructor's
     // account has, so the cell alone can't show where it came from: pin that
     // it was looked up from the uid.
-    cy.wait('@resolveEmails')
+    cy.wait('@classInstructors')
       .its('response.body.emails')
       .should('deep.equal', { 'instructor-demo-uid': 'instructor@gbstem.org' })
+    // The enrollment email went to the parent account behind reg-charlie, and
+    // the dialog shows that account's address too.
+    cy.wait('@registrationParents')
+      .its('response.body.emails')
+      .should('deep.equal', { 'reg-charlie': 'parent1@gmail.com' })
 
     // Drop the class
     // eq(1) is the Drop Class dropdown

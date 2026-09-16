@@ -11,7 +11,33 @@ jest.mock('firebase/firestore', () => ({
 }))
 
 function mockSnapshot(docs: any[]) {
-  return { forEach: (cb: any) => docs.forEach(cb), size: docs.length }
+  return { docs, forEach: (cb: any) => docs.forEach(cb), size: docs.length }
+}
+
+/**
+ * Answers /api/resolveEmails from `accounts` (uid -> current address), the
+ * way the server would. Also records every request made.
+ */
+function mockAccounts(accounts: Record<string, string>) {
+  ;(global.fetch as jest.Mock).mockImplementation(
+    async (_url: string, init: any) => {
+      const { uids } = JSON.parse(init.body)
+      return {
+        ok: true,
+        json: async () => ({
+          emails: Object.fromEntries(
+            uids.map((uid: string) => [uid, accounts[uid] ?? null]),
+          ),
+        }),
+      }
+    },
+  )
+}
+
+function requestedIntents() {
+  return (global.fetch as jest.Mock).mock.calls.map(
+    ([, init]) => JSON.parse(init.body).intent,
+  )
 }
 
 function mockCount(count: number) {
@@ -25,6 +51,8 @@ function mockDoc(id: string, data: Record<string, any>) {
 describe('dashboardService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn() as jest.Mock
+    mockAccounts({})
   })
 
   afterEach(() => {
@@ -33,9 +61,12 @@ describe('dashboardService (Data Access Layer)', () => {
 
   describe('fetchDashboardData (reviewer view)', () => {
     it('aggregates application counts and uncompleted applicant emails, leaving registration/user data zeroed', async () => {
+      // The stored addresses are stale; each applicant account's current one
+      // is what the button copies.
+      mockAccounts({ 'app-1': 'a@example.com' })
       ;(firestore.getDocs as jest.Mock).mockResolvedValueOnce(
         mockSnapshot([
-          mockDoc('app-1', { personal: { email: 'a@example.com' } }),
+          mockDoc('app-1', { personal: { email: 'stale-a@example.com' } }),
           mockDoc('app-2', { personal: {} }),
         ]),
       )
@@ -62,9 +93,11 @@ describe('dashboardService (Data Access Layer)', () => {
       expect(result.uncompletedApplicationsEmails).toEqual(['a@example.com'])
     })
 
-    it('skips applicant docs without a usable email', async () => {
+    it('skips an applicant whose account is gone', async () => {
       ;(firestore.getDocs as jest.Mock).mockResolvedValueOnce(
-        mockSnapshot([mockDoc('app-1', { personal: { email: 42 } })]),
+        mockSnapshot([
+          mockDoc('app-1', { personal: { email: 'stored@example.com' } }),
+        ]),
       )
       ;(firestore.getCountFromServer as jest.Mock)
         .mockResolvedValueOnce(mockCount(1))
@@ -81,28 +114,25 @@ describe('dashboardService (Data Access Layer)', () => {
       const today = new Date()
       const notToday = new Date(2000, 0, 1)
 
+      mockAccounts({
+        'parent-a': 'uncompleted-reg@example.com',
+        'parent-b': 'submitted@example.com',
+        'app-1': 'uncompleted-app@example.com',
+      })
       ;(firestore.getDocs as jest.Mock)
         .mockResolvedValueOnce(
           mockSnapshot([
-            mockDoc('reg-1', {
-              personal: { email: 'uncompleted-reg@example.com' },
-            }),
+            mockDoc('parent-a-1', { personal: { email: 'stale@example.com' } }),
           ]),
         )
         .mockResolvedValueOnce(
           mockSnapshot([
-            mockDoc('app-1', {
-              personal: { email: ' uncompleted-app@example.com ' },
-            }),
+            mockDoc('app-1', { personal: { email: 'stale@example.com' } }),
             mockDoc('app-2', { personal: {} }),
           ]),
         )
         .mockResolvedValueOnce(
-          mockSnapshot([
-            mockDoc('reg-2', {
-              personal: { email: 'Submitted@Example.com' },
-            }),
-          ]),
+          mockSnapshot([mockDoc('parent-b-1', { personal: {} })]),
         )
         .mockResolvedValueOnce(
           mockSnapshot([
@@ -149,18 +179,17 @@ describe('dashboardService (Data Access Layer)', () => {
       ])
     })
 
-    it('excludes an uncompleted-registration email if the same email already submitted', async () => {
+    // Matched by parent account, not by address: a parent who has submitted
+    // one child's registration isn't nagged about another child's draft.
+    it('excludes a parent who has already submitted a registration for another child', async () => {
+      mockAccounts({ 'parent-a': 'parent@example.com' })
       ;(firestore.getDocs as jest.Mock)
         .mockResolvedValueOnce(
-          mockSnapshot([
-            mockDoc('reg-1', { personal: { email: 'dup@example.com' } }),
-          ]),
+          mockSnapshot([mockDoc('parent-a-2', { personal: {} })]),
         )
         .mockResolvedValueOnce(mockSnapshot([]))
         .mockResolvedValueOnce(
-          mockSnapshot([
-            mockDoc('reg-2', { personal: { email: 'DUP@Example.com' } }),
-          ]),
+          mockSnapshot([mockDoc('parent-a-1', { personal: {} })]),
         )
         .mockResolvedValueOnce(mockSnapshot([]))
       ;(firestore.getCountFromServer as jest.Mock).mockResolvedValue(
@@ -169,6 +198,31 @@ describe('dashboardService (Data Access Layer)', () => {
 
       const result = await dashboardService.fetchDashboardData(false)
       expect(result.uncompletedRegistrationsEmails).toEqual([])
+      expect(requestedIntents()).not.toContain('registrationParents')
+    })
+
+    it('still loads, with empty email lists, when the lookup fails', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      })
+      jest.spyOn(console, 'error').mockImplementation(() => {})
+      ;(firestore.getDocs as jest.Mock)
+        .mockResolvedValueOnce(
+          mockSnapshot([mockDoc('parent-a-1', { personal: {} })]),
+        )
+        .mockResolvedValueOnce(mockSnapshot([mockDoc('app-1', {})]))
+        .mockResolvedValueOnce(mockSnapshot([]))
+        .mockResolvedValueOnce(mockSnapshot([]))
+      ;(firestore.getCountFromServer as jest.Mock).mockResolvedValue(
+        mockCount(3),
+      )
+
+      const result = await dashboardService.fetchDashboardData(false)
+      expect(result.dashboardData.applications.total).toBe(3)
+      expect(result.uncompletedRegistrationsEmails).toEqual([])
+      expect(result.uncompletedApplicationsEmails).toEqual([])
     })
 
     it('ignores non-array or missing meetingTimes without throwing', async () => {

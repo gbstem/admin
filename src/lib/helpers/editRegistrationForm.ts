@@ -76,7 +76,6 @@ export function toRegistrationFormValues(v: Data.Registration<'client'>) {
       studentLastName: v.personal?.studentLastName || '',
       parentFirstName: v.personal?.parentFirstName || '',
       parentLastName: v.personal?.parentLastName || '',
-      email: v.personal?.email || '',
       secondaryEmail: v.personal?.secondaryEmail || '',
       phoneNumber: v.personal?.phoneNumber || '',
       dateOfBirth: v.personal?.dateOfBirth || '',

@@ -58,6 +58,26 @@
 
   const schema = applicationSchema
 
+  // The applicant account's current address. The application's own
+  // `personal.email` is an audit record of what was submitted and is never
+  // shown.
+  let applicantEmail = $state('')
+  $effect(() => {
+    const applicationId = id
+    const semesterId = semesterIdFromPath(collection) ?? currentSemester
+    applicantEmail = ''
+    if (!applicationId) return
+    applicationService
+      .fetchApplicantEmails([applicationId], semesterId)
+      .then((emails) => {
+        // A late reply for an application the dialog has since moved on from.
+        if (id === applicationId) applicantEmail = emails[applicationId] ?? ''
+      })
+      .catch((err) =>
+        console.error('Could not resolve the applicant address:', err),
+      )
+  })
+
   const formResult = superForm(
     defaults(toFormValues(values) as any, zod(schema as any) as any) as any,
     {
@@ -120,7 +140,7 @@
           {`Name: ${values.personal.firstName} ${values.personal.lastName}`}
         </div>
         <div class="rounded-md bg-gray-100 px-3 py-2 shadow-xs">
-          {`Email: ${values.personal.email}`}
+          {`Email: ${applicantEmail}`}
         </div>
         <div class="text-sm">
           Wrong name or email? Go to your <a class="link" href="/profile"

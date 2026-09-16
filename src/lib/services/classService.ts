@@ -1,4 +1,5 @@
 import { db } from '$lib/client/firebase'
+import { studentService } from '$lib/services/studentService'
 import {
   classesCollection,
   instructorFeedbackCollection,
@@ -97,24 +98,26 @@ export const classService = {
   },
 
   /**
-   * Fetches student profile records for a list of student UIDs.
+   * Fetches student profile records for a list of registration ids, each with
+   * its parent account's current address (see `Student.email`).
    */
   async fetchStudentList(studentUids: string[]): Promise<Student[]> {
     const docs = await Promise.all(
       studentUids.map((uid) => getDoc(doc(db, registrationsCollection, uid))),
     )
     const list: Student[] = []
-    docs.forEach((studentDoc) => {
+    docs.forEach((studentDoc, index) => {
       if (studentDoc.exists()) {
         const data = studentDoc.data()
         if (data) {
           list.push({
+            id: studentUids[index],
             name: `${normalizeCapitals(
               data.personal.studentFirstName +
                 ' ' +
                 data.personal.studentLastName,
             )}`,
-            email: data.personal.email,
+            email: '',
             secondaryEmail: data.personal.secondaryEmail || '',
             phone: data.personal.phoneNumber || '',
             grade: data.academic?.grade || '',
@@ -123,6 +126,16 @@ export const classService = {
         }
       }
     })
+
+    const emails = await studentService
+      .fetchParentEmails(list.map((student) => student.id))
+      .catch((err) => {
+        console.error('Could not resolve class list parent addresses:', err)
+        return {} as Record<string, string>
+      })
+    for (const student of list) {
+      student.email = emails[student.id] ?? ''
+    }
     return list
   },
 }

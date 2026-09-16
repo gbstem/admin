@@ -16,9 +16,14 @@ mockToDateSafe.mockImplementation((ts: any) =>
   ts && typeof ts.toDate === 'function' ? ts.toDate() : ts,
 )
 
+const mockGetUsers = jest.fn()
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+  },
+  adminAuth: {
+    getUsers: (...args: any[]) => mockGetUsers(...args),
   },
   toDateSafe: (...args: any[]) => mockToDateSafe(...args),
 }))
@@ -30,7 +35,11 @@ jest.mock('$lib/server/search', () => ({
 import { applicationService } from '$lib/server/applicationService'
 
 const storedApplication = (overrides: Record<string, unknown> = {}) => ({
-  personal: { firstName: 'Ada', lastName: 'Lovelace' },
+  personal: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    email: 'submitted@example.com',
+  },
   academic: { school: 'MIT' },
   program: { inPerson: false },
   essay: {},
@@ -58,6 +67,9 @@ describe('applicationService (server Data Access Layer)', () => {
     mockQuery.limit.mockReturnValue(mockQuery)
     mockQuery.offset.mockReturnValue(mockQuery)
     mockGet.mockResolvedValue({ docs: [] })
+    mockGetUsers.mockImplementation(async (ids: { uid: string }[]) => ({
+      users: ids.map(({ uid }) => ({ uid, email: `${uid}@current.example` })),
+    }))
     mockDocGet.mockResolvedValue({ data: () => storedDecision })
   })
 
@@ -168,6 +180,25 @@ describe('applicationService (server Data Access Layer)', () => {
       expect(mockCollection).toHaveBeenCalledWith('semesters/Fall26/decisions')
       expect(mockDoc).toHaveBeenCalledWith('app-1')
       expect(row.values.meta.decision).toEqual(storedDecision)
+    })
+
+    // The row carries the applicant account's current address - the
+    // application's id is its applicant's uid - and none of the address
+    // stored on the application, which is only an audit record.
+    it("shows the applicant account's current address, not the stored one", async () => {
+      mockGet.mockResolvedValue({
+        docs: [{ id: 'app-1', data: () => storedApplication() }],
+      })
+
+      const [row] = await applicationService.fetchApplications({
+        semesterId: 'Fall26',
+        limit: 25,
+        offset: 0,
+      })
+
+      expect(mockGetUsers).toHaveBeenCalledWith([{ uid: 'app-1' }])
+      expect(row.email).toBe('app-1@current.example')
+      expect(row.values.personal).not.toHaveProperty('email')
     })
 
     it('leaves decision null for an undecided application', async () => {
