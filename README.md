@@ -204,9 +204,6 @@ Deploy indexes **before** the code that queries them: a query whose index doesn'
 
 Admins can browse a past semester's data via the `?semester=<id>` URL param on the Applications and Registrations pages (see `CollectionFilter.svelte`), validated against [`collectionsList.json`](src/lib/data/collectionsList.json) before being used to build a Firestore path.
 
-> [!NOTE]
-> Before this schema, each collection type was duplicated per semester by name (e.g. `applicationsSpring26`, `registrationsFall25`). Those collections still exist in Firestore as a read-only historical backup — nothing reads or writes them anymore — and should eventually be deleted after a comfortable soak period.
-
 ## Roles and Authorization
 
 Almost everything either site will let a person do comes down to one value: their **role** — `admin`, `reviewer`, `instructor` or `student`. Two things are worth knowing before you touch anything that reads it.
