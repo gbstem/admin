@@ -371,7 +371,7 @@
                    the fetched value when that promise resolves, so typing
                    into these fields before then is silently overwritten
                    rather than merged - see saveNotes/buildNotesPayload. -->
-              <fieldset disabled={loading}>
+              <fieldset class="min-w-0" disabled={loading}>
                 <h2 class="my-4 text-2xl font-bold">
                   Interview Guide & Evaluation Form
                 </h2>
@@ -522,7 +522,7 @@
                     attitude.
                   </div>
                   <div class="mt-8 font-bold">Mock Lesson Materials</div>
-                  <div class="flex gap-4">
+                  <div class="flex flex-wrap gap-4">
                     <Button
                       class="bg-gray-200"
                       href="https://docs.google.com/presentation/d/1dtv0qWFLNg3pjnlPCkm8nKEkEU_m5-dcLVMNEJmwFjk/edit#slide=id.g11b679f5bf6_0_9"
@@ -539,7 +539,7 @@
                       target="_blank">Engineering</Button
                     >
                   </div>
-                  <div class="mt-4 flex gap-4">
+                  <div class="mt-4 flex flex-wrap gap-4">
                     <Button
                       color="blue"
                       href="https://docs.google.com/document/d/1ruPmF-SRdWQ_LlilQz0PBFX1p7gDpfGZ1jVBmSpdgyI/edit#"
@@ -650,7 +650,7 @@
                   Once you have completed this form, click "Save Notes" to
                   submit it!
                 </div>
-                <div class="flex justify-start gap-4">
+                <div class="flex flex-wrap justify-start gap-4">
                   <Button color="green" onclick={saveNotes}>Save Notes</Button>
                   <Button
                     color="red"

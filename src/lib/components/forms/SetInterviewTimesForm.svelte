@@ -352,7 +352,7 @@
             {#if intervieweeOptions.find((option) => option.meta.uid === request.uid)?.meta.interview === false}
               {#if request.date > new Date()}
                 <div
-                  class="mt-2 flex items-center justify-between rounded-lg bg-blue-100 p-4"
+                  class="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-blue-100 p-4 sm:grid-cols-3 sm:items-center sm:gap-4"
                 >
                   <p>{formatDateLocal(request.date)}</p>
                   <p>{request.firstName} {request.lastName}</p>
@@ -360,7 +360,7 @@
                 </div>
               {:else if request.date > new Date(new Date().setDate(new Date().getDate() - 30))}
                 <div
-                  class="mt-2 flex items-center justify-between rounded-lg bg-red-100 p-4"
+                  class="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-red-100 p-4 sm:grid-cols-3 sm:items-center sm:gap-4"
                 >
                   <p>{formatDateLocal(request.date)}</p>
                   <p>{request.firstName} {request.lastName}</p>
@@ -475,6 +475,16 @@
                         }}>Delete</Button
                       >
                     </div>
+                    <div class="right-2 items-center">
+                      <Button
+                        color="gray"
+                        class="my-4 px-2 py-1"
+                        type="button"
+                        onclick={() => {
+                          editSlot = ''
+                        }}>Close</Button
+                      >
+                    </div>
                   </div>
                 </div>
               </form>
@@ -492,7 +502,7 @@
             </div>
             <div>
               <b>Meeting Link:</b>
-              <a href={interview.meetingLink} target="_blank">
+              <a href={interview.meetingLink} target="_blank" class="break-all">
                 {interview.meetingLink}
               </a>
             </div>

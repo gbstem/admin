@@ -65,7 +65,7 @@
   }
 </script>
 
-<Form class="flex w-96 shrink-0 gap-4" onSubmit={handleSearch}>
+<Form class="flex w-full gap-4 sm:w-96 sm:shrink-0" onSubmit={handleSearch}>
   <div class="relative grow">
     <TextInput
       class={{
