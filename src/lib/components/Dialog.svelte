@@ -120,11 +120,13 @@
           <Icon src={XMark} class="h-5 w-5" />
         </button>
         <h1
-          class="rounded-md bg-gray-200 px-4 py-3 pr-12 text-xl font-bold uppercase"
+          class="min-w-0 rounded-md bg-gray-200 px-4 py-3 pr-12 text-xl font-bold uppercase"
         >
           {@render title?.()}
         </h1>
-        {@render description?.()}
+        <div class="min-w-0">
+          {@render description?.()}
+        </div>
       </div>
     </div>
   </div>
