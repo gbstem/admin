@@ -27,6 +27,8 @@
 // An address that no account owns is flagged UNRESOLVED, and its document is
 // left with the address and no uid.
 //
+// STATUS: Phase 1 is done in production (portion without --strip-emails)
+//
 // Usage:
 //   npx tsx scripts/backfill-interviewer-uids.ts
 //       Stamp missing interviewerUid, intervieweeId and time request uid

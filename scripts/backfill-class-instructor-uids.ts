@@ -31,6 +31,8 @@
 // so every document fits the schema, and future analytics or migrations
 // needn't know which ones predate which field.
 //
+// STATUS: Phase 1 is done in production
+//
 // Usage:
 //   npx tsx scripts/backfill-class-instructor-uids.ts
 //       Phase 1: stamp instructorUid + otherInstructorUids on classes and
@@ -97,11 +99,11 @@
 // Idempotent: only writes documents that still need changing, so re-running
 // after a partial failure is safe.
 import admin from 'firebase-admin'
-import collectionsList from '../src/lib/data/collectionsList.json'
 import {
   semesterCollectionPath,
   subRequestsCollection,
 } from '../src/lib/data/collections'
+import collectionsList from '../src/lib/data/collectionsList.json'
 import {
   classNeedsCoInstructorBackfill,
   classNeedsInstructorUidBackfill,

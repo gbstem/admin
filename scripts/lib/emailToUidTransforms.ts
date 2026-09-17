@@ -11,10 +11,6 @@
 // - `personal.email` and `personal.secondaryEmail` on applications and
 //   registrations are contact details, not identities: a student has no Auth
 //   account, and a secondary guardian needn't have one (audit section 2).
-// - The pre-semester flat collections (`classesFall24`,
-//   `instructorInterviewTimesSpring26`, ...) are an unreachable read-only backup
-//   awaiting deletion - no rule matches them - see notes/DEAD_COLLECTION_ANALYSIS.md.
-//   Deleting them is the migration for those.
 import { slotRequestUid } from '../../src/lib/data/docIds'
 
 /**

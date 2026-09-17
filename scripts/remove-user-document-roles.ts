@@ -15,6 +15,8 @@
 // on 2026-09-11: every account whose document named a role already carried a
 // matching claim, so no document was the only record of anyone's role.
 //
+// STATUS: Not yet started in production
+//
 // Usage:
 //   npx tsx scripts/remove-user-document-roles.ts --dry-run
 //   npx tsx scripts/remove-user-document-roles.ts
