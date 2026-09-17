@@ -143,9 +143,11 @@
           {`Email: ${applicantEmail}`}
         </div>
         <div class="text-sm">
-          Wrong name or email? Go to your <a class="link" href="/profile"
-            >profile</a
-          > to update your information.
+          Wrong name or email? The applicant can update it at <a
+            class="link"
+            href="https://portal.gbstem.org/profile"
+            target="_blank">their portal profile</a
+          >.
         </div>
       </Card>
 
