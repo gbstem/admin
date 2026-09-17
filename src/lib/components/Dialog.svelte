@@ -93,7 +93,7 @@
     transition:fade={{ duration: 200 }}
   >
     <div
-      class="relative flex min-h-screen items-end justify-center px-d/2 py-d sm:items-center"
+      class="relative flex min-h-screen items-center justify-center px-d/2 py-d"
     >
       <div
         class={cn(
