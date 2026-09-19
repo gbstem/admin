@@ -4,6 +4,7 @@ import { renderEmail } from '$lib/emails/render'
 import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
+import semesterDatesJson from '$lib/data/semesterDates.json'
 
 import { z } from 'zod'
 
@@ -38,8 +39,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           firstName: body.name,
           name: 'Portal',
           link: 'https://portal.gbstem.org',
-          orientation: 'Thursday, March 5th at 7:00 PM EST',
-          orientationLink: 'https://mit.zoom.us/j/95024505441',
+          orientation: semesterDatesJson.instructorOrientation,
+          orientationLink: semesterDatesJson.instructorOrientationLink,
         },
       },
     }
