@@ -2,6 +2,10 @@ import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import svelte from 'eslint-plugin-svelte'
 import prettier from 'eslint-config-prettier'
+import cypress from 'eslint-plugin-cypress'
+import tailwindcss from 'eslint-plugin-tailwindcss'
+import jest from 'eslint-plugin-jest'
+import testingLibrary from 'eslint-plugin-testing-library'
 import globals from 'globals'
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -9,7 +13,25 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   ...svelte.configs['flat/recommended'],
+  tailwindcss.configs.recommended,
   prettier,
+  {
+    settings: {
+      tailwindcss: {
+        cssConfigPath: './src/app.css',
+      },
+    },
+    rules: {
+      // prettier-plugin-tailwindcss already sorts classnames on format; a lint
+      // rule for the same thing just fights the formatter over ordering it
+      // doesn't actually control.
+      'tailwindcss/classnames-order': 'off',
+      // The rule can't distinguish a real typo from a deliberate custom
+      // utility class (e.g. `link`, `show-validation` defined in src/app.css),
+      // so it flags every one of the latter as if it were the former.
+      'tailwindcss/no-custom-classname': 'off',
+    },
+  },
   {
     languageOptions: {
       globals: {
@@ -58,6 +80,39 @@ export default tseslint.config(
       'no-constant-binary-expression': 'off',
       'svelte/no-at-html-tags': 'off',
     },
+  },
+  // Scoped to the Cypress tree on purpose: the plugin's own `recommended` config
+  // ships no `files` key, so spreading it unscoped would apply the Cypress rules
+  // to app code and leak ~1200 browser globals into every file.
+  {
+    ...cypress.configs.recommended,
+    files: ['cypress/**/*.ts'],
+    rules: {
+      ...cypress.configs.recommended.rules,
+      'cypress/no-debug': 'error',
+      'cypress/no-pause': 'error',
+    },
+  },
+  // Scoped to __tests__ for the same reason as the Cypress block above:
+  // both configs' rules assume their respective globals/APIs are in scope,
+  // which is only true under this tree.
+  {
+    ...jest.configs['flat/recommended'],
+    files: ['__tests__/**/*.ts'],
+    rules: {
+      ...jest.configs['flat/recommended'].rules,
+      // The rule only recognizes literal `expect(...)` calls, so it can't see
+      // into this codebase's local assertion helpers (expectDecisionBatch,
+      // assertSucceeds/assertFails from @firebase/rules-unit-testing, ...).
+      'jest/expect-expect': [
+        'warn',
+        { assertFunctionNames: ['expect', 'expect*', 'assert*'] },
+      ],
+    },
+  },
+  {
+    ...testingLibrary.configs['flat/dom'],
+    files: ['__tests__/**/*.ts'],
   },
   {
     ignores: [
