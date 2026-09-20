@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   applicationSchema,
   classSchema,
@@ -10,6 +11,27 @@ import {
   registrationSchema,
   tokenSchema,
 } from '../src/lib/components/forms/schemas'
+
+/**
+ * Asserts a safeParse() call succeeded and returns its data, narrowed - so
+ * callers get real type safety without a runtime `if (result.success)` guard
+ * wrapping their own assertions on the parsed data.
+ */
+function expectParseSuccess<T>(result: z.SafeParseReturnType<unknown, T>): T {
+  expect(result.success).toBe(true)
+  if (!result.success) throw new Error('expected safeParse to succeed')
+  return result.data
+}
+
+/**
+ * The failure-side counterpart to expectParseSuccess: asserts safeParse()
+ * failed and returns the ZodError, narrowed.
+ */
+function expectParseFailure<T>(result: z.SafeParseReturnType<unknown, T>) {
+  expect(result.success).toBe(false)
+  if (result.success) throw new Error('expected safeParse to fail')
+  return result.error
+}
 
 describe('Zod Validation Schemas', () => {
   describe('classSchema', () => {
@@ -27,11 +49,9 @@ describe('Zod Validation Schemas', () => {
 
     it('passes for a valid class object', () => {
       const result = classSchema.safeParse(validClass)
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.course).toBe('Introduction to Python')
-        expect(result.data.classCap).toBe(15)
-      }
+      const data = expectParseSuccess(result)
+      expect(data.course).toBe('Introduction to Python')
+      expect(data.classCap).toBe(15)
     })
 
     it('supplies defaults for optional fields', () => {
@@ -42,14 +62,12 @@ describe('Zod Validation Schemas', () => {
         classTime1: '5:00 PM',
       }
       const result = classSchema.safeParse(minimalClass)
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.gradeRecommendation).toBe('')
-        expect(result.data.meetingLink).toBe('')
-        expect(result.data.classDay2).toBe('')
-        expect(result.data.classTime2).toBe('')
-        expect(result.data.online).toBe(true) // default value
-      }
+      const data = expectParseSuccess(result)
+      expect(data.gradeRecommendation).toBe('')
+      expect(data.meetingLink).toBe('')
+      expect(data.classDay2).toBe('')
+      expect(data.classTime2).toBe('')
+      expect(data.online).toBe(true) // default value
     })
 
     it('denies empty course name', () => {
@@ -57,13 +75,10 @@ describe('Zod Validation Schemas', () => {
         ...validClass,
         course: '',
       })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        const issues = result.error.issues
-        expect(issues).toHaveLength(1)
-        expect(issues[0].path).toEqual(['course'])
-        expect(issues[0].message).toBe('Course is required')
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues).toHaveLength(1)
+      expect(issues[0].path).toEqual(['course'])
+      expect(issues[0].message).toBe('Course is required')
     })
 
     it('denies negative capacity', () => {
@@ -71,12 +86,9 @@ describe('Zod Validation Schemas', () => {
         ...validClass,
         classCap: -5,
       })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        const issues = result.error.issues
-        expect(issues[0].path).toEqual(['classCap'])
-        expect(issues[0].message).toBe('Capacity must be at least 0')
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].path).toEqual(['classCap'])
+      expect(issues[0].message).toBe('Capacity must be at least 0')
     })
 
     it('coerces string capacity to number', () => {
@@ -84,10 +96,8 @@ describe('Zod Validation Schemas', () => {
         ...validClass,
         classCap: '25',
       })
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.classCap).toBe(25)
-      }
+      const data = expectParseSuccess(result)
+      expect(data.classCap).toBe(25)
     })
 
     it('denies missing required day/time', () => {
@@ -95,21 +105,17 @@ describe('Zod Validation Schemas', () => {
         ...validClass,
         classDay1: '',
       })
-      expect(result1.success).toBe(false)
-      if (!result1.success) {
-        expect(result1.error.issues[0].path).toEqual(['classDay1'])
-        expect(result1.error.issues[0].message).toBe('Day 1 is required')
-      }
+      const issues1 = expectParseFailure(result1).issues
+      expect(issues1[0].path).toEqual(['classDay1'])
+      expect(issues1[0].message).toBe('Day 1 is required')
 
       const result2 = classSchema.safeParse({
         ...validClass,
         classTime1: '',
       })
-      expect(result2.success).toBe(false)
-      if (!result2.success) {
-        expect(result2.error.issues[0].path).toEqual(['classTime1'])
-        expect(result2.error.issues[0].message).toBe('Time 1 is required')
-      }
+      const issues2 = expectParseFailure(result2).issues
+      expect(issues2[0].path).toEqual(['classTime1'])
+      expect(issues2[0].message).toBe('Time 1 is required')
     })
   })
 
@@ -138,10 +144,8 @@ describe('Zod Validation Schemas', () => {
         consumable: true,
         expires: 24,
       })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].path).toEqual(['role'])
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].path).toEqual(['role'])
     })
 
     it('denies out-of-range expiry hours', () => {
@@ -151,11 +155,9 @@ describe('Zod Validation Schemas', () => {
         consumable: true,
         expires: 0,
       })
-      expect(resultMin.success).toBe(false)
-      if (!resultMin.success) {
-        expect(resultMin.error.issues[0].path).toEqual(['expires'])
-        expect(resultMin.error.issues[0].message).toBe('Minimum is 1 hour')
-      }
+      const issuesMin = expectParseFailure(resultMin).issues
+      expect(issuesMin[0].path).toEqual(['expires'])
+      expect(issuesMin[0].message).toBe('Minimum is 1 hour')
 
       // Over max (49)
       const resultMax = tokenSchema.safeParse({
@@ -163,11 +165,9 @@ describe('Zod Validation Schemas', () => {
         consumable: true,
         expires: 49,
       })
-      expect(resultMax.success).toBe(false)
-      if (!resultMax.success) {
-        expect(resultMax.error.issues[0].path).toEqual(['expires'])
-        expect(resultMax.error.issues[0].message).toBe('Maximum is 48 hours')
-      }
+      const issuesMax = expectParseFailure(resultMax).issues
+      expect(issuesMax[0].path).toEqual(['expires'])
+      expect(issuesMax[0].message).toBe('Maximum is 48 hours')
     })
 
     it('denies non-integer expiry', () => {
@@ -176,10 +176,8 @@ describe('Zod Validation Schemas', () => {
         consumable: true,
         expires: 12.5,
       })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].path).toEqual(['expires'])
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].path).toEqual(['expires'])
     })
   })
 
@@ -232,16 +230,9 @@ describe('Zod Validation Schemas', () => {
             phoneNumber: phone,
           },
         })
-        expect(result.success).toBe(false)
-        if (!result.success) {
-          expect(result.error.issues[0].path).toEqual([
-            'personal',
-            'phoneNumber',
-          ])
-          expect(result.error.issues[0].message).toBe(
-            'Invalid phone number format',
-          )
-        }
+        const issues = expectParseFailure(result).issues
+        expect(issues[0].path).toEqual(['personal', 'phoneNumber'])
+        expect(issues[0].message).toBe('Invalid phone number format')
       })
     })
 
@@ -254,14 +245,9 @@ describe('Zod Validation Schemas', () => {
           graduationYear: currentYear - 1,
         },
       })
-      expect(resultPast.success).toBe(false)
-      if (!resultPast.success) {
-        expect(resultPast.error.issues[0].path).toEqual([
-          'academic',
-          'graduationYear',
-        ])
-        expect(resultPast.error.issues[0].message).toBe('Invalid year')
-      }
+      const issuesPast = expectParseFailure(resultPast).issues
+      expect(issuesPast[0].path).toEqual(['academic', 'graduationYear'])
+      expect(issuesPast[0].message).toBe('Invalid year')
 
       // Far future year
       const resultFuture = applicationSchema.safeParse({
@@ -271,14 +257,9 @@ describe('Zod Validation Schemas', () => {
           graduationYear: currentYear + 21,
         },
       })
-      expect(resultFuture.success).toBe(false)
-      if (!resultFuture.success) {
-        expect(resultFuture.error.issues[0].path).toEqual([
-          'academic',
-          'graduationYear',
-        ])
-        expect(resultFuture.error.issues[0].message).toBe('Invalid year')
-      }
+      const issuesFuture = expectParseFailure(resultFuture).issues
+      expect(issuesFuture[0].path).toEqual(['academic', 'graduationYear'])
+      expect(issuesFuture[0].message).toBe('Invalid year')
     })
 
     it('denies empty required program fields', () => {
@@ -289,16 +270,9 @@ describe('Zod Validation Schemas', () => {
           courses: [],
         },
       })
-      expect(resultNoCourses.success).toBe(false)
-      if (!resultNoCourses.success) {
-        expect(resultNoCourses.error.issues[0].path).toEqual([
-          'program',
-          'courses',
-        ])
-        expect(resultNoCourses.error.issues[0].message).toBe(
-          'Select at least one course',
-        )
-      }
+      const issues = expectParseFailure(resultNoCourses).issues
+      expect(issues[0].path).toEqual(['program', 'courses'])
+      expect(issues[0].message).toBe('Select at least one course')
     })
 
     it('denies essay fields exceeding maximum length', () => {
@@ -310,14 +284,9 @@ describe('Zod Validation Schemas', () => {
           academicBackground: longText,
         },
       })
-      expect(resultTooLong.success).toBe(false)
-      if (!resultTooLong.success) {
-        expect(resultTooLong.error.issues[0].path).toEqual([
-          'essay',
-          'academicBackground',
-        ])
-        expect(resultTooLong.error.issues[0].message).toBe('Max 500 characters')
-      }
+      const issues = expectParseFailure(resultTooLong).issues
+      expect(issues[0].path).toEqual(['essay', 'academicBackground'])
+      expect(issues[0].message).toBe('Max 500 characters')
     })
 
     // The admin edit dialog sends this schema's output straight to Firestore as a
@@ -342,20 +311,18 @@ describe('Zod Validation Schemas', () => {
         timestamps: { created: 'then', updated: 'then' },
       })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(Object.keys(result.data)).toEqual([
-          'personal',
-          'academic',
-          'program',
-          'essay',
-          'agreements',
-        ])
-        expect(result.data.personal).not.toHaveProperty('firstName')
-        expect(result.data.personal).not.toHaveProperty('lastName')
-        expect(result.data.personal).not.toHaveProperty('email')
-        expect(result.data.program).not.toHaveProperty('numClasses')
-      }
+      const data = expectParseSuccess(result)
+      expect(Object.keys(data)).toEqual([
+        'personal',
+        'academic',
+        'program',
+        'essay',
+        'agreements',
+      ])
+      expect(data.personal).not.toHaveProperty('firstName')
+      expect(data.personal).not.toHaveProperty('lastName')
+      expect(data.personal).not.toHaveProperty('email')
+      expect(data.program).not.toHaveProperty('numClasses')
     })
   })
 
@@ -410,16 +377,22 @@ describe('Zod Validation Schemas', () => {
         ...validRegistration,
         personal: { ...validRegistration.personal, email: 'not-an-address' },
       })
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.personal).not.toHaveProperty('email')
-      }
+      const data = expectParseSuccess(result)
+      expect(data.personal).not.toHaveProperty('email')
     })
 
     it('denies missing required personal info fields', () => {
       const fields = [
-        { field: 'studentFirstName', path: ['personal', 'studentFirstName'] },
-        { field: 'studentLastName', path: ['personal', 'studentLastName'] },
+        {
+          field: 'studentFirstName',
+          path: ['personal', 'studentFirstName'],
+          msg: 'First name is required',
+        },
+        {
+          field: 'studentLastName',
+          path: ['personal', 'studentLastName'],
+          msg: 'Last name is required',
+        },
         {
           field: 'frlp',
           path: ['personal', 'frlp'],
@@ -440,13 +413,9 @@ describe('Zod Validation Schemas', () => {
             [field]: '',
           },
         })
-        expect(result.success).toBe(false)
-        if (!result.success) {
-          expect(result.error.issues[0].path).toEqual(path)
-          if (msg) {
-            expect(result.error.issues[0].message).toBe(msg)
-          }
-        }
+        const issues = expectParseFailure(result).issues
+        expect(issues[0].path).toEqual(path)
+        expect(issues[0].message).toBe(msg)
       })
     })
 
@@ -465,18 +434,16 @@ describe('Zod Validation Schemas', () => {
         timestamps: { created: 'then', updated: 'then' },
       })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(Object.keys(result.data)).toEqual([
-          'personal',
-          'academic',
-          'program',
-          'inPerson',
-          'agreements',
-        ])
-        expect(result.data.personal).not.toHaveProperty('parentFirstName')
-        expect(result.data.personal).not.toHaveProperty('parentLastName')
-      }
+      const data = expectParseSuccess(result)
+      expect(Object.keys(data)).toEqual([
+        'personal',
+        'academic',
+        'program',
+        'inPerson',
+        'agreements',
+      ])
+      expect(data.personal).not.toHaveProperty('parentFirstName')
+      expect(data.personal).not.toHaveProperty('parentLastName')
     })
   })
 
@@ -488,32 +455,22 @@ describe('Zod Validation Schemas', () => {
 
     it('denies a password shorter than 6 characters', () => {
       const result = passwordSchema.safeParse('12345')
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe(
-          'Password must be at least 6 characters',
-        )
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].message).toBe('Password must be at least 6 characters')
     })
 
     it('denies a password longer than 64 characters', () => {
       const result = passwordSchema.safeParse('a'.repeat(64) + '1')
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe(
-          'Password must be at most 64 characters',
-        )
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].message).toBe('Password must be at most 64 characters')
     })
 
     it('denies a password with only alphabet characters', () => {
       const result = passwordSchema.safeParse('abcdefg')
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe(
-          'Password must contain at least one non-alphabet character',
-        )
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].message).toBe(
+        'Password must contain at least one non-alphabet character',
+      )
     })
   })
 
@@ -525,10 +482,8 @@ describe('Zod Validation Schemas', () => {
         interviewerName: 'Jane Doe',
         interviewerEmail: 'jane@example.com',
       })
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.interviewSlotStatus).toBe('available')
-      }
+      const data = expectParseSuccess(result)
+      expect(data.interviewSlotStatus).toBe('available')
     })
 
     it('denies missing required fields', () => {
@@ -538,10 +493,8 @@ describe('Zod Validation Schemas', () => {
         interviewerName: '',
         interviewerEmail: 'invalid-email',
       })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues.length).toBeGreaterThanOrEqual(3)
-      }
+      const issues = expectParseFailure(result).issues
+      expect(issues.length).toBeGreaterThanOrEqual(3)
     })
   })
 

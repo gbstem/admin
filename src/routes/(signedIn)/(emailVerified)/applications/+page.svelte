@@ -266,7 +266,7 @@
       <div class="flex items-center">
         <input
           id="check-all"
-          class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
+          class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
           type="checkbox"
           checked={checked.length === data.applications.length &&
             checked.length > 0}
@@ -301,7 +301,7 @@
           <div class="flex items-center">
             <input
               id={`check-${i}`}
-              class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
+              class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
               type="checkbox"
               checked={checked.includes(i)}
               oninput={(e) => handleCheck(e, i)}
@@ -316,15 +316,15 @@
               <Icon
                 src={CheckCircle}
                 theme="mini"
-                class="h-5 w-5 text-green-300"
+                class="size-5 text-green-300"
               />
             {:else if application.values.meta.decision?.likelyDecision === 'likely no'}
-              <Icon src={XCircle} theme="mini" class="h-5 w-5 text-red-300" />
+              <Icon src={XCircle} theme="mini" class="size-5 text-red-300" />
             {:else if application.values.meta.decision?.likelyDecision === 'likely waitlist'}
               <Icon
                 src={ExclamationCircle}
                 theme="mini"
-                class="h-5 w-5 text-yellow-300"
+                class="size-5 text-yellow-300"
               />
             {/if}
           {:else}
@@ -338,7 +338,7 @@
           {#if application.values.meta.submitted}
             {format(application.values.timestamps.updated, 'yyyy.MM.dd p')}
           {:else}
-            <Icon src={XMark} class="h-5 w-5" />
+            <Icon src={XMark} class="size-5" />
           {/if}
         </td>
         <td class="px-6 py-4">
@@ -347,27 +347,27 @@
               <Icon
                 src={CheckCircle}
                 theme="mini"
-                class="h-5 w-5 text-green-300"
+                class="size-5 text-green-300"
               />
             {:else if application.values.meta.decision?.type === 'waitlisted'}
               <Icon
                 src={ExclamationCircle}
                 theme="mini"
-                class="h-5 w-5 text-yellow-300"
+                class="size-5 text-yellow-300"
               />
             {:else if application.values.meta.decision.type === 'rejected'}
-              <Icon src={XCircle} theme="mini" class="h-5 w-5 text-red-300" />
+              <Icon src={XCircle} theme="mini" class="size-5 text-red-300" />
             {:else if application.values.meta.decision.type === 'interview'}
               <Icon
                 src={ExclamationCircle}
                 theme="mini"
-                class="h-5 w-5 text-blue-300"
+                class="size-5 text-blue-300"
               />
             {:else if application.values.meta.decision.type === 'substitute'}
               <Icon
                 src={PlusCircle}
                 theme="mini"
-                class="h-5 w-5 text-purple-300"
+                class="size-5 text-purple-300"
               />
             {/if}
           {:else}
@@ -392,9 +392,9 @@
 
         <td class="px-6 py-4">
           {#if application.values.essay.taughtBefore}
-            <Icon src={Check} class="h-5 w-5" />
+            <Icon src={Check} class="size-5" />
           {:else}
-            <Icon src={XMark} class="h-5 w-5" />
+            <Icon src={XMark} class="size-5" />
           {/if}
         </td>
       </tr>

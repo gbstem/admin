@@ -28,12 +28,11 @@ Cypress.Commands.add('setFieldValue', (selector: string, value: string) => {
 })
 
 Cypress.Commands.add('fillInput', (selector: string, text: string) => {
-  cy.get(selector)
-    .scrollIntoView()
-    .should('be.visible')
-    .focus()
-    .clear()
-    .type(text, { delay: 20 })
+  cy.get(selector).scrollIntoView()
+  cy.get(selector).should('be.visible')
+  cy.get(selector).focus()
+  cy.get(selector).clear()
+  cy.get(selector).type(text, { delay: 20 })
   // We had buggy inputs in the past, verify the value actually stuck.
   cy.get(selector).should('have.value', text)
 })
@@ -84,6 +83,11 @@ Cypress.Commands.add('submitSearch', (term: string) => {
   const selector = 'input[placeholder="Search"]'
   cy.fillInput(selector, term)
   cy.get(selector).type('{enter}')
+  // No DOM signal marks "the URL update from this keystroke has landed" -
+  // the cy.url() assertion below retries/waits on its own, but needs a beat
+  // after typing before that retry window starts, or it can read the URL
+  // from before this keystroke and pass on stale state.
+  // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(250)
   // Build the expectation the same way SearchBox does, via URLSearchParams --
   // it encodes a space as "+", which encodeURIComponent would never match for
@@ -110,13 +114,15 @@ Cypress.Commands.add(
     cy.session(`signedIn-${emailToUse}`, () => {
       cy.visit('/signin')
       cy.get('input[type="email"]').should('be.visible')
-      cy.wait(2500) // Wait for Svelte page and HMR to settle
+      // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
+      cy.wait(2500)
       const password = 'penguin'
 
       cy.fillInput('input[type="email"]', emailToUse)
       cy.fillInput('input[type="password"]', password)
       cy.get('button[type="submit"]').click()
-      cy.wait(1000) // Wait for Svelte page and HMR to settle
+      // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
+      cy.wait(1000)
     })
 
     const initialPage = options.initialPage || '/dashboard'
@@ -154,6 +160,7 @@ Cypress.Commands.add(
     } else if (initialPage.startsWith('/user/')) {
       cy.title().should('contain', 'Check In')
     }
+    // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
     cy.wait(1000)
   },
 )
@@ -305,6 +312,10 @@ Cypress.Commands.add(
             `Expected an email sent to ${email} with subject containing "${subjectSubstring}"`,
           ).to.not.equal(undefined)
         }
+        // The 250ms here is a poll interval for this deadline-bounded retry loop,
+        // not a blind pause - there's no Cypress-native "retry until" for an
+        // arbitrary async condition against a REST response.
+        // eslint-disable-next-line cypress/no-unnecessary-waiting
         return cy.wait(250, { log: false }).then(attempt)
       })
     return attempt()

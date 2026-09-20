@@ -8,7 +8,7 @@ jest.mock('$app/navigation', () => ({
 }))
 
 import { mount, unmount, flushSync } from 'svelte'
-import { fireEvent } from '@testing-library/dom'
+import { fireEvent, within } from '@testing-library/dom'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import Select from '$lib/components/Select.svelte'
@@ -64,16 +64,16 @@ describe('Select', () => {
       },
     })
     flushSync()
-    return target.querySelector('input') as HTMLInputElement
+    return within(target).getByLabelText(/Status/) as HTMLInputElement
   }
 
   it('does not commit a selection while the user is typing', async () => {
     const onchange = jest.fn()
     const input = mountSelect({ value: 'all', onchange })
 
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
-    await fireEvent.input(input, { target: { value: 'sub' } })
+    fireEvent.input(input, { target: { value: 'sub' } })
     flushSync()
     await afterDebounce()
 
@@ -86,9 +86,9 @@ describe('Select', () => {
     const onchange = jest.fn()
     const input = mountSelect({ value: 'incomplete', onchange })
 
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
-    await fireEvent.input(input, { target: { value: '' } })
+    fireEvent.input(input, { target: { value: '' } })
     flushSync()
     await afterDebounce()
 
@@ -99,12 +99,12 @@ describe('Select', () => {
     const onchange = jest.fn()
     const input = mountSelect({ value: 'incomplete', onchange })
 
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
     const submitted = optionButtons(target).find(
       (b) => b.textContent?.trim() === 'submitted',
     )
-    await fireEvent.click(submitted as HTMLButtonElement)
+    fireEvent.click(submitted as HTMLButtonElement)
     flushSync()
 
     expect(onchange).toHaveBeenCalledWith('submitted')
@@ -114,11 +114,11 @@ describe('Select', () => {
     const onchange = jest.fn()
     const input = mountSelect({ value: '', onchange })
 
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
-    await fireEvent.keyDown(input, { code: 'ArrowDown' })
+    fireEvent.keyDown(input, { code: 'ArrowDown' })
     flushSync()
-    await fireEvent.keyDown(input, { code: 'Enter' })
+    fireEvent.keyDown(input, { code: 'Enter' })
     flushSync()
 
     expect(onchange).toHaveBeenCalledWith('submitted')
@@ -148,33 +148,33 @@ describe('StatusFilter', () => {
   })
 
   it('navigates when a real option is chosen', async () => {
-    const input = target.querySelector('input') as HTMLInputElement
+    const input = within(target).getByLabelText(/Status/) as HTMLInputElement
 
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
     const all = optionButtons(target).find(
       (b) => b.textContent?.trim() === 'all',
     )
-    await fireEvent.click(all as HTMLButtonElement)
+    fireEvent.click(all as HTMLButtonElement)
     flushSync()
 
     expect(gotoMock).toHaveBeenCalledWith('?filter=all')
   })
 
   it('does not navigate when the committed value is empty', async () => {
-    const input = target.querySelector('input') as HTMLInputElement
+    const input = within(target).getByLabelText(/Status/) as HTMLInputElement
 
     // Typing text that matches no option empties the filtered list, so the
     // Enter handler commits `filteredOptions[0]` - which is `undefined`. That
     // is the one commit path that can still produce an empty value, and
     // treating it as "the user picked the default" is what made this filter
     // navigate mid-interaction.
-    await fireEvent.focusIn(input)
+    fireEvent.focusIn(input)
     flushSync()
-    await fireEvent.input(input, { target: { value: 'zzz' } })
+    fireEvent.input(input, { target: { value: 'zzz' } })
     flushSync()
     await afterDebounce()
-    await fireEvent.keyDown(input, { code: 'Enter' })
+    fireEvent.keyDown(input, { code: 'Enter' })
     flushSync()
 
     expect(gotoMock).not.toHaveBeenCalled()

@@ -41,8 +41,10 @@ describe('Section L: Profile and Account Customization', () => {
     // these assert the seeded profile rather than the Auth displayName.
     cy.get('input[name="first-name"]').should('have.value', 'Demo')
     cy.get('input[name="last-name"]').should('have.value', 'Admin')
-    cy.get('input[name="first-name"]').clear().type('Demo')
-    cy.get('input[name="last-name"]').clear().type('AdminTest')
+    cy.get('input[name="first-name"]').clear()
+    cy.get('input[name="first-name"]').type('Demo')
+    cy.get('input[name="last-name"]').clear()
+    cy.get('input[name="last-name"]').type('AdminTest')
     cy.get('input[name="last-name"]')
       .closest('.items-end')
       .contains('button', 'Update')
@@ -56,7 +58,8 @@ describe('Section L: Profile and Account Customization', () => {
     cy.contains('span', 'Change email')
       .parent()
       .within(() => {
-        cy.get('input[name="new-email"]').clear().type('tempadmin@gbstem.org')
+        cy.get('input[name="new-email"]').clear()
+        cy.get('input[name="new-email"]').type('tempadmin@gbstem.org')
         cy.get('input[name="new-email"]')
           .closest('.items-end')
           .contains('button', 'Update')
@@ -65,10 +68,8 @@ describe('Section L: Profile and Account Customization', () => {
 
     // Reauthenticate dialog opens
     cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]')
-      .find('input[type="password"]')
-      .clear()
-      .type('penguin')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
+    cy.get('[role="dialog"]').find('input[type="password"]').type('penguin')
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
       .click({ force: true })
@@ -78,37 +79,40 @@ describe('Section L: Profile and Account Customization', () => {
     // real test runs: removing this wait made the second request below fail
     // with a 400 from /api/action every time) -- not a client-side race, so
     // give it real breathing room rather than retrying blindly.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Change email back to demo@gbstem.org
     cy.contains('span', 'Change email')
       .parent()
       .within(() => {
-        cy.get('input[name="new-email"]').clear().type('demo@gbstem.org')
+        cy.get('input[name="new-email"]').clear()
+        cy.get('input[name="new-email"]').type('demo@gbstem.org')
         cy.get('input[name="new-email"]')
           .closest('.items-end')
           .contains('button', 'Update')
           .click({ force: true })
       })
     cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]')
-      .find('input[type="password"]')
-      .clear()
-      .type('penguin')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
+    cy.get('[role="dialog"]').find('input[type="password"]').type('penguin')
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
       .click({ force: true })
     cy.waitForNotification('A verification email was sent.', 'bg-gray-200')
     // Same Auth-throttling consideration as above, ahead of the next
     // reauthenticate-and-mutate flow.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // 4. Change password to temp and then change it back
     cy.contains('span', 'Change password')
       .parent()
       .within(() => {
-        cy.get('input[name="new-password"]').clear().type('penguin123')
-        cy.get('input[name="confirm-password"]').clear().type('penguin123')
+        cy.get('input[name="new-password"]').clear()
+        cy.get('input[name="new-password"]').type('penguin123')
+        cy.get('input[name="confirm-password"]').clear()
+        cy.get('input[name="confirm-password"]').type('penguin123')
         cy.get('input[name="confirm-password"]')
           .closest('.items-end')
           .contains('button', 'Update')
@@ -117,10 +121,8 @@ describe('Section L: Profile and Account Customization', () => {
 
     // Reauthenticate dialog
     cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]')
-      .find('input[type="password"]')
-      .clear()
-      .type('penguin')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
+    cy.get('[role="dialog"]').find('input[type="password"]').type('penguin')
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
       .click({ force: true })
@@ -133,6 +135,7 @@ describe('Section L: Profile and Account Customization', () => {
       })
     // Same Auth-throttling consideration as above, ahead of the next
     // reauthenticate-and-mutate flow.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Changing the password bumps Firebase's tokensValidAfterTime for this
@@ -146,6 +149,7 @@ describe('Section L: Profile and Account Customization', () => {
     cy.fillInput('input[type="email"]', 'demo@gbstem.org')
     cy.fillInput('input[type="password"]', 'penguin123')
     cy.get('button[type="submit"]').click()
+    // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
     cy.wait(1000)
     cy.visit('/profile')
     cy.title().should('contain', 'Profile')
@@ -161,8 +165,10 @@ describe('Section L: Profile and Account Customization', () => {
     cy.contains('span', 'Change password')
       .parent()
       .within(() => {
-        cy.get('input[name="new-password"]').clear().type('penguin!')
-        cy.get('input[name="confirm-password"]').clear().type('penguin!')
+        cy.get('input[name="new-password"]').clear()
+        cy.get('input[name="new-password"]').type('penguin!')
+        cy.get('input[name="confirm-password"]').clear()
+        cy.get('input[name="confirm-password"]').type('penguin!')
         cy.get('input[name="confirm-password"]')
           .closest('.items-end')
           .contains('button', 'Update')
@@ -171,10 +177,8 @@ describe('Section L: Profile and Account Customization', () => {
 
     // Reauthenticate dialog (now password is penguin123!)
     cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]')
-      .find('input[type="password"]')
-      .clear()
-      .type('penguin123')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
+    cy.get('[role="dialog"]').find('input[type="password"]').type('penguin123')
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
       .click({ force: true })

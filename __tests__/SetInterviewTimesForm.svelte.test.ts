@@ -216,13 +216,13 @@ describe('SetInterviewTimesForm Component', () => {
     await waitFor(() => {
       expect(within(container).getByText('Edit')).toBeInTheDocument()
     })
-    await fireEvent.click(within(container).getByText('Edit'))
+    fireEvent.click(within(container).getByText('Edit'))
     flushSync()
 
     await waitFor(() => {
       expect(within(container).getByText('Delete')).toBeInTheDocument()
     })
-    await fireEvent.click(within(container).getByText('Delete'))
+    fireEvent.click(within(container).getByText('Delete'))
     flushSync()
 
     await waitFor(() => {
@@ -248,7 +248,7 @@ describe('SetInterviewTimesForm Component', () => {
 
     // The card itself is filtered out by "Only include my interviews" until
     // that box is unchecked, since the slot belongs to a different user.
-    await fireEvent.click(
+    fireEvent.click(
       within(container).getByLabelText('Only include my interviews'),
     )
     flushSync()
@@ -269,7 +269,7 @@ describe('SetInterviewTimesForm Component', () => {
     ])
     const app = await mountAuthenticated(otherAdminAuthUser)
 
-    await fireEvent.click(
+    fireEvent.click(
       within(container).getByLabelText('Only include my interviews'),
     )
     flushSync()

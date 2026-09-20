@@ -108,11 +108,11 @@
 <div class="relative w-full">
   {#if loading}
     <div
-      class="absolute top-0 right-0 left-0 flex h-[calc(100vh-216px-80px)] items-center justify-center rounded-lg bg-gray-200 opacity-60 md:h-[calc(100vh-216px)]"
+      class="absolute inset-x-0 top-0 flex h-[calc(100vh-216px-80px)] items-center justify-center rounded-lg bg-gray-200 opacity-60 md:h-[calc(100vh-216px)]"
       transition:fade
     >
       <div role="status">
-        <SpinnerIcon class="h-10 w-10 fill-gray-700" />
+        <SpinnerIcon class="size-10 fill-gray-700" />
         <span class="sr-only">Loading...</span>
       </div>
     </div>

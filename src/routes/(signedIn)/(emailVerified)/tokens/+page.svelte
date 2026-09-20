@@ -135,7 +135,7 @@
       <div class="flex items-center">
         <input
           id="check-all"
-          class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
+          class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
           type="checkbox"
           checked={checked.length === data.tokens.length && checked.length > 0}
           oninput={handleCheckAll}
@@ -150,12 +150,12 @@
     <th scope="col" class="px-6 py-3">Consumers</th>
     <th scope="col" class="flex justify-end px-6 py-3">
       <Button
-        class="flex h-10 w-10 items-center justify-center p-0"
+        class="flex size-10 items-center justify-center p-0"
         color="blue"
         onclick={handleCreate}
         disabled={disabled.create}
       >
-        <Icon src={Plus} class="h-5 w-5" />
+        <Icon src={Plus} class="size-5" />
       </Button>
     </th>
   {/snippet}
@@ -166,7 +166,7 @@
           <div class="flex items-center">
             <input
               id={`check-${i}`}
-              class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
+              class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
               type="checkbox"
               checked={checked.includes(i)}
               oninput={(e) => handleCheck(e, i)}
@@ -190,9 +190,9 @@
         <td class="px-6 py-4 capitalize"> {token.values.role} </td>
         <td class="px-6 py-4 capitalize">
           {#if token.values.consumable}
-            <Icon src={Check} class="h-5 w-5" />
+            <Icon src={Check} class="size-5" />
           {:else}
-            <Icon src={XMark} class="h-5 w-5" />
+            <Icon src={XMark} class="size-5" />
           {/if}
         </td>
         <td class="px-6 py-4"> {token.values.consumers.length} </td>

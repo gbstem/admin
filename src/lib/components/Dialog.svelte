@@ -117,7 +117,7 @@
           {disabled}
           aria-label="Close dialog"
         >
-          <Icon src={XMark} class="h-5 w-5" />
+          <Icon src={XMark} class="size-5" />
         </button>
         <h1
           class="min-w-0 rounded-md bg-gray-200 px-4 py-3 pr-12 text-xl font-bold uppercase"

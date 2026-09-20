@@ -254,6 +254,10 @@ describe('dashboardService (Data Access Layer)', () => {
       )
 
       const resultPromise = dashboardService.fetchDashboardData(true, 5000)
+      // Deliberately not awaited here: starting the rejection listener before
+      // advancing the fake clock is what lets it observe the timeout that
+      // firing the clock causes below. It's awaited on the last line.
+      // eslint-disable-next-line jest/valid-expect
       const assertion = expect(resultPromise).rejects.toThrow(
         'Query timeout (5 seconds)',
       )

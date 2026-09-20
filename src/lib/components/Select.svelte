@@ -254,7 +254,7 @@
           }
         }}
       >
-        <Icon src={ChevronUpDown} class="h-6 w-6" />
+        <Icon src={ChevronUpDown} class="size-6" />
       </button>
     </div>
     <input

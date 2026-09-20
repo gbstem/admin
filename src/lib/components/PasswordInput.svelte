@@ -92,7 +92,7 @@
       {autocomplete}
       {...rest}
     />
-    <div class="absolute top-0 right-3 bottom-0 flex items-center">
+    <div class="absolute inset-y-0 right-3 flex items-center">
       <button
         class="text-gray-500"
         type="button"
@@ -102,9 +102,9 @@
         }}
       >
         {#if passwordVisible}
-          <Icon src={EyeSlash} class="h-6 w-6" />
+          <Icon src={EyeSlash} class="size-6" />
         {:else}
-          <Icon src={Eye} class="h-6 w-6" />
+          <Icon src={Eye} class="size-6" />
         {/if}
       </button>
     </div>

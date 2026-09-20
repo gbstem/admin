@@ -16,9 +16,9 @@
   >
     <div class="text-center">
       <div
-        class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600"
+        class="mx-auto flex size-16 items-center justify-center rounded-full bg-red-100 text-red-600"
       >
-        <Icon src={ExclamationTriangle} class="h-10 w-10" />
+        <Icon src={ExclamationTriangle} class="size-10" />
       </div>
       <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-950">
         Database or Server Error

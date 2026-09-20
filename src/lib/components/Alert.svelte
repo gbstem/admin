@@ -70,11 +70,11 @@
       >
         <div class="shrink-0">
           {#if $alert.type === 'success'}
-            <Icon src={CheckCircle} class="h-6 w-6" />
+            <Icon src={CheckCircle} class="size-6" />
           {:else if $alert.type === 'info'}
-            <Icon src={InformationCircle} class="h-6 w-6" />
+            <Icon src={InformationCircle} class="size-6" />
           {:else if $alert.type === 'error'}
-            <Icon src={ExclamationCircle} class="h-6 w-6 shrink-0" />
+            <Icon src={ExclamationCircle} class="size-6 shrink-0" />
           {/if}
         </div>
         <p class="grow text-left">{$alert.message}</p>

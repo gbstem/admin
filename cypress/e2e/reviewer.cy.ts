@@ -97,6 +97,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.title().should('contain', 'Applications')
     // Raw cy.visit() (not cy.signedInSession()), so there's no built-in
     // settle time for Svelte to attach event handlers before the click below.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Open application modal for David Miller
@@ -142,6 +143,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.title().should('contain', 'Registrations')
     // Raw cy.visit() (not cy.signedInSession()), so there's no built-in
     // settle time for Svelte to attach event handlers before the click below.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Try to toggle "Bypass Age Limits?" which reviewer doesn't have permissions to write

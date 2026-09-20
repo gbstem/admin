@@ -83,7 +83,7 @@
         class="mt-2 flex w-full items-center gap-4 rounded-md bg-red-200 px-5 py-4 shadow-sm"
         transition:fade
       >
-        <Icon src={ExclamationCircle} class="h-6 w-6 shrink-0" />
+        <Icon src={ExclamationCircle} class="size-6 shrink-0" />
         <div class="grow">
           Email is not verified. Try reloading or check your inbox to verify
           your account. Can't find the email? <button
@@ -113,7 +113,7 @@
               writeToClipboard(data.user.uid)
             }}
           >
-            <Icon src={DocumentDuplicate} class="h-5 w-5" />
+            <Icon src={DocumentDuplicate} class="size-5" />
           </button>
         </div>
       </div>
