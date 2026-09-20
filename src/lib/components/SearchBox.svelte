@@ -87,14 +87,14 @@
   </div>
 
   <Button
-    class="flex h-12 w-12 shrink-0 items-center justify-center p-0"
+    class="flex size-12 shrink-0 items-center justify-center p-0"
     type="submit"
     disabled={searching}
   >
     {#if searching}
-      <SpinnerIcon class="h-6 w-6 fill-blue-500" />
+      <SpinnerIcon class="size-6 fill-blue-500" />
     {:else}
-      <Icon src={MagnifyingGlass} class="h-6 w-6" />
+      <Icon src={MagnifyingGlass} class="size-6" />
     {/if}
   </Button>
 </Form>

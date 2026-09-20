@@ -225,7 +225,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely yes')}
               >
-                <Icon src={CheckCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={CheckCircle} theme="mini" class="size-5" />
                 <span>Likely Yes</span></Button
               >
               <Button
@@ -237,7 +237,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely waitlist')}
               >
-                <Icon src={ExclamationCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={ExclamationCircle} theme="mini" class="size-5" />
                 <span>Likely Waitlist</span></Button
               >
               <Button
@@ -249,7 +249,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision('likely no')}
               >
-                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={XCircle} theme="mini" class="size-5" />
                 <span>Likely No</span></Button
               >
               <Button
@@ -257,7 +257,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision(null)}
               >
-                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={XCircle} theme="mini" class="size-5" />
                 <span>Clear Likely Decision</span></Button
               >
               <Button
@@ -279,7 +279,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('accepted')}
               >
-                <Icon src={CheckCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={CheckCircle} theme="mini" class="size-5" />
                 <span>Accept</span></Button
               >
               <Button
@@ -292,7 +292,7 @@
                 ><Icon
                   src={PlusCircle}
                   theme="mini"
-                  class="h-5 w-5 text-purple-300"
+                  class="size-5 text-purple-300"
                 />
                 <span>Substitute</span></Button
               >
@@ -304,7 +304,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('waitlisted')}
               >
-                <Icon src={ExclamationCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={ExclamationCircle} theme="mini" class="size-5" />
                 <span>Waitlist</span></Button
               >
 
@@ -316,7 +316,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('rejected')}
               >
-                <Icon src={XCircle} theme="mini" class="h-5 w-5" />
+                <Icon src={XCircle} theme="mini" class="size-5" />
                 <span>Reject</span></Button
               >
             {:else}

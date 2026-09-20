@@ -60,7 +60,7 @@
     <Icon
       src={ChevronDown}
       class={cn(
-        'ml-3 h-6 w-6 shrink-0 transition-transform',
+        'ml-3 size-6 shrink-0 transition-transform',
         openState && 'rotate-180',
       )}
     />

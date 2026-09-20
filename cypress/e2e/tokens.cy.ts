@@ -25,9 +25,8 @@ describe('Section K: Registration Signup Tokens', () => {
 
     // Fill out Token creation form
     // Role selection
-    cy.get('input[name="what-role-should-this-token-grant"]')
-      .clear()
-      .type('admin')
+    cy.get('input[name="what-role-should-this-token-grant"]').clear()
+    cy.get('input[name="what-role-should-this-token-grant"]').type('admin')
     cy.get('input[name="what-role-should-this-token-grant"]')
       .parent()
       .find('button')
@@ -136,9 +135,17 @@ describe('Section H: Signup Token Field Coverage', () => {
     cy.get('input[name="should-this-token-be-one-time-use"]').check({
       force: true,
     })
-    cy.get('input[name="after-how-many-hours-should-this-token-expire"]')
-      .clear({ force: true })
-      .type('6', { force: true })
+    cy.get('input[name="after-how-many-hours-should-this-token-expire"]').clear(
+      {
+        force: true,
+      },
+    )
+    cy.get('input[name="after-how-many-hours-should-this-token-expire"]').type(
+      '6',
+      {
+        force: true,
+      },
+    )
 
     // The id comes from the clipboard, not the table. `CreateTokenForm` copies
     // `/signup?token=<id>` on success, and that is deterministic - whereas the

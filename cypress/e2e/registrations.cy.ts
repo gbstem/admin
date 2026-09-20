@@ -226,11 +226,10 @@ describe('Section G: Pre-Registrations Directory', () => {
 
     // Toggle Bypass Age Limits on Charlie Brown's row
     // Charlie Brown row's bypass checkbox is in column 9 (index 8)
-    cy.contains('tr', 'Charlie Brown')
-      .scrollIntoView()
-      .within(() => {
-        cy.get('td').eq(8).find('input[type="checkbox"]').check()
-      })
+    cy.contains('tr', 'Charlie Brown').scrollIntoView()
+    cy.contains('tr', 'Charlie Brown').within(() => {
+      cy.get('td').eq(8).find('input[type="checkbox"]').check()
+    })
     cy.waitForNotification('Bypass age limits updated successfully.')
     cy.contains('tr', 'Charlie Brown').within(() => {
       cy.get('td').eq(8).find('input[type="checkbox"]').should('be.checked')
@@ -258,13 +257,13 @@ describe('Section G: Pre-Registrations Directory', () => {
     })
 
     // Change student grade from 4 to 5
-    cy.get('input[name="student-grade"]')
-      .scrollIntoView()
-      .clear({ force: true })
-      .type('5', { force: true })
+    cy.get('input[name="student-grade"]').scrollIntoView()
+    cy.get('input[name="student-grade"]').clear({ force: true })
+    cy.get('input[name="student-grade"]').type('5', { force: true })
 
     // Click Save changes
-    cy.contains('button', 'Save changes').scrollIntoView().click()
+    cy.contains('button', 'Save changes').scrollIntoView()
+    cy.contains('button', 'Save changes').click()
     cy.waitForNotification('Changes were saved successfully.')
 
     // Verify parent education remains intact after save
@@ -512,7 +511,8 @@ function openRegistrationForEdit(name = 'Sally Brown') {
 }
 
 function saveRegistration() {
-  cy.contains('button', 'Save changes').scrollIntoView().click()
+  cy.contains('button', 'Save changes').scrollIntoView()
+  cy.contains('button', 'Save changes').click()
   cy.waitForNotification('Changes were saved successfully.')
 }
 

@@ -41,14 +41,14 @@
   }}
 >
   <button
-    class="hidden h-10 w-10 items-center justify-center rounded-full border-2 border-black transition-colors hover:bg-gray-200 sm:flex"
+    class="hidden size-10 items-center justify-center rounded-full border-2 border-black transition-colors hover:bg-gray-200 sm:flex"
     type="button"
     aria-label="Profile menu"
     onclick={() => {
       open = !open
     }}
   >
-    <Icon src={User} class="h-6 w-6" stroke-width="2" />
+    <Icon src={User} class="size-6" stroke-width="2" />
   </button>
   {#if open}
     <div

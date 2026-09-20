@@ -23,6 +23,7 @@ describe('Section I: Feedback Views', () => {
     // submitSearch's typing/click below needs the page to actually be
     // interactive, which a retrying assertion on visible content doesn't
     // guarantee on its own.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Verify columns
@@ -142,6 +143,7 @@ describe('Section I: Feedback Views', () => {
     cy.title().should('contain', 'Class Feedback') // The title is Class Feedback or similar
     // See the same comment in Test Case 17 -- raw cy.visit() with no built-in
     // settle time before submitSearch's typing/click.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
     // Verify columns

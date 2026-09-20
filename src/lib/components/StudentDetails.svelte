@@ -334,7 +334,7 @@
               copyEmails([studentData.email, studentData.secondaryEmail])}
             class="flex items-center gap-1"
           >
-            <Icon src={DocumentDuplicate} class="h-5 w-5 text-black" />
+            <Icon src={DocumentDuplicate} class="size-5 text-black" />
             <span>Copy Emails</span>
           </Button>
         </div>
@@ -419,7 +419,7 @@
                   </span>
                 {:else}
                   <div class="flex items-center gap-1 text-red-500">
-                    <Icon src={XCircle} class="h-5 w-5" />
+                    <Icon src={XCircle} class="size-5" />
                     <span>No</span>
                   </div>
                 {/if}

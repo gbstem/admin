@@ -42,7 +42,8 @@ describe('Section E: Classes Directory', () => {
     })
 
     // Select "Python 1" from Course filter dropdown
-    cy.get('input[name="course"]').clear().type('Python 1')
+    cy.get('input[name="course"]').clear()
+    cy.get('input[name="course"]').type('Python 1')
     cy.get('input[name="course"]')
       .parent()
       .find('button')

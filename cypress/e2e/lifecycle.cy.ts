@@ -24,9 +24,8 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.get('[role="dialog"]').should('exist')
 
     // Role selection: admin
-    cy.get('input[name="what-role-should-this-token-grant"]')
-      .clear()
-      .type('admin')
+    cy.get('input[name="what-role-should-this-token-grant"]').clear()
+    cy.get('input[name="what-role-should-this-token-grant"]').type('admin')
     cy.get('input[name="what-role-should-this-token-grant"]')
       .parent()
       .find('button')
@@ -138,7 +137,8 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     const updatedLastName = 'TestUpdated'
     cy.get('input[name="first-name"]').should('have.value', 'Lifecycle')
     cy.get('input[name="last-name"]').should('have.value', 'Test')
-    cy.get('input[name="last-name"]').clear().type(updatedLastName)
+    cy.get('input[name="last-name"]').clear()
+    cy.get('input[name="last-name"]').type(updatedLastName)
     cy.get('input[name="last-name"]')
       .closest('.items-end')
       .contains('button', 'Update')
@@ -152,7 +152,8 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.contains('span', 'Change email')
       .parent()
       .within(() => {
-        cy.get('input[name="new-email"]').clear().type(updatedEmail)
+        cy.get('input[name="new-email"]').clear()
+        cy.get('input[name="new-email"]').type(updatedEmail)
       })
     cy.get('input[name="new-email"]')
       .closest('.items-end')
@@ -161,9 +162,9 @@ describe('Section N: End-to-End Account Lifecycle', () => {
 
     // Reauthenticate dialog opens
     cy.get('[role="dialog"]').should('exist')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
     cy.get('[role="dialog"]')
       .find('input[type="password"]')
-      .clear()
       .type(initialPassword)
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
@@ -187,8 +188,10 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.contains('span', 'Change password')
       .parent()
       .within(() => {
-        cy.get('input[name="new-password"]').clear().type(newPassword)
-        cy.get('input[name="confirm-password"]').clear().type(newPassword)
+        cy.get('input[name="new-password"]').clear()
+        cy.get('input[name="new-password"]').type(newPassword)
+        cy.get('input[name="confirm-password"]').clear()
+        cy.get('input[name="confirm-password"]').type(newPassword)
       })
     cy.get('input[name="confirm-password"]')
       .closest('.items-end')
@@ -197,9 +200,9 @@ describe('Section N: End-to-End Account Lifecycle', () => {
 
     // Reauthenticate dialog opens
     cy.get('[role="dialog"]').should('exist')
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
     cy.get('[role="dialog"]')
       .find('input[type="password"]')
-      .clear()
       .type(initialPassword)
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
@@ -241,10 +244,8 @@ describe('Section N: End-to-End Account Lifecycle', () => {
       .click({ force: true })
 
     cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]')
-      .find('input[type="password"]')
-      .clear()
-      .type(finalPassword)
+    cy.get('[role="dialog"]').find('input[type="password"]').clear()
+    cy.get('[role="dialog"]').find('input[type="password"]').type(finalPassword)
     cy.get('[role="dialog"]')
       .find('button[type="submit"]')
       .contains('Delete')

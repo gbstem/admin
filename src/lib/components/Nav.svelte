@@ -140,7 +140,7 @@
       <ProfileMenu class="hidden sm:block" />
     {/if}
     <button
-      class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-200 sm:hidden"
+      class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-gray-200 sm:hidden"
       type="button"
       aria-label={open ? 'Close menu' : 'Open menu'}
       aria-expanded={open}
@@ -149,9 +149,9 @@
       }}
     >
       {#if open}
-        <Icon src={XMark} class="h-8 w-8" />
+        <Icon src={XMark} class="size-8" />
       {:else}
-        <Icon src={Bars2} class="h-8 w-8" />
+        <Icon src={Bars2} class="size-8" />
       {/if}
     </button>
   </div>

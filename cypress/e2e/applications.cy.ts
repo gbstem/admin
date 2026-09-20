@@ -65,7 +65,8 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Select "Fall 2025" from Collection dropdown
-    cy.get('input[name="collection"]').clear().type('Fall 2025')
+    cy.get('input[name="collection"]').clear()
+    cy.get('input[name="collection"]').type('Fall 2025')
     cy.get('input[name="collection"]')
       .parent()
       .find('button')
@@ -78,7 +79,8 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Switch back to the current semester to see the applications again
-    cy.get('input[name="collection"]').clear().type(currentSemesterName)
+    cy.get('input[name="collection"]').clear()
+    cy.get('input[name="collection"]').type(currentSemesterName)
     cy.get('input[name="collection"]')
       .parent()
       .find('button')
@@ -91,7 +93,8 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Select "undecided" from Decision dropdown
-    cy.get('input[name="decision"]').clear().type('undecided')
+    cy.get('input[name="decision"]').clear()
+    cy.get('input[name="decision"]').type('undecided')
     cy.get('input[name="decision"]')
       .parent()
       .find('button')
@@ -279,6 +282,7 @@ describe('Section D: Instructor Applications Management', () => {
     // attach event handlers before interacting -- the row is visible from SSR
     // markup well before its checkbox's onclick listener is wired up, so a
     // retrying assertion on the row itself doesn't catch this.
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
     // Search for this one rather than expecting to find her row on the first
     // page. Selecting by name already made the test independent of row
@@ -324,7 +328,8 @@ describe('Section D: Instructor Applications Management', () => {
     cy.get('input[name="personal.phoneNumber"]').should('not.be.disabled')
 
     // Cancel changes test
-    cy.get('input[name="personal.phoneNumber"]').clear().type('123-456-7890')
+    cy.get('input[name="personal.phoneNumber"]').clear()
+    cy.get('input[name="personal.phoneNumber"]').type('123-456-7890')
     cy.contains('button', 'Cancel changes').click({ force: true })
     cy.get('input[name="personal.phoneNumber"]').should('be.disabled')
     cy.get('input[name="personal.phoneNumber"]').should(
@@ -334,7 +339,8 @@ describe('Section D: Instructor Applications Management', () => {
 
     // Save changes test
     cy.contains('button', 'Edit').click({ force: true })
-    cy.get('input[name="personal.phoneNumber"]').clear().type('123-456-7890')
+    cy.get('input[name="personal.phoneNumber"]').clear()
+    cy.get('input[name="personal.phoneNumber"]').type('123-456-7890')
     cy.contains('button', 'Save changes').click({ force: true })
 
     // Verify toast success
@@ -435,11 +441,16 @@ describe('Section D: Instructor Applications Management', () => {
         cy.selectOption('input[name="attendance"]', 'On Time')
 
         // Ratings inputs
-        cy.get('input[type="number"]').eq(0).clear().type('4') // Friendliness
-        cy.get('input[type="number"]').eq(1).clear().type('4') // Explanations
-        cy.get('input[type="number"]').eq(2).clear().type('3') // Engagement
-        cy.get('input[type="number"]').eq(3).clear().type('4') // Pacing
-        cy.get('input[type="number"]').eq(4).clear().type('4') // Overall
+        cy.get('input[type="number"]').eq(0).clear()
+        cy.get('input[type="number"]').eq(0).type('4') // Friendliness
+        cy.get('input[type="number"]').eq(1).clear()
+        cy.get('input[type="number"]').eq(1).type('4') // Explanations
+        cy.get('input[type="number"]').eq(2).clear()
+        cy.get('input[type="number"]').eq(2).type('3') // Engagement
+        cy.get('input[type="number"]').eq(3).clear()
+        cy.get('input[type="number"]').eq(3).type('4') // Pacing
+        cy.get('input[type="number"]').eq(4).clear()
+        cy.get('input[type="number"]').eq(4).type('4') // Overall
 
         // Textarea fields
         cy.get('textarea[name="conversation-notes"]').type(

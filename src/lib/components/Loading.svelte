@@ -18,7 +18,7 @@
   transition:fade
 >
   <div role="status">
-    <SpinnerIcon class="h-10 w-10 fill-gray-700" />
+    <SpinnerIcon class="size-10 fill-gray-700" />
     <span class="sr-only">Loading...</span>
   </div>
 </div>

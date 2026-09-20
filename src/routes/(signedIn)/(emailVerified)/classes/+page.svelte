@@ -112,7 +112,7 @@
       copyEmails(data.classes.map((instructor) => instructor.email))}
     class="flex h-12 items-center gap-1"
   >
-    <Icon src={DocumentDuplicate} class="h-5 w-5 text-black" />
+    <Icon src={DocumentDuplicate} class="size-5 text-black" />
     <span>Copy Emails</span>
   </Button>
 </div>

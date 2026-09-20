@@ -2,5 +2,28 @@
   "css.lint.unknownAtRules": "ignore",
   "files.exclude": {
     "**/*-debug.log": true
-  }
+  },
+
+  // Format on save through Prettier so the editor produces byte-identical output to `yarn format`.
+  // Without an explicit defaultFormatter the editor falls back to its built-in TypeScript formatter,
+  // which knows nothing about prettier.config.js (no semicolons, Tailwind class sorting, Svelte
+  // parsing) -- that fallback is what causes formatting to drift between the IDE and the CLI.
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Only format where a Prettier config is actually resolved, so files outside this project are
+  // left alone.
+  "prettier.requireConfig": true,
+  "prettier.useEditorConfig": false,
+
+  // Per-language pins: a global defaultFormatter is overridden by any language-specific setting a
+  // user already has, so name each language Prettier owns here.
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[svelte]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[markdown]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[yaml]": { "editor.defaultFormatter": "esbenp.prettier-vscode" }
 }

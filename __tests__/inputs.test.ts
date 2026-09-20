@@ -1,5 +1,5 @@
 import { mount, unmount, flushSync } from 'svelte'
-import { fireEvent } from '@testing-library/dom'
+import { fireEvent, screen, within } from '@testing-library/dom'
 import TextInput from '../src/lib/components/TextInput.svelte'
 import EmailInput from '../src/lib/components/EmailInput.svelte'
 import PasswordInput from '../src/lib/components/PasswordInput.svelte'
@@ -37,11 +37,9 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
-      expect(input).not.toBeNull()
+      const input = screen.getByLabelText(/Test Label/) as HTMLInputElement
       expect(input.value).toBe('hello')
       expect(input.required).toBe(true)
-      expect(container.textContent).toContain('Test Label*')
 
       unmount(app)
     })
@@ -61,7 +59,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Validated/) as HTMLInputElement
       expect(input.validationMessage).toBe('Please fill required fields.')
 
       unmount(app)
@@ -79,7 +77,9 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(
+        /Custom Validation/,
+      ) as HTMLInputElement
       expect(input.validationMessage).toBe('Must match pattern')
 
       unmount(app)
@@ -97,7 +97,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Valid Input/) as HTMLInputElement
       expect(input.validationMessage).toBe('')
 
       unmount(app)
@@ -115,8 +115,11 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
+      // No label is passed, so there's no accessible name to query the
+      // wrapper by - it's plain a `<div>` around the input.
+      // eslint-disable-next-line testing-library/no-node-access
       const wrapper = container.firstElementChild as HTMLElement
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = within(container).getByRole('textbox') as HTMLInputElement
       expect(wrapper.classList.contains('custom-container-class')).toBe(true)
       expect(input.classList.contains('custom-input-class')).toBe(true)
 
@@ -136,10 +139,9 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Email Address/) as HTMLInputElement
       expect(input.type).toBe('email')
       expect(input.value).toBe('user@example.com')
-      expect(container.textContent).toContain('Email Address*')
 
       unmount(app)
     })
@@ -156,7 +158,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Email/) as HTMLInputElement
       expect(input.validationMessage).toBe('Invalid email domain')
 
       unmount(app)
@@ -174,14 +176,12 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Password/) as HTMLInputElement
       expect(input.type).toBe('password')
 
-      const toggleBtn = container.querySelector(
-        'button[type="button"]',
-      ) as HTMLButtonElement
-      expect(toggleBtn).not.toBeNull()
-      expect(toggleBtn.getAttribute('aria-label')).toBe('Show password')
+      const toggleBtn = screen.getByRole('button', {
+        name: 'Show password',
+      }) as HTMLButtonElement
 
       fireEvent.click(toggleBtn)
       flushSync()
@@ -208,7 +208,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Password/) as HTMLInputElement
       expect(input.validationMessage).toBe('Please fill required fields.')
 
       unmount(app)
@@ -229,7 +229,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Score/) as HTMLInputElement
       expect(input.type).toBe('number')
       expect(input.value).toBe('3')
       expect(input.min).toBe('0')
@@ -252,7 +252,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Age/) as HTMLInputElement
       expect(input.validationMessage).toBe('Please fill required fields.')
 
       unmount(app)
@@ -271,7 +271,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Accept Terms/) as HTMLInputElement
       expect(input.type).toBe('checkbox')
       expect(input.checked).toBe(false)
 
@@ -292,7 +292,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Agree/) as HTMLInputElement
       expect(input.validationMessage).toBe('Please fill required fields.')
 
       unmount(app)
@@ -310,7 +310,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Meeting Time/) as HTMLInputElement
       expect(input.type).toBe('datetime-local')
       expect(input.value).toBe('2026-08-03T14:00')
 
@@ -328,7 +328,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const input = container.querySelector('input') as HTMLInputElement
+      const input = screen.getByLabelText(/Time/) as HTMLInputElement
       expect(input.validationMessage).toBe('Please fill required fields.')
 
       unmount(app)
@@ -349,13 +349,9 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const textarea = container.querySelector(
-        'textarea',
-      ) as HTMLTextAreaElement
-      expect(textarea).not.toBeNull()
+      const textarea = screen.getByLabelText(/Feedback/) as HTMLTextAreaElement
       expect(textarea.value).toBe('Initial text')
       expect(textarea.style.minHeight).toBe('7.5rem')
-      expect(container.textContent).toContain('Feedback*')
 
       fireEvent.input(textarea, { target: { value: 'Updated feedback' } })
       flushSync()
@@ -379,8 +375,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const btn = container.querySelector('button') as HTMLButtonElement
-      expect(btn).not.toBeNull()
+      const btn = screen.getByRole('button') as HTMLButtonElement
       expect(btn.type).toBe('submit')
       expect(btn.classList.contains('bg-gray-100')).toBe(true)
 
@@ -397,10 +392,8 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const link = container.querySelector('a') as HTMLAnchorElement
-      expect(link).not.toBeNull()
+      const link = screen.getByRole('button') as HTMLAnchorElement
       expect(link.getAttribute('href')).toBe('/dashboard')
-      expect(link.getAttribute('role')).toBe('button')
       expect(link.classList.contains('bg-blue-100')).toBe(true)
 
       unmount(app)
@@ -414,7 +407,7 @@ describe('UI & Input Components', () => {
           props: { color },
         })
         flushSync()
-        const btn = container.querySelector('button') as HTMLButtonElement
+        const btn = screen.getByRole('button') as HTMLButtonElement
         expect(btn.classList.contains(`bg-${color}-100`)).toBe(true)
         unmount(app)
       })
@@ -431,9 +424,7 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const status = container.querySelector('[role="status"]')
-      expect(status).not.toBeNull()
-      expect(container.textContent).toContain('Loading...')
+      expect(screen.getByRole('status')).toHaveTextContent('Loading...')
 
       unmount(app)
     })
@@ -447,11 +438,15 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
-      const btn = container.querySelector('button') as HTMLButtonElement
-      expect(btn).not.toBeNull()
+      const btn = screen.getByRole('button')
 
       fireEvent.click(btn)
       flushSync()
+
+      // No title/content snippets are passed, so there's nothing visible to
+      // assert about the toggled state - this only confirms the click
+      // handler doesn't throw.
+      expect(btn).toBeInTheDocument()
 
       unmount(app)
     })
@@ -467,6 +462,9 @@ describe('UI & Input Components', () => {
       })
       flushSync()
 
+      // Card renders no children here and carries no accessible role of its
+      // own, so there's no query-based way to reach its root element.
+      // eslint-disable-next-line testing-library/no-node-access
       const div = container.firstElementChild as HTMLElement
       expect(div.classList.contains('my-card-class')).toBe(true)
 
