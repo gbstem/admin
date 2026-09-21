@@ -61,6 +61,7 @@
   >
     <button class="w-full" type="button" onclick={close} transition:fade>
       <div
+        data-testid="alert"
         class={cn(
           'flex w-full items-center gap-2 rounded-md p-3 shadow-sm',
           $alert.type === 'success' && 'bg-green-200',

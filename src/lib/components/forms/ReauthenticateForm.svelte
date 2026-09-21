@@ -10,7 +10,9 @@
     reauthenticateWithCredential,
   } from 'firebase/auth'
   interface Props {
-    onReauthenticate?: () => void
+    // Returns a promise so `onUpdate` below can await it. See the
+    // `invalidateAll: false` comment for why that ordering matters.
+    onReauthenticate?: () => void | Promise<void>
     children?: import('svelte').Snippet
   }
 
@@ -25,6 +27,20 @@
     {
       SPA: true,
       validators: zod(schema as any) as any,
+      // This dialog renders no server-loaded data, so it has nothing to
+      // revalidate - and superforms' default (`invalidateAll: true`) actively
+      // broke the flows that use it. It fires *after* `onUpdate` resolves,
+      // racing whatever mutation `onReauthenticate` kicked off: changing a
+      // password bumps Firebase's `tokensValidAfterTime`, which revokes the
+      // `__session` cookie that hooks.server.ts checks with `checkRevoked`,
+      // so whichever request landed second decided whether you stayed on the
+      // page or got bounced to /signin. That coin flip failed
+      // profile.cy.ts about half of CI runs, from both sides.
+      //
+      // The three sibling forms (ChangeName/ChangeEmail/ChangePassword) all
+      // already opt out the same way.
+      invalidateAll: false,
+      applyAction: false,
       async onUpdate({ form: formVal }) {
         if (!formVal.valid) return
         if ($user) {
@@ -36,7 +52,11 @@
                 formVal.data.password,
               ),
             )
-            onReauthenticate?.()
+            // Awaited, so the caller's mutation is complete (and its
+            // success/error alert triggered) before this form's submit
+            // settles. Firing it loose left two async chains in flight with
+            // no defined order.
+            await onReauthenticate?.()
           } catch (err: any) {
             alert.trigger('error', err.code, true)
           }
