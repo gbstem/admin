@@ -128,7 +128,9 @@ describe('Section A: Authentication and Navigation', () => {
       // Expect a dialog to pop up asking the user to verify their email
       cy.get('[role="dialog"]').should('exist')
       cy.contains('Please verify your email').should('be.visible')
-      cy.waitForNotification('Email is not verified.', 'bg-red-200')
+      cy.get('[data-testid="email-unverified-banner"]')
+        .should('be.visible')
+        .and('contain', 'Email is not verified.')
 
       // Verify main navigation links are hidden until this account is verified
       cy.contains('a', 'Dashboard').should('not.exist')
@@ -211,7 +213,9 @@ describe('Section A: Authentication and Navigation', () => {
       // Expect a dialog to pop up asking the user to verify their email
       cy.get('[role="dialog"]').should('exist')
       cy.contains('Please verify your email').should('be.visible')
-      cy.waitForNotification('Email is not verified.', 'bg-red-200')
+      cy.get('[data-testid="email-unverified-banner"]')
+        .should('be.visible')
+        .and('contain', 'Email is not verified.')
 
       // Verify main navigation links are hidden because this account is not verified.
       cy.contains('a', 'Dashboard').should('not.exist')

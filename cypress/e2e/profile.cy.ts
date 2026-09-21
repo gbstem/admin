@@ -53,8 +53,32 @@ describe('Section L: Profile and Account Customization', () => {
     cy.get('input[name="first-name"]').should('have.value', 'Demo')
     cy.get('input[name="last-name"]').should('have.value', 'AdminTest')
 
-    // 3. Change email to temp and then change it back
-    // We target the "Change email" fieldset
+    // Put the seeded name back. Every mutation in this test restores what it
+    // changed, because the assertions above are written against the seeded
+    // profile - a run that left 'AdminTest' behind made its own retry fail on
+    // the very first assertion, for reasons that had nothing to do with what
+    // actually went wrong.
+    cy.get('input[name="last-name"]').clear()
+    cy.get('input[name="last-name"]').type('Admin')
+    cy.get('input[name="last-name"]')
+      .closest('.items-end')
+      .contains('button', 'Update')
+      .click({ force: true })
+    cy.waitForNotification('Name successfully updated.')
+    cy.get('input[name="last-name"]').should('have.value', 'Admin')
+
+    // 3. Request an email change.
+    //
+    // There is nothing to change back here: /api/action's `changeEmail` only
+    // *sends* a verify-and-change link (generateVerifyAndChangeEmailLink), and
+    // the address does not move until a recipient clicks it, which no test
+    // does. This step used to ask for a second change, back to
+    // demo@gbstem.org -- a link from the account's own address to itself,
+    // which Firebase rejects as auth/email-already-exists. That 400 was
+    // invisible: waitForNotification matched `.bg-gray-200` anywhere on the
+    // page, and the page's own <h1> carries that class, so the assertion
+    // passed on a heading while the real toast was red. It is scoped to the
+    // Alert component now, so the request has to actually succeed.
     cy.contains('span', 'Change email')
       .parent()
       .within(() => {
@@ -74,38 +98,28 @@ describe('Section L: Profile and Account Customization', () => {
       .find('button[type="submit"]')
       .click({ force: true })
     cy.waitForNotification('A verification email was sent.', 'bg-gray-200')
-    // Firebase Auth appears to reject a second email-action-link request for
-    // the same account made too soon after the first (verified via repeated
-    // real test runs: removing this wait made the second request below fail
-    // with a 400 from /api/action every time) -- not a client-side race, so
-    // give it real breathing room rather than retrying blindly.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
 
-    // Change email back to demo@gbstem.org
-    cy.contains('span', 'Change email')
-      .parent()
-      .within(() => {
-        cy.get('input[name="new-email"]').clear()
-        cy.get('input[name="new-email"]').type('demo@gbstem.org')
-        cy.get('input[name="new-email"]')
-          .closest('.items-end')
-          .contains('button', 'Update')
-          .click({ force: true })
-      })
-    cy.get('[role="dialog"]').should('exist')
-    cy.get('[role="dialog"]').find('input[type="password"]').clear()
-    cy.get('[role="dialog"]').find('input[type="password"]').type('penguin')
-    cy.get('[role="dialog"]')
-      .find('button[type="submit"]')
-      .click({ force: true })
-    cy.waitForNotification('A verification email was sent.', 'bg-gray-200')
-    // Same Auth-throttling consideration as above, ahead of the next
-    // reauthenticate-and-mutate flow.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
+    // ...and the account still answers to its original address, because the
+    // emailed link was never used.
+    cy.task('getFirestoreUserId', 'tempadmin@gbstem.org').should('eq', null)
+    cy.task('getFirestoreUserId', 'demo@gbstem.org').should('be.a', 'string')
 
-    // 4. Change password to temp and then change it back
+    // 4. Change the password, then put it back.
+    //
+    // A password change bumps Firebase's `tokensValidAfterTime`, which revokes
+    // the `__session` cookie hooks.server.ts verifies with `checkRevoked`.
+    // ChangePasswordForm signs in again with the new password and mints a
+    // replacement before it reports success, so the session survives.
+    //
+    // This used to be a coin flip, and it failed this spec in roughly half of
+    // CI runs: ReauthenticateForm fired its callback without awaiting it while
+    // superforms' default `invalidateAll: true` reloaded the page in parallel,
+    // so whether the reload saw a live or a revoked cookie -- and therefore
+    // whether you stayed on /profile or were bounced to /signin -- depended on
+    // which request happened to land first. Both outcomes broke this test, and
+    // both reported it as a beforeEach failure on the *retry*
+    // ("expected 'Sign in' to include 'Profile'"), naming neither the step
+    // that failed nor the reason.
     cy.contains('span', 'Change password')
       .parent()
       .within(() => {
@@ -133,35 +147,22 @@ describe('Section L: Profile and Account Customization', () => {
         cy.get('input[name="new-password"]').should('have.value', '')
         cy.get('input[name="confirm-password"]').should('have.value', '')
       })
-    // Same Auth-throttling consideration as above, ahead of the next
-    // reauthenticate-and-mutate flow.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
-
-    // Changing the password bumps Firebase's tokensValidAfterTime for this
-    // account, which revokes the __session cookie minted at the original
-    // sign-in - hooks.server.ts's verifySessionCookie(..., true) correctly
-    // rejects it on the next server-rendered request, redirecting here to
-    // /signin. Sign back in with the new password before testing the second
-    // change below.
-    cy.url().should('include', '/signin')
-    cy.waitForFormHydration()
-    cy.fillInput('input[type="email"]', 'demo@gbstem.org')
-    cy.fillInput('input[type="password"]', 'penguin123')
-    cy.get('button[type="submit"]').click()
-    // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
-    cy.wait(1000)
+    // The session has to survive the change, and only a server-rendered
+    // request proves it: a full visit is what hooks.server.ts's
+    // `verifySessionCookie(..., checkRevoked)` would reject and redirect to
+    // /signin if the cookie were still the revoked one. Staying put on the
+    // client says nothing, because nothing asks the server.
     cy.visit('/profile')
+    cy.url().should('include', '/profile')
     cy.title().should('contain', 'Profile')
     cy.get('h1').should('contain', 'Profile')
-    // A fresh full-page visit, unlike the rest of this test's SPA
-    // navigation - the Change Password form's use:enhance handler needs a
-    // moment to attach, or the click below native-GETs instead of triggering
-    // the reauthenticate dialog (see waitForFormHydration's doc comment).
+    // A fresh full-page visit - the Change Password form's use:enhance handler
+    // needs a moment to attach, or the click below native-GETs instead of
+    // opening the reauthenticate dialog (see waitForFormHydration's comment).
     cy.waitForFormHydration()
 
-    // Change password to penguin!, which allows us to test that the previous
-    // password change worked during the reauthenticate step.
+    // Change it again, reauthenticating with the password set above - which
+    // is what proves that first change reached Firebase and not just the UI.
     cy.contains('span', 'Change password')
       .parent()
       .within(() => {
@@ -175,7 +176,6 @@ describe('Section L: Profile and Account Customization', () => {
           .click({ force: true })
       })
 
-    // Reauthenticate dialog (now password is penguin123!)
     cy.get('[role="dialog"]').should('exist')
     cy.get('[role="dialog"]').find('input[type="password"]').clear()
     cy.get('[role="dialog"]').find('input[type="password"]').type('penguin123')
@@ -189,6 +189,26 @@ describe('Section L: Profile and Account Customization', () => {
         cy.get('input[name="new-password"]').should('have.value', '')
         cy.get('input[name="confirm-password"]').should('have.value', '')
       })
+    cy.url().should('include', '/profile')
+  })
+
+  // `afterEach`, not `after`, because it has to run between a failed attempt
+  // and its retry. cypress/support/e2e.ts re-seeds once per spec file, not per
+  // test, so a retry inherits whatever password the failed attempt left
+  // behind - and cy.signedInSession only knows the seeded one. That is what
+  // turned any single failure in this test into a second, misleading failure:
+  // the retry's beforeEach could not sign in, and reported it as
+  // `expected 'Sign in' to include 'Profile'`, naming neither this test nor
+  // the password.
+  //
+  // It goes through the Admin SDK rather than the form above because the
+  // seeded password is one the form would reject - see the `setUserPassword`
+  // task.
+  afterEach(() => {
+    cy.task('setUserPassword', {
+      email: 'demo@gbstem.org',
+      password: 'penguin',
+    })
   })
 })
 

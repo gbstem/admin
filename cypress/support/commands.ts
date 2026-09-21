@@ -110,22 +110,52 @@ Cypress.Commands.add(
     const emailToUse =
       options.email ||
       (role === 'admin' ? 'demo@gbstem.org' : `${role}@gbstem.org`)
-
-    cy.session(`signedIn-${emailToUse}`, () => {
-      cy.visit('/signin')
-      cy.get('input[type="email"]').should('be.visible')
-      // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
-      cy.wait(2500)
-      const password = 'penguin'
-
-      cy.fillInput('input[type="email"]', emailToUse)
-      cy.fillInput('input[type="password"]', password)
-      cy.get('button[type="submit"]').click()
-      // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
-      cy.wait(1000)
-    })
-
     const initialPage = options.initialPage || '/dashboard'
+
+    cy.session(
+      `signedIn-${emailToUse}`,
+      () => {
+        cy.visit('/signin')
+        cy.get('input[type="email"]').should('be.visible')
+        // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
+        cy.wait(2500)
+        const password = 'penguin'
+
+        cy.fillInput('input[type="email"]', emailToUse)
+        cy.fillInput('input[type="password"]', password)
+        cy.get('button[type="submit"]').click()
+        // SignInForm only leaves /signin once /api/auth has minted the
+        // `__session` cookie, so this is the signal that setup actually
+        // succeeded. Without it a failed sign-in was cached as a perfectly
+        // good session, and the failure surfaced pages later as a confusing
+        // title assertion against the sign-in page.
+        cy.url({ timeout: 15000 }).should('not.include', '/signin')
+      },
+      {
+        // cy.session restores a cached cookie without asking the server
+        // whether it is still any good, and this app's `__session` cookie can
+        // be revoked out from under the cache: anything that bumps Firebase's
+        // `tokensValidAfterTime` (a password change) makes
+        // hooks.server.ts's `verifySessionCookie(..., true)` reject it. A
+        // spec that mutates the signed-in account therefore poisoned its own
+        // retry - the restored session 301'd to /signin and reported it as
+        // `expected 'Sign in' to include 'Profile'` in a beforeEach hook,
+        // which names neither the spec's real failure nor its cause.
+        //
+        // Failing validation makes cy.session re-run setup instead, so a
+        // retry gets a genuinely fresh session.
+        validate() {
+          cy.request({ url: initialPage, followRedirect: false }).then(
+            (res) => {
+              expect(String(res.headers.location ?? '')).to.not.include(
+                '/signin',
+              )
+            },
+          )
+        },
+      },
+    )
+
     cy.visit(initialPage)
     if (initialPage === '/announcements') {
       cy.title().should('contain', 'Announcements')
@@ -329,9 +359,15 @@ Cypress.Commands.add(
     colorClass: string = 'bg-green-200',
     timeoutMs: number = 15000,
   ) => {
+    // Scoped to the Alert component itself, not to anything on the page
+    // wearing the same background class. `.bg-gray-200` alone also matched
+    // page headings, so an assertion for an info toast could be satisfied by
+    // an <h1> while the real toast was red and reporting a failed request -
+    // profile.cy.ts was passing a step whose API call had 400'd.
     return cy
-      .get(`.${colorClass}`, { timeout: timeoutMs })
-      .should('contain', text)
+      .get('[data-testid="alert"]', { timeout: timeoutMs })
+      .should('have.class', colorClass)
+      .and('contain', text)
   },
 )
 

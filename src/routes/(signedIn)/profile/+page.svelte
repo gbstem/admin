@@ -80,6 +80,7 @@
   <div class="grid w-full max-w-2xl gap-6">
     {#if !data.user.emailVerified}
       <div
+        data-testid="email-unverified-banner"
         class="mt-2 flex w-full items-center gap-4 rounded-md bg-red-200 px-5 py-4 shadow-sm"
         transition:fade
       >

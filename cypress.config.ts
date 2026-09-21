@@ -97,6 +97,32 @@ export default defineConfig({
           await seedEmulator()
           return null
         },
+        // Sets an account's password through the Admin SDK, which is not
+        // bound by the app's own password policy.
+        //
+        // A spec that changes a seeded account's password has to put it back,
+        // or cy.signedInSession - which only knows the seeded password - fails
+        // for every later sign-in as that account, including the spec's own
+        // retry. It cannot put it back through the UI: scripts/seed.ts seeds
+        // `penguin`, and passwordSchema refuses an all-alphabet password, so
+        // the change-password form rejects the original value. The Admin SDK
+        // sets it the same way the seed did.
+        async setUserPassword({
+          email,
+          password,
+        }: {
+          email: string
+          password: string
+        }) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          const userRecord = await getAuth().getUserByEmail(email)
+          await getAuth().updateUser(userRecord.uid, { password })
+          return null
+        },
         async getFirestoreUserId(email: string) {
           if (getApps().length === 0) {
             initializeApp({

@@ -104,7 +104,9 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.get('h1').should('contain', 'Profile')
     cy.get('[role="dialog"]').should('exist')
     cy.contains('Please verify your email').should('be.visible')
-    cy.waitForNotification('Email is not verified.', 'bg-red-200')
+    cy.get('[data-testid="email-unverified-banner"]')
+      .should('be.visible')
+      .and('contain', 'Email is not verified.')
 
     // Verify main navigation links are hidden
     cy.contains('a', 'Dashboard').should('not.exist')
