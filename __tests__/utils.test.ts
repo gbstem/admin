@@ -18,6 +18,7 @@ import {
   formatClassTimes,
   formatDate,
   formatDateLocal,
+  formatDateInGbstemTime,
   formatDateShort,
   formatDateString,
   formatTime24to12,
@@ -26,6 +27,7 @@ import {
   getNearestFutureClassIndex,
   isClassUpcoming,
   normalizeCapitals,
+  parseGbstemDateTime,
   parseLimit,
   parsePage,
   parsePagination,
@@ -217,6 +219,34 @@ describe('utils', () => {
     it('toLocalISOString formats local date components to ISO string format', () => {
       const date = new Date(2026, 4, 28, 15, 30)
       expect(toLocalISOString(date)).toBe('2026-05-28T15:30')
+    })
+
+    it('formatDateInGbstemTime names the Eastern zone regardless of the runtime zone', () => {
+      const date = new Date('2026-05-28T19:30:00Z')
+      expect(formatDateInGbstemTime(date, 'long')).toBe(
+        'Thursday, May 28 at 3:30 PM Eastern Daylight Time',
+      )
+      expect(formatDateInGbstemTime(date, 'short')).toBe(
+        'Thu, May 28, 3:30 PM EDT',
+      )
+    })
+
+    it('parseGbstemDateTime anchors a semesterDates.json date/time to EDT in summer', () => {
+      // 09/20/26 at 19:00 is EDT (UTC-4), regardless of the process's own TZ.
+      const date = parseGbstemDateTime('09/20/26', '19:00')
+      expect(date.toISOString()).toBe('2026-09-20T23:00:00.000Z')
+      expect(formatDateInGbstemTime(date, 'long')).toBe(
+        'Sunday, September 20 at 7:00 PM Eastern Daylight Time',
+      )
+    })
+
+    it('parseGbstemDateTime anchors a semesterDates.json date/time to EST in winter', () => {
+      // 01/15/26 at 18:30 is EST (UTC-5).
+      const date = parseGbstemDateTime('01/15/26', '18:30')
+      expect(date.toISOString()).toBe('2026-01-15T23:30:00.000Z')
+      expect(formatDateInGbstemTime(date, 'long')).toBe(
+        'Thursday, January 15 at 6:30 PM Eastern Standard Time',
+      )
     })
   })
 

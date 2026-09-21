@@ -64,6 +64,7 @@ describe('collections.ts', () => {
           'classesStart',
           'instructorOrientation',
           'instructorOrientationLink',
+          'instructorOrientationTime',
           'newInstructorAppsDue',
           'newInstructorAppsOpen',
           'parentOrientation',
@@ -81,7 +82,11 @@ describe('collections.ts', () => {
     // every destructured usage below.
     const semesterDateEntries = (
       Object.entries(semesterDates) as Array<[string, string]>
-    ).filter(([field]) => field !== 'instructorOrientationLink')
+    ).filter(
+      ([field]) =>
+        field !== 'instructorOrientationLink' &&
+        field !== 'instructorOrientationTime',
+    )
 
     it.each(semesterDateEntries)(
       '%s is a valid MM/DD/YY date whose year matches currentSemester',
@@ -97,6 +102,15 @@ describe('collections.ts', () => {
       expect(
         () => new URL(semesterDates.instructorOrientationLink),
       ).not.toThrow()
+    })
+
+    // Bare `HH:mm`, like `classTimes` elsewhere in this codebase - no zone of
+    // its own. `formatDateInGbstemTime` combines it with `instructorOrientation`
+    // and anchors the result to `GBSTEM_TIME_ZONE`.
+    it('instructorOrientationTime is a valid 24-hour HH:mm time', () => {
+      expect(semesterDates.instructorOrientationTime).toMatch(
+        /^([01]\d|2[0-3]):[0-5]\d$/,
+      )
     })
   })
 
