@@ -1,16 +1,10 @@
 import raceJson from './race.json'
 import gendersJson from './genders.json'
-import shirtSizeJson from './shirtSizes.json'
-import dietaryRestrictionsJson from './dietaryRestrictions.json'
-import errorsJson from './errors.json'
 import reasonsJson from './reasons.json'
-import fieldsJson from './fields.json'
 import frlpJson from './frlp.json'
 import gradesJson from './grades.json'
 import parentEducationJson from './parentEducation.json'
-import timeSlotsJson from './timeSlots.json'
 import courses from './courses.json'
-import classesPerWeekJson from './classesPerWeek.json'
 import daysOfWeekJson from './daysOfWeek.json'
 import interviewAttendanceJson from './interviewAttendance.json'
 import { currentSemester } from './collections'
@@ -71,11 +65,7 @@ const scienceCoursesJson = [
 export {
   raceJson,
   gendersJson,
-  shirtSizeJson,
-  dietaryRestrictionsJson,
   reasonsJson,
-  errorsJson,
-  fieldsJson,
   frlpJson,
   csCoursesJson,
   mathCoursesJson,
@@ -83,9 +73,7 @@ export {
   engineeringCoursesJson,
   gradesJson,
   parentEducationJson,
-  timeSlotsJson,
   coursesJson,
-  classesPerWeekJson,
   daysOfWeekJson,
   interviewAttendanceJson,
 }
