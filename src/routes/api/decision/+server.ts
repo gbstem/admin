@@ -2,6 +2,7 @@ import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
 import { sendEmail } from '$lib/server/email'
 import { renderEmail } from '$lib/emails/render'
 import { resolveAccountEmail } from '$lib/server/accountEmail'
+import { formatDateInGbstemTime, parseGbstemDateTime } from '$lib/utils'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import semesterDatesJson from '$lib/data/semesterDates.json'
@@ -39,7 +40,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           firstName: body.name,
           name: 'Portal',
           link: 'https://portal.gbstem.org',
-          orientation: semesterDatesJson.instructorOrientation,
+          orientation: formatDateInGbstemTime(
+            parseGbstemDateTime(
+              semesterDatesJson.instructorOrientation,
+              semesterDatesJson.instructorOrientationTime,
+            ),
+            'long',
+          ),
           orientationLink: semesterDatesJson.instructorOrientationLink,
         },
       },
