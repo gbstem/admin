@@ -219,10 +219,9 @@ describe('users/{uid} - a name and nothing else', () => {
   })
 
   it('still lets a name change through on a document written before the role field was removed', async () => {
-    // Production documents kept a `role` until
-    // scripts/remove-user-document-roles.ts ran. The update rule checks only
-    // the fields a write changes, so those accounts can rename themselves
-    // whether or not it has run yet.
+    // Production documents kept a `role` until the user-document role removal
+    // migration ran. The update rule checks only the fields a write changes,
+    // so those accounts can rename themselves whether or not it has run yet.
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), `users/${UIDS.otherStudent}`), {
         role: 'student',
