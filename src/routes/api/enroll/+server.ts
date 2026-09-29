@@ -7,6 +7,10 @@ import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
+import {
+  isAllowedMeetingLink,
+  MEETING_LINK_ERROR,
+} from '$lib/helpers/meetingLink'
 import { z } from 'zod'
 
 const enrollSchema = z.object({
@@ -23,7 +27,14 @@ const enrollSchema = z.object({
   classDays: z.array(z.string()).min(1, 'At least one class day is required'),
   course: z.string().min(1, 'Course is required'),
   studentName: z.string().min(1, 'Student name is required'),
-  meetingLink: z.string().optional().default(''),
+  meetingLink: z
+    .string()
+    .trim()
+    .refine((link) => link === '' || isAllowedMeetingLink(link), {
+      message: MEETING_LINK_ERROR,
+    })
+    .optional()
+    .default(''),
   online: z.boolean(),
 })
 

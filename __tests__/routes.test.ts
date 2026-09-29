@@ -1418,6 +1418,57 @@ describe('API routes POST endpoints', () => {
     expect(MailService.send).not.toHaveBeenCalled()
   })
 
+  it('enrollPOST refuses a meeting link that is not an allowed https host, without sending', async () => {
+    mockAuthUsers({
+      'inst-uid-1': 'inst@test.com',
+      'parent-uid': 'parent@test.com',
+    })
+    mockRequest.json.mockResolvedValue({
+      registrationId: 'parent-uid-1',
+      firstName: 'StudentFirst',
+      instructor: 'InstructorName',
+      instructorUid: 'inst-uid-1',
+      classTimes: ['14:00'],
+      classDays: ['Monday'],
+      course: 'Math',
+      studentName: 'StudentFull',
+      meetingLink: "javascript://teams.microsoft.com/%0aalert('x')",
+      online: true,
+    })
+    await expect(
+      enrollPOST({
+        request: mockRequest as any,
+        locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      } as any),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(MailService.send).not.toHaveBeenCalled()
+  })
+
+  it('enrollPOST accepts a branded Zoom link and sends confirmation', async () => {
+    mockAuthUsers({
+      'inst-uid-1': 'inst@test.com',
+      'parent-uid': 'parent@test.com',
+    })
+    mockRequest.json.mockResolvedValue({
+      registrationId: 'parent-uid-1',
+      firstName: 'StudentFirst',
+      instructor: 'InstructorName',
+      instructorUid: 'inst-uid-1',
+      classTimes: ['14:00'],
+      classDays: ['Monday'],
+      course: 'Math',
+      studentName: 'StudentFull',
+      meetingLink: 'https://mit.zoom.us/j/99593863281',
+      online: true,
+    })
+    const res = await enrollPOST({
+      request: mockRequest as any,
+      locals: { user: { email: 'admin@test.com', role: 'admin' } },
+    } as any)
+    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(MailService.send).toHaveBeenCalledTimes(1)
+  })
+
   it('remindInstructorPOST rejects a legacy payload with an address but no instructorUid', async () => {
     mockRequest.json.mockResolvedValue({
       name: 'Instructor',

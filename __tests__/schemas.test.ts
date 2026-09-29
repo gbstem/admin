@@ -1,3 +1,4 @@
+import { MEETING_LINK_ERROR } from '$lib/helpers/meetingLink'
 import { z } from 'zod'
 import {
   applicationSchema,
@@ -68,6 +69,36 @@ describe('Zod Validation Schemas', () => {
       expect(data.classDay2).toBe('')
       expect(data.classTime2).toBe('')
       expect(data.online).toBe(true) // default value
+    })
+
+    it('accepts an empty meeting link', () => {
+      const data = expectParseSuccess(
+        classSchema.safeParse({ ...validClass, meetingLink: '' }),
+      )
+      expect(data.meetingLink).toBe('')
+    })
+
+    it('trims a meeting link', () => {
+      const data = expectParseSuccess(
+        classSchema.safeParse({
+          ...validClass,
+          meetingLink: ' https://mit.zoom.us/j/1 ',
+        }),
+      )
+      expect(data.meetingLink).toBe('https://mit.zoom.us/j/1')
+    })
+
+    it.each([
+      'javascript:alert(1)',
+      'http://zoom.us/j/1',
+      'https://evil.example',
+    ])('denies the meeting link %s', (meetingLink) => {
+      const issues = expectParseFailure(
+        classSchema.safeParse({ ...validClass, meetingLink }),
+      ).issues
+      expect(issues).toHaveLength(1)
+      expect(issues[0].path).toEqual(['meetingLink'])
+      expect(issues[0].message).toBe(MEETING_LINK_ERROR)
     })
 
     it('denies empty course name', () => {
@@ -495,6 +526,28 @@ describe('Zod Validation Schemas', () => {
       })
       const issues = expectParseFailure(result).issues
       expect(issues.length).toBeGreaterThanOrEqual(3)
+    })
+
+    it('trims meetingLink', () => {
+      const result = interviewSlotSchema.safeParse({
+        date: '2026-08-01T15:00:00.000Z',
+        meetingLink: '  https://zoom.us/j/999888777  ',
+        interviewerName: 'Jane Doe',
+      })
+      const data = expectParseSuccess(result)
+      expect(data.meetingLink).toBe('https://zoom.us/j/999888777')
+    })
+
+    it('denies invalid meeting link', () => {
+      const result = interviewSlotSchema.safeParse({
+        date: '2026-08-01T15:00:00.000Z',
+        meetingLink: 'javascript:alert(1)',
+        interviewerName: 'Jane Doe',
+      })
+      const issues = expectParseFailure(result).issues
+      expect(issues[0].message).toContain(
+        'Zoom, Microsoft Teams or Google Meet',
+      )
     })
   })
 

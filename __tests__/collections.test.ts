@@ -15,6 +15,7 @@ import {
   interviewTimeRequestsCollection,
   withSemester,
 } from '../src/lib/data/collections'
+import { isAllowedMeetingLink } from '../src/lib/helpers/meetingLink'
 
 describe('collections.ts', () => {
   // Guards the assumption the rest of this file's assertions are built on: that
@@ -97,11 +98,14 @@ describe('collections.ts', () => {
       },
     )
 
-    it('instructorOrientationLink is a valid URL', () => {
+    it('instructorOrientationLink is an allowed meeting link', () => {
       expect(semesterDates.instructorOrientationLink).toMatch(/^https:\/\//)
       expect(
         () => new URL(semesterDates.instructorOrientationLink),
       ).not.toThrow()
+      expect(
+        isAllowedMeetingLink(semesterDates.instructorOrientationLink),
+      ).toBe(true)
     })
 
     // Bare `HH:mm`, like `classTimes` elsewhere in this codebase - no zone of

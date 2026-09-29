@@ -19,6 +19,7 @@
   import FormInput from '../FormInput.svelte'
   import Loading from '../Loading.svelte'
   import Select from '../Select.svelte'
+  import { openableMeetingLink } from '$lib/helpers/meetingLink'
   import { getInterviewSlotDefaults, interviewSlotSchema } from './schemas'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { Trash } from '@steeze-ui/heroicons'
@@ -502,9 +503,22 @@
             </div>
             <div>
               <b>Meeting Link:</b>
-              <a href={interview.meetingLink} target="_blank" class="break-all">
-                {interview.meetingLink}
-              </a>
+              {#if openableMeetingLink(interview.meetingLink)}
+                <a
+                  href={openableMeetingLink(interview.meetingLink)}
+                  target="_blank"
+                  rel="noopener"
+                  class="break-all text-blue-600 hover:underline"
+                >
+                  {interview.meetingLink}
+                </a>
+              {:else if interview.meetingLink}
+                <span class="font-medium text-red-600"
+                  >Invalid meeting link</span
+                >
+              {:else}
+                <span class="text-gray-500">None</span>
+              {/if}
             </div>
             <!-- interview status -->
             <div>

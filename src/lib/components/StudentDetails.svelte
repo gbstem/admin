@@ -6,6 +6,7 @@
   import type ClassData from '$lib/data/types/ClassData'
   import type Student from '$lib/data/types/Student'
   import { formatClassName } from '$lib/helpers/studentDetails'
+  import { openableMeetingLink } from '$lib/helpers/meetingLink'
   import { studentService } from '$lib/services/studentService'
   import { alert } from '$lib/stores'
   import {
@@ -274,7 +275,22 @@
                       <td class="p-2 whitespace-nowrap"
                         >{instructorEmails[value.id] ?? ''}</td
                       >
-                      <td class="p-2 whitespace-nowrap">{value.meetingLink}</td>
+                      <td class="p-2 whitespace-nowrap">
+                        {#if openableMeetingLink(value.meetingLink)}
+                          <a
+                            href={openableMeetingLink(value.meetingLink)}
+                            target="_blank"
+                            rel="noopener"
+                            class="text-blue-600 hover:underline"
+                          >
+                            {value.meetingLink}
+                          </a>
+                        {:else if value.meetingLink}
+                          <span class="font-medium text-red-600"
+                            >Invalid meeting link</span
+                          >
+                        {/if}
+                      </td>
                       <td class="p-2 whitespace-nowrap"
                         >{value.online ? 'Online' : 'In-Person'}</td
                       >
