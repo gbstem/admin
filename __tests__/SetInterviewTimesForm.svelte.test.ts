@@ -81,7 +81,7 @@ const futureSlot: Data.InterviewSlot = {
   intervieweeLastName: '',
   intervieweeId: '',
   interviewSlotStatus: 'available',
-  meetingLink: 'https://meet.example.com/slot-1',
+  meetingLink: 'https://meet.google.com/slot-1',
 }
 
 // A slot `authUser` owns. Ownership is the `interviewerUid` stamped at
@@ -91,7 +91,7 @@ const ownSlot: Data.InterviewSlot = {
   ...futureSlot,
   id: 'slot-2',
   interviewerUid: authUser.object.uid,
-  meetingLink: 'https://meet.example.com/slot-2',
+  meetingLink: 'https://meet.google.com/slot-2',
 }
 
 describe('SetInterviewTimesForm Component', () => {
@@ -302,6 +302,30 @@ describe('SetInterviewTimesForm Component', () => {
       ).toBeInTheDocument()
     })
     expect(within(container).getByText('Edit')).toBeInTheDocument()
+
+    unmount(app)
+  })
+
+  it('renders "Invalid meeting link" and no link when the meeting link is invalid', async () => {
+    const invalidSlot: Data.InterviewSlot = {
+      ...ownSlot,
+      id: 'slot-invalid',
+      meetingLink: 'javascript:alert("malicious")',
+    }
+    ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+      invalidSlot,
+    ])
+    const app = await mountAuthenticated(authUser)
+
+    await waitFor(() => {
+      expect(
+        within(container).getByText('Invalid meeting link'),
+      ).toBeInTheDocument()
+    })
+    expect(
+      within(container).queryByText('javascript:alert("malicious")'),
+    ).toBeNull()
+    expect(within(container).queryByRole('link')).toBeNull()
 
     unmount(app)
   })

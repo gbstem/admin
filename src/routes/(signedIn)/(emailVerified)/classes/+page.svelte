@@ -8,6 +8,7 @@
   import Table from '$lib/components/Table.svelte'
   import { ClassStatus } from '$lib/data/types/ClassStatus'
   import { objectUrl } from '$lib/objectUrl.svelte'
+  import { openableMeetingLink } from '$lib/helpers/meetingLink'
   import { copyEmails, generateCSV } from '$lib/utils'
   import type { PageData } from './$types'
   import { Icon } from '@steeze-ui/svelte-icon'
@@ -148,7 +149,19 @@
             {value.courses}
           </td>
           <td class="px-6 py-4">
-            {value.meetingLink}
+            {#if openableMeetingLink(value.meetingLink)}
+              <a
+                href={openableMeetingLink(value.meetingLink)}
+                target="_blank"
+                rel="noopener"
+                class="text-blue-600 hover:underline"
+                onclick={(e) => e.stopPropagation()}
+              >
+                {value.meetingLink}
+              </a>
+            {:else if value.meetingLink}
+              <span class="font-medium text-red-600">Invalid meeting link</span>
+            {/if}
           </td>
           <td class="px-6 py-4">
             {value.classTimes.join(', ')}
