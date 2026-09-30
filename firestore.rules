@@ -59,56 +59,37 @@ service cloud.firestore {
     match /semesters/{semesterId} {
       allow read: if isSignedIn(); // parent docs, if we ever materialize them
 
-      // `meta.decided` gates whether admin's applicationService loads the
-      // decision doc at all (loadApplicationDetails), so an applicant who
-      // could write it themselves could set it back to false and hide their
-      // own interview notes from the admin UI. So an applicant's own write
-      // must leave it unchanged, but admin/reviewer - who set it through this
-      // same client SDK path, not the Admin SDK - can still change it.
+      // Applicants create, save and submit their applications through
+      // portal's /apply form actions, which validate and write with the Admin
+      // SDK (bypassing these rules), so no applicant write is allowed here.
+      // Admins and reviewers still write through the client SDK - decisions,
+      // notes and meta.interview.
       match /applications/{userId} {
         allow read: if isInstructorUser(userId) || isAdminOrReviewer();
-        allow create: if isAdminOrReviewer()
-                      || (isInstructorUser(userId)
-                          && request.resource.data.meta.get('decided', false) == false);
-        allow update: if isAdminOrReviewer()
-                      || (isInstructorUser(userId)
-                          && request.resource.data.meta.get('decided', false)
-                             == resource.data.meta.get('decided', false));
-        // No delete rule: nothing writes one directly any more. An
-        // instructor's own application is removed as part of account
-        // deletion (portal's /api/account), with the Admin SDK, which
-        // bypasses these rules; nothing else in either site's UI deletes
-        // an application.
+        allow create: if isAdminOrReviewer();
+        allow update: if isAdminOrReviewer();
+        // No delete rule: an instructor's own application is removed as part
+        // of account deletion (portal's /api/account), with the Admin SDK.
       }
 
+      // Parents create, save and submit registrations through portal's /apply
+      // form actions and enroll through /api/enroll, all with the Admin SDK
+      // (bypassing these rules), so no parent write is allowed here - which
+      // also keeps `classes`/`enrolled` in step with each class's `students`.
+      // Admins still write through the client SDK (studentService enrollment,
+      // the edit dialog).
+      //
       // A registration is a minor's date of birth, race, phone number, school
       // and family income indicator (FRLP). Instructors never read this collection
       // directly through the client SDK; all instructor access is brokered by
       // server-side API routes (/api/classRoster, /api/remindStudents) that strictly
       // enforce class ownership and return only the minimal necessary fields.
-      //
-      // `classes` and `enrolled` say which classes the student is in, and each
-      // class's own `students` has to say the same - capacity, the instructor
-      // roster and reminders all read that side. Portal's /api/enroll writes
-      // both sides together in one Admin SDK transaction, so a parent's own
-      // writes must leave these two fields as they are: a registration is
-      // created without an enrollment, updated without changing it, and
-      // deleted only once it is in no class. Frozen the same way
-      // applications' `meta.decided` is above. Admins still change them
-      // through this client SDK path (admin's studentService enrollment).
       match /registrations/{userId} {
         allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
-        allow create: if isAdmin()
-                      || (isStudentUserOrTheirChild(userId)
-                          && request.resource.data.get('classes', []) == []
-                          && request.resource.data.get('enrolled', false) == false);
-        allow update: if isAdmin()
-                      || (isStudentUserOrTheirChild(userId)
-                          && !request.resource.data.diff(resource.data).affectedKeys()
-                               .hasAny(['classes', 'enrolled']));
-        allow delete: if isAdmin()
-                      || (isStudentUserOrTheirChild(userId)
-                          && resource.data.get('classes', []) == []);
+        allow create: if isAdmin();
+        allow update: if isAdmin();
+        // No delete rule: a parent's own registrations are removed as part
+        // of account deletion (portal's /api/account), with the Admin SDK.
       }
 
       match /decisions/{userId} {
