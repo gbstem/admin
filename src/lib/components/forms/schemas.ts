@@ -106,10 +106,12 @@ const boundedList = () =>
   z.array(z.string().max(MAX_LIST_ITEM)).max(MAX_LIST_ITEMS)
 
 /**
- * A checkbox the applicant or parent has to tick before submitting. These
- * used to be plain booleans that only the input's HTML `required` attribute
- * enforced, which showed as a browser popup rather than the inline message
- * every other field shows. Kept identical to portal's.
+ * A checkbox the applicant has to tick. Used for the application's
+ * agreements, which EditApplicationForm already required through the inputs'
+ * HTML `required` attribute - shown as a browser popup rather than the inline
+ * message every other field shows. Portal uses the same schema for the
+ * registration agreements too, but admin deliberately doesn't (see
+ * `registrationSchema`).
  */
 const agreementSchema = z
   .boolean()
@@ -246,9 +248,13 @@ export const registrationSchema = z.object({
   agreements: z.object({
     mediaRelease: z.boolean().default(false),
     bypassAgeLimits: z.boolean().default(false),
-    entireProgram: agreementSchema,
-    timeCommitment: agreementSchema,
-    submitting: agreementSchema,
+    // Plain booleans here, unlike portal's `agreementSchema`: these are the
+    // parent's attestations, which portal requires when the parent submits.
+    // An admin editing a registration may need to record that one was
+    // withdrawn, so EditRegistrationForm must be able to save them unchecked.
+    entireProgram: z.boolean().default(false),
+    timeCommitment: z.boolean().default(false),
+    submitting: z.boolean().default(false),
   }),
 })
 

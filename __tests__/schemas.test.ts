@@ -690,18 +690,19 @@ describe('application submit rules', () => {
   )
 
   it.each(['entireProgram', 'timeCommitment', 'submitting'] as const)(
-    'requires the %s agreement on a registration too',
+    'lets an admin save a registration with the %s agreement unchecked',
     (agreement) => {
+      // Unlike portal, where the parent has to tick these to submit: an admin
+      // may need to record that one was withdrawn (registrations.cy.ts 15c).
       const defaults = getRegistrationFormDefaults()
-      const error = expectParseFailure(
-        registrationSchema.safeParse({
-          ...defaults,
-          agreements: { ...defaults.agreements, [agreement]: false },
-        }),
-      )
-      expect(error.issues.map((i) => i.path.join('.'))).toContain(
-        `agreements.${agreement}`,
-      )
+      const result = registrationSchema.safeParse({
+        ...defaults,
+        agreements: { ...defaults.agreements, [agreement]: false },
+      })
+      const failedPaths = result.success
+        ? []
+        : result.error.issues.map((i) => i.path.join('.'))
+      expect(failedPaths).not.toContain(`agreements.${agreement}`)
     },
   )
 
