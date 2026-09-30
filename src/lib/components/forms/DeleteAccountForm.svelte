@@ -132,7 +132,7 @@
   {/snippet}
   {#snippet description()}
     <div class="flex w-full justify-center">
-      <form use:enhance class="w-full max-w-lg">
+      <form novalidate use:enhance class="w-full max-w-lg">
         <fieldset class="space-y-4" disabled={$delayed}>
           <div class="flex justify-center">
             <div class="w-full space-y-4">

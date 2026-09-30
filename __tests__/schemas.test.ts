@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   applicationSchema,
   classSchema,
+  editClassFormSchema,
   getApplyFormDefaults,
   getClassDataDefaults,
   getInterviewSlotDefaults,
@@ -585,5 +586,201 @@ describe('Zod Validation Schemas', () => {
       expect(defaults.students).toEqual([])
       expect(defaults.online).toBe(true)
     })
+  })
+})
+
+/**
+ * Dotted paths of every string or array in a Zod object schema - including
+ * an array's elements, as `path[]` - that has no upper bound.
+ */
+function unboundedFields(schema: z.ZodTypeAny, path = ''): string[] {
+  let node: any = schema
+  while (node?._def?.innerType || node?._def?.schema) {
+    node = node._def.innerType ?? node._def.schema
+  }
+  if (node instanceof z.ZodObject) {
+    return Object.entries(node.shape as Record<string, z.ZodTypeAny>).flatMap(
+      ([key, child]) => unboundedFields(child, path ? `${path}.${key}` : key),
+    )
+  }
+  if (node instanceof z.ZodString) {
+    return node.maxLength === null ? [path] : []
+  }
+  if (node instanceof z.ZodArray) {
+    return [
+      ...(node._def.maxLength === null ? [path] : []),
+      ...unboundedFields(node.element, `${path}[]`),
+    ]
+  }
+  return []
+}
+
+describe('application size caps', () => {
+  // Without a bound, a hand-crafted request could store a document as large
+  // as Firestore allows, which admin then loads and renders.
+  it.each([['applicationSchema', applicationSchema]])(
+    '%s bounds every string and list',
+    (_name, schema) => {
+      expect(unboundedFields(schema)).toEqual([])
+    },
+  )
+
+  it('refuses an oversized submitted answer', () => {
+    const defaults = getApplyFormDefaults()
+    const error = expectParseFailure(
+      applicationSchema.safeParse({
+        ...defaults,
+        program: { ...defaults.program, timeSlots: 'x'.repeat(2001) },
+      }),
+    )
+    expect(error.issues.map((i) => i.path.join('.'))).toContain(
+      'program.timeSlots',
+    )
+  })
+})
+
+describe('application submit rules', () => {
+  // Used to be enforced only by the inputs' HTML `required` attribute, so
+  // only in the browser and as a browser popup.
+  function completeApplication() {
+    return {
+      personal: {
+        phoneNumber: '5559998888',
+        dateOfBirth: '2005-10-10',
+        gender: 'Female',
+        race: [],
+      },
+      academic: { school: 'MIT', graduationYear: new Date().getFullYear() },
+      program: {
+        courses: ['Python 1'],
+        preferences: '',
+        timeSlots: 'Weekends',
+        notAvailable: 'None',
+        inPerson: false,
+        reason: 'School',
+      },
+      essay: {
+        taughtBefore: false,
+        academicBackground: 'Coursework',
+        teachingScenario: 'Games',
+        why: 'Kids',
+      },
+      agreements: {
+        entireProgram: true,
+        timeCommitment: true,
+        submitting: true,
+      },
+    }
+  }
+
+  it('accepts a complete application', () => {
+    expectParseSuccess(applicationSchema.safeParse(completeApplication()))
+  })
+
+  it.each(['entireProgram', 'timeCommitment', 'submitting'] as const)(
+    'requires the %s agreement, on that field',
+    (agreement) => {
+      const data = completeApplication()
+      data.agreements[agreement] = false
+      const error = expectParseFailure(applicationSchema.safeParse(data))
+      expect(error.issues.map((i) => i.path.join('.'))).toEqual([
+        `agreements.${agreement}`,
+      ])
+    },
+  )
+
+  it.each(['entireProgram', 'timeCommitment', 'submitting'] as const)(
+    'requires the %s agreement on a registration too',
+    (agreement) => {
+      const defaults = getRegistrationFormDefaults()
+      const error = expectParseFailure(
+        registrationSchema.safeParse({
+          ...defaults,
+          agreements: { ...defaults.agreements, [agreement]: false },
+        }),
+      )
+      expect(error.issues.map((i) => i.path.join('.'))).toContain(
+        `agreements.${agreement}`,
+      )
+    },
+  )
+
+  it('requires the newcomer essays, on those fields, of first-time instructors', () => {
+    const data = completeApplication()
+    data.essay = { ...data.essay, teachingScenario: '', why: '' }
+    const error = expectParseFailure(applicationSchema.safeParse(data))
+    expect(error.issues.map((i) => i.path.join('.'))).toEqual([
+      'essay.teachingScenario',
+      'essay.why',
+    ])
+  })
+
+  it('reports the essays even while other sections are invalid', () => {
+    const data = completeApplication()
+    data.essay = { ...data.essay, why: '' }
+    data.program.timeSlots = ''
+    const error = expectParseFailure(applicationSchema.safeParse(data))
+    expect(error.issues.map((i) => i.path.join('.'))).toEqual(
+      expect.arrayContaining(['essay.why', 'program.timeSlots']),
+    )
+  })
+
+  it('does not require the newcomer essays of returning instructors', () => {
+    const data = completeApplication()
+    data.essay = {
+      ...data.essay,
+      taughtBefore: true,
+      teachingScenario: '',
+      why: '',
+    }
+    expectParseSuccess(applicationSchema.safeParse(data))
+  })
+})
+
+describe('editClassFormSchema', () => {
+  const onlineClass = {
+    course: 'Python 1',
+    classCap: 10,
+    meetingLink: 'https://teams.microsoft.com/l/meetup-join/abc',
+    classDay1: 'Monday',
+    classTime1: '16:00',
+    classDay2: 'Wednesday',
+    classTime2: '16:00',
+    online: true,
+  }
+
+  it('accepts a complete online class', () => {
+    expectParseSuccess(editClassFormSchema.safeParse(onlineClass))
+  })
+
+  it('requires a meeting link and a second day of an online class', () => {
+    const error = expectParseFailure(
+      editClassFormSchema.safeParse({
+        ...onlineClass,
+        meetingLink: '',
+        classDay2: '',
+      }),
+    )
+    expect(error.issues.map((i) => i.path.join('.'))).toEqual([
+      'meetingLink',
+      'classDay2',
+    ])
+  })
+
+  it('requires neither of an in-person class', () => {
+    expectParseSuccess(
+      editClassFormSchema.safeParse({
+        ...onlineClass,
+        online: false,
+        meetingLink: '',
+        classDay2: '',
+      }),
+    )
+  })
+
+  it('leaves classSchema, which the seed parses with, unchanged', () => {
+    expectParseSuccess(
+      classSchema.safeParse({ ...onlineClass, meetingLink: '', classDay2: '' }),
+    )
   })
 })

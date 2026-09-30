@@ -59,7 +59,7 @@
   const { form, enhance, submitting } = formResult
 </script>
 
-<form use:enhance class="w-full max-w-lg">
+<form novalidate use:enhance class="w-full max-w-lg">
   <fieldset class="space-y-4" disabled={$submitting}>
     <Brand />
     <h1 class="text-2xl font-bold">Sign in</h1>

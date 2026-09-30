@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { constraintAt, constraintsStore } from './fieldConstraints'
+  import { fromStore } from 'svelte/store'
   import { Field, Control, Label, FieldErrors } from 'formsnap'
   import { cn } from '$lib/utils'
 
@@ -28,27 +30,9 @@
     ...rest
   }: Props = $props()
 
-  /**
-   * Helper function to dynamically retrieve constraint values (e.g. min, max, minlength, maxlength, pattern, required)
-   * defined in the Sveltekit-Superform Zod schema.
-   * It takes the nested constraints object from `$form.constraints` (or `formResult.constraints` store value)
-   * and walks down the dotted path name (e.g. 'personal.phoneNumber') to retrieve the field's constraints.
-   */
-  function getConstraint(constraints: any, path: string): any {
-    if (!constraints || !path) return {}
-    const parts = path.split('.')
-    let current = constraints
-    for (const part of parts) {
-      if (current && typeof current === 'object' && part in current) {
-        current = current[part]
-      } else {
-        return {}
-      }
-    }
-    return current || {}
-  }
-
-  let fieldConstraints = $derived(getConstraint(form?.constraints, name))
+  // A superForm's `constraints` is a store - see `constraintsStore`.
+  const constraints = $derived(fromStore(constraintsStore(form)))
+  let fieldConstraints = $derived(constraintAt(constraints.current, name))
   let isRequired = $derived(required ?? fieldConstraints?.required ?? false)
 </script>
 

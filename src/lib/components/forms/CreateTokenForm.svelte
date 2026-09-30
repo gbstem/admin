@@ -56,7 +56,7 @@
   const { form, enhance, delayed } = formResult
 </script>
 
-<form use:enhance class="w-full">
+<form novalidate use:enhance class="w-full">
   <fieldset class="space-y-4" disabled={$delayed}>
     <div class="flex w-full justify-center">
       <div class="w-full max-w-lg space-y-4 text-left">

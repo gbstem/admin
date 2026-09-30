@@ -131,7 +131,7 @@
   })
 </script>
 
-<form bind:this={formEl} use:enhance class="w-full">
+<form novalidate bind:this={formEl} use:enhance class="w-full">
   <fieldset class="space-y-14" disabled={disabled || $submitting || !loaded}>
     <div class="grid gap-1">
       <span class="font-bold">Personal</span>

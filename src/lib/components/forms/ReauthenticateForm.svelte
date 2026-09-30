@@ -68,7 +68,7 @@
   const { form, enhance, delayed } = formResult
 </script>
 
-<form use:enhance class="w-full">
+<form novalidate use:enhance class="w-full">
   <fieldset class="space-y-4" disabled={$delayed}>
     <div class="flex flex-col gap-1.5">
       <Field form={formResult} name="password">

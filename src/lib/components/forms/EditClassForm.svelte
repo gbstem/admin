@@ -6,7 +6,7 @@
   import { classService } from '$lib/services/classService'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
-  import { classSchema } from './schemas'
+  import { editClassFormSchema } from './schemas'
   import {
     classEditedFields,
     toClassFormValues as toFormValues,
@@ -38,7 +38,7 @@
     loaded = true,
   }: Props = $props()
 
-  const schema = classSchema
+  const schema = editClassFormSchema
 
   const formResult = superForm(
     defaults(toFormValues(values), zod(schema as any) as any) as any,
@@ -81,7 +81,7 @@
   })
 </script>
 
-<form bind:this={formEl} use:enhance class="w-full max-w-4xl">
+<form novalidate bind:this={formEl} use:enhance class="w-full max-w-4xl">
   <fieldset
     class="mt-4 space-y-4"
     disabled={disabled || $submitting || !loaded}

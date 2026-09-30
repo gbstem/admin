@@ -371,7 +371,7 @@
             {/if}
           {/each}
         </Card>
-        <form use:addEnhance class="w-full">
+        <form novalidate use:addEnhance class="w-full">
           <Card>
             <h2 class="font-bold">Add A Time Slot</h2>
             <FormInput
@@ -431,6 +431,7 @@
           {#if ((onlyIncludeMyInterviews && isMyInterview(interview)) || !onlyIncludeMyInterviews) && ((onlyShowFutureSlots && new Date(interview.date) > new Date()) || !onlyShowFutureSlots)}
             <Card>
               <form
+                novalidate
                 use:editEnhance
                 class={cn(
                   'w-full',

@@ -52,7 +52,7 @@
   const { form, enhance, delayed, reset } = formResult
 </script>
 
-<form use:enhance class="w-full max-w-lg">
+<form novalidate use:enhance class="w-full max-w-lg">
   <fieldset class="space-y-4" disabled={$delayed}>
     <Brand />
     <h1 class="text-2xl font-bold">Reset password</h1>
