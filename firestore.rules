@@ -97,33 +97,19 @@ service cloud.firestore {
         allow read, write: if isAdminOrReviewer();
       }
 
-      // Instructors create classes and change their details, co-instructors
-      // and ownership through portal's /api/classDetails, which saves with the
-      // Admin SDK after checking the caller and every added co-instructor.
-      // What an instructor of the class writes here directly is only the
-      // per-session state ClassSchedule keeps. Filing feedback marks a session
-      // complete too, but through portal's /api/instructorFeedback, which
-      // writes the class and the feedback together with the Admin SDK.
-      //
-      // Teaching a class requires having been accepted to teach one. Note
-      // `isAcceptedInstructor` rather than `isTeachingInstructor`: a
-      // substitute covers individual sessions through the subRequests flow
-      // and is never on a class's uid lists, so their writes go through
-      // portal's /api/substituteSession and /api/substituteFeedback with the
-      // Admin SDK - see instructorDirectory.ts's isAcceptedInstructor.
+      // Instructors write classes only through portal API routes, which check
+      // the caller with the Admin SDK and write with it, bypassing these rules:
+      // /api/classDetails (creation, details, co-instructors and ownership),
+      // /api/classSchedule (rescheduling and holding a session),
+      // /api/instructorFeedback (marking a session's feedback filed), and
+      // /api/substituteSession and /api/substituteFeedback for a substitute,
+      // who is never on a class's uid lists. Each route computes the derived
+      // session state (classStatuses, feedbackCompleted) itself rather than
+      // taking it from the client.
       match /classes/{classId} {
         allow read: if isSignedIn();
         allow create: if isAdmin();
-        allow update: if isAdminOrReviewer()
-                      || (isInstructorOfClass()
-                          && isAcceptedInstructor(semesterId)
-                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                            'meetingTimes',
-                            'feedbackCompleted',
-                            'classStatuses',
-                            'completedClassDates'
-                          ]));
-        allow delete: if isAdminOrReviewer();
+        allow update, delete: if isAdminOrReviewer();
       }
 
       // Admins and reviewers manage interview slots. Applicants see the open
@@ -164,17 +150,12 @@ service cloud.firestore {
     //
     // INTERVIEW TIME REQUESTS
     //
-    // Keyed `${uid}-${requestedDate}` (see portal's
-    // interviewService.requestInterviewSlot). An applicant only ever creates
-    // their own request and never reads one back; listing and managing them
-    // is admin/reviewer work (admin's interviewService.fetchSlotRequests).
+    // Keyed `${uid}-${requestedDate}`. Applicants file a request through
+    // portal's /api/slotRequest, which writes it with the Admin SDK and
+    // notifies admins; listing and managing them is admin/reviewer work
+    // (admin's interviewService.fetchSlotRequests).
     match /interviewTimeRequests/{requestId} {
-      allow read: if isAdminOrReviewer();
-      allow create: if isAdminOrReviewer()
-                    || (isSignedIn()
-                        && requestId.matches(request.auth.uid + '-.+')
-                        && request.resource.data.uid == request.auth.uid);
-      allow update, delete: if isAdminOrReviewer();
+      allow read, write: if isAdminOrReviewer();
     }
 
     //
@@ -182,24 +163,15 @@ service cloud.firestore {
     //
     // Keyed `${classId}---${classNumber}`. The people a request belongs to
     // read it directly: whoever filed it, the class's instructor of record,
-    // and the substitute covering it. The first two also file, edit the
-    // date and notes of, and cancel it here. Finding open requests and
-    // claiming one act on other instructors' requests, so both go through
-    // portal's /api/substitute, which claims in a transaction; holding the
-    // session and filing its feedback go through /api/substituteSession and
-    // /api/substituteFeedback.
+    // and the substitute covering it. Every instructor write goes through a
+    // portal API route using the Admin SDK: filing, editing and cancelling
+    // one through /api/subRequest, which takes the class's instructors from
+    // the class document rather than from the caller; finding and claiming
+    // open requests through /api/substitute; holding the session and filing
+    // its feedback through /api/substituteSession and /api/substituteFeedback.
     match /subRequests/{subRequestId} {
       allow read: if isAdminOrReviewer() || isSubRequestParty(resource.data);
-      allow create: if isSubRequestOwner(request.resource.data)
-                    && request.resource.data.subRequestStatus == 'SubstituteNeeded'
-                    && request.resource.data.subInstructorId == '';
-      allow update: if isAdmin()
-                    || (isSubRequestOwner(resource.data)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                          'dateOfClass',
-                          'notes'
-                        ]));
-      allow delete: if isAdmin() || isSubRequestOwner(resource.data);
+      allow write: if isAdmin();
     }
 
     //
@@ -218,9 +190,12 @@ service cloud.firestore {
     //
     // REAL-TIME PROGRAM CHECK-INS AND MEAL CHECKOUTS
     //
+    // Staff check students in and record meals from admin's StudentDetails
+    // (studentService). Portal never reads or writes this collection - the
+    // parent-facing check-in it once had is long gone - so parents have no
+    // access, not even to their own children's records.
     match /checkIns/{userId} {
-      allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
-      allow write: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
+      allow read, write: if isAdminOrReviewer();
     }
 
     //
@@ -237,9 +212,11 @@ service cloud.firestore {
     // hasRole() cost an exists() plus a get() on every evaluation.
     //
     // Do not reintroduce a document-reading role helper. If a rule needs to
-    // know something about a user beyond their role, read the document that
-    // actually records it - the way the decision helpers below do - and make
-    // sure that document is not client-writable.
+    // know something about a user beyond their role - whether an instructor
+    // was accepted, say - check it in a server route with the Admin SDK
+    // (portal's instructorDirectory.ts), as every instructor write now does.
+    // If a rule ever must, read the document that actually records it, and
+    // make sure that document is not client-writable.
     //
     // The one propagation caveat: a claim reaches request.auth.token only when
     // the ID token refreshes (within the hour). Code that changes a role should
@@ -252,27 +229,10 @@ service cloud.firestore {
     function isStudent() {
       return isSignedIn() && hasRRole('student');
     }
-    // Whether the signed-in instructor's decision for this semester is one of `types`.
-    //
-    // `decisions` is written only by an admin or reviewer (see the rule above),
-    // which is what makes it safe to authorize against. `semesterId` is a
-    // parameter rather than a constant so this stays correct for every semester
-    // without the rules needing an edit at a rollover - the collections are
-    // matched by id, not by path, for the same reason.
-    function hasDecisionType(semesterId, types) {
-      return exists(/databases/$(database)/documents/semesters/$(semesterId)/decisions/$(request.auth.uid))
-        && get(/databases/$(database)/documents/semesters/$(semesterId)/decisions/$(request.auth.uid)).data.get('type', '') in types;
-    }
     // The role means "has applied to teach", not "teaches" - it is held from
     // signup onward, long before any interview.
     function isInstructor() {
       return isSignedIn() && hasRRole('instructor');
-    }
-    // Interviewed and accepted to teach a class of their own this semester.
-    // Mirrors portal's server-side isAcceptedInstructor() so the two layers
-    // agree on what "an instructor" means.
-    function isAcceptedInstructor(semesterId) {
-      return isInstructor() && hasDecisionType(semesterId, ['accepted']);
     }
     function hasUserId(userId) {
       return request.auth.uid == userId;
@@ -282,16 +242,6 @@ service cloud.firestore {
     }
     function isAdminOrReviewer() {
       return isSignedIn() && (hasRRole('admin') || hasRRole('reviewer'));
-    }
-    // Class access is uid-only: either the primary instructor UID or the
-    // co-instructor UID (otherInstructorUids) which are populated only
-    // through flows that allow accepted instructors.
-    function isInstructorOfClass() {
-      return isInstructor() && (
-        (resource.data.instructorUid != null && request.auth.uid == resource.data.instructorUid) ||
-        (resource.data.otherInstructorUids != null &&
-         request.auth.uid in resource.data.otherInstructorUids)
-      );
     }
     function isSignedIn() {
       return request.auth != null;
@@ -308,7 +258,7 @@ service cloud.firestore {
         || (isSignedIn() && data.get('subInstructorId', '') == request.auth.uid);
     }
     // In gbSTEM, children do not have separate Auth accounts. A parent's
-    // child registrations and check-ins are keyed as `${parentUid}` (primary)
+    // child registrations (and admin's check-ins) are keyed as `${parentUid}` (primary)
     // or `${parentUid}-1`, `${parentUid}-2`, ... up to maxChildrenPerAccount (5).
     // Matching exact UID or `${uid}-\d+` allows access to those child
     // documents while preventing arbitrary prefix collisions.

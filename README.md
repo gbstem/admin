@@ -220,18 +220,18 @@ There is no copy in Firestore. `users/{uid}` holds a name and nothing else, and 
 
 **The `instructor` role means "applied to teach", not "teaches".**
 
-It is granted at signup, before any interview — so it says nothing about whether someone was accepted. What says that is `semesters/{id}/decisions/{uid}.type`, which only an admin or reviewer can write. Anything that assumes acceptance must check it:
+It is granted at signup, before any interview — so it says nothing about whether someone was accepted. What says that is `semesters/{id}/decisions/{uid}.type`, which only an admin or reviewer can write. Anything that assumes acceptance must check it on the server, with `isAcceptedInstructor(uid)` in portal's [`instructorDirectory.ts`](https://github.com/gbstem/portal/blob/main/src/lib/server/instructorDirectory.ts), or `canSubstitute(uid)` (accepted **or** substitute) for covering another instructor's session. `firestore.rules` has no acceptance check, because it grants an instructor no writes at all beyond their own name in `users/{uid}`.
 
-- in `firestore.rules`, `isAcceptedInstructor(semesterId)`
-- on the server, `isAcceptedInstructor(uid)` in portal's [`instructorDirectory.ts`](https://github.com/gbstem/portal/blob/main/src/lib/server/instructorDirectory.ts), or `canSubstitute(uid)` (accepted **or** substitute) for covering another instructor's session
-
-**No rule lets one instructor read or change another instructor's data.** A rule granting that to "any instructor" can't tell whose data it is, so each of those actions is a portal API route that checks with the Admin SDK instead:
+**Every instructor write goes through a portal API route.** A rule can check a role and compare a uid, but it can't check acceptance cheaply, tell whether a class or session is really the caller's, or work out derived fields such as a class's session statuses — so each instructor write is a portal API route that checks with the Admin SDK and writes with it:
 
 - `/api/classDetails` saves a class, checking ownership and every added co-instructor, and keeps the server-only `instructorClasses` mapping in step in the same transaction
-- `/api/substitute` lists the sessions needing cover and claims one in a transaction; otherwise a `subRequests` document is readable and editable only by the people it belongs to — whoever filed it, the class's instructor of record, and its substitute
+- `/api/classSchedule` reschedules a class's sessions or records one being held, computing `classStatuses`/`feedbackCompleted` itself
+- `/api/subRequest` files, edits and cancels a sub request, taking the class's instructors from the class document; a `subRequests` document is otherwise readable only by the people it belongs to — whoever filed it, the class's instructor of record, and its substitute
+- `/api/substitute` lists the sessions needing cover and claims one in a transaction
 - `/api/interview` lists open interview slots and books one in a transaction; otherwise `instructorInterviewTimes` is admin/reviewer-only
+- `/api/slotRequest` files a request for a new interview time and notifies admins
 
-When a feature needs cross-instructor access, add a route like these rather than widening a rule.
+When a feature needs an instructor to write something, add a route like these rather than widening a rule.
 
 **A role alone never authorizes a write.** A rule like `allow create: if isStudent()` can't tell whether the class or student a document names is the caller's, or keep them from choosing its fields, so no rule grants a whole role a write. `classFeedback` and `instructorFeedback` are admin-read-only, and portal files them through routes that check the caller against the class and fill in the names themselves:
 
