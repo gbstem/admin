@@ -693,9 +693,11 @@ describe('classes - teaching requires having been accepted to teach', () => {
     )
   })
 
-  it("lets an accepted instructor update their own class's sessions", async () => {
+  // Rescheduling and holding a session go through portal's
+  // /api/classSchedule, which computes the statuses itself.
+  it("refuses an accepted instructor writing their own class's sessions", async () => {
     const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
         meetingTimes: [new Date('2026-10-05T16:00:00.000Z')],
         feedbackCompleted: [false],
@@ -742,7 +744,7 @@ describe('classes - teaching requires having been accepted to teach', () => {
     )
   })
 
-  it('lets a co-instructor update the class', async () => {
+  it('refuses a co-instructor updating the class', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(
         doc(context.firestore(), classes, `${UIDS.accepted}-1`),
@@ -757,6 +759,15 @@ describe('classes - teaching requires having been accepted to teach', () => {
       })
     })
     const db = as(UIDS.substitute, 'instructor')
+    await assertFails(
+      updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
+        classStatuses: ['FeedbackIncomplete'],
+      }),
+    )
+  })
+
+  it('lets a reviewer update a class', async () => {
+    const db = as(UIDS.reviewer, 'reviewer')
     await assertSucceeds(
       updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
         classStatuses: ['FeedbackIncomplete'],
@@ -787,27 +798,6 @@ describe('classes - teaching requires having been accepted to teach', () => {
   it('refuses an instructor deleting their own class', async () => {
     const db = as(UIDS.accepted, 'instructor')
     await assertFails(deleteDoc(doc(db, classes, `${UIDS.accepted}-1`)))
-  })
-})
-
-describe('classes - legacy documents', () => {
-  it('lets the owner update a class that predates otherInstructorUids', async () => {
-    // 44 classes from Spring24/Fall24 carry no otherInstructorUids field, and
-    // rules error rather than return null when a map key is missing - so
-    // isInstructorOfClass()'s null guards are load-bearing. Adding the
-    // acceptance check to this rule must not have changed that.
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), classes, `${UIDS.accepted}-9`), {
-        course: 'Python 1',
-        instructorUid: UIDS.accepted,
-      })
-    })
-    const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
-      updateDoc(doc(db, classes, `${UIDS.accepted}-9`), {
-        classStatuses: ['FeedbackIncomplete'],
-      }),
-    )
   })
 })
 
@@ -1123,9 +1113,8 @@ describe('instructorClasses - server-only class mapping', () => {
   })
 })
 
-describe('interviewTimeRequests - applicants create their own; admins/reviewers manage', () => {
-  // Keyed `${uid}-${requestedDate}` - see portal's
-  // interviewService.requestInterviewSlot.
+describe('interviewTimeRequests - admins/reviewers only; applicants file through the API', () => {
+  // Keyed `${uid}-${requestedDate}` - see portal's /api/slotRequest.
   const requestId = (uid: string) => `${uid}-2026-10-05T14:00`
   const request = (uid: string) => ({
     uid,
@@ -1148,9 +1137,9 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
     })
   }
 
-  it('lets an instructor applicant create their own request', async () => {
+  it('refuses an instructor applicant creating even their own request', async () => {
     const db = as(UIDS.undecided, 'instructor')
-    await assertSucceeds(
+    await assertFails(
       setDoc(
         doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
         request(UIDS.undecided),
@@ -1261,7 +1250,7 @@ describe('interviewTimeRequests - applicants create their own; admins/reviewers 
   })
 })
 
-describe("subRequests - a request's own people; open requests and claims go through the API", () => {
+describe("subRequests - a request's own people read it; every instructor write goes through the API", () => {
   // Keyed `${classId}---${classNumber}`, like portal's subRequestDocId.
   const REQUEST_ID = `${UIDS.accepted}-1---2`
 
@@ -1294,16 +1283,16 @@ describe("subRequests - a request's own people; open requests and claims go thro
     })
   }
 
-  it('lets an instructor file a request for their own class', async () => {
+  // Filing goes through portal's /api/subRequest, which takes the class's
+  // instructors from the class document.
+  it('refuses an instructor filing a request, even for their own class', async () => {
     const db = as(UIDS.accepted, 'instructor')
-    await assertSucceeds(
-      setDoc(doc(db, 'subRequests', REQUEST_ID), subRequest()),
-    )
+    await assertFails(setDoc(doc(db, 'subRequests', REQUEST_ID), subRequest()))
   })
 
-  it("lets a co-instructor file one naming the class's instructor of record", async () => {
+  it("refuses a co-instructor filing one naming the class's instructor of record", async () => {
     const db = as(UIDS.substitute, 'instructor')
-    await assertSucceeds(
+    await assertFails(
       setDoc(
         doc(db, 'subRequests', REQUEST_ID),
         subRequest({ requestedByUid: UIDS.substitute }),
@@ -1316,45 +1305,21 @@ describe("subRequests - a request's own people; open requests and claims go thro
     await assertFails(setDoc(doc(db, 'subRequests', REQUEST_ID), subRequest()))
   })
 
-  // A closed-out request counts toward the named substitute's community
-  // service hours, so one can't be created already claimed.
-  it('refuses filing a request that is already claimed or closed out', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    await assertFails(
-      setDoc(
-        doc(db, 'subRequests', REQUEST_ID),
-        subRequest({
-          subInstructorId: UIDS.accepted,
-          subRequestStatus: 'NoSubstituteNeeded',
-        }),
-      ),
-    )
-    await assertFails(
-      setDoc(
-        doc(db, 'subRequests', REQUEST_ID),
-        subRequest({ subRequestStatus: 'SubstituteFound' }),
-      ),
-    )
-  })
-
-  it('lets the requester and the instructor of record read it, edit its date and notes, and cancel it', async () => {
+  // Editing and cancelling go through /api/subRequest too.
+  it('lets the requester and the instructor of record read it, but not edit or cancel it', async () => {
     await seed({ requestedByUid: UIDS.substitute })
     for (const uid of [UIDS.substitute, UIDS.accepted]) {
       const db = as(uid, 'instructor')
       const ref = doc(db, 'subRequests', REQUEST_ID)
       await assertSucceeds(getDoc(ref))
-      await assertSucceeds(
+      await assertFails(
         updateDoc(ref, {
           notes: `Edited by ${uid}.`,
           dateOfClass: new Date('2026-10-06T20:00:00.000Z'),
         }),
       )
+      await assertFails(deleteDoc(ref))
     }
-    await assertSucceeds(
-      deleteDoc(
-        doc(as(UIDS.accepted, 'instructor'), 'subRequests', REQUEST_ID),
-      ),
-    )
   })
 
   it('refuses the requester changing who covers it, its status or its session', async () => {
@@ -1551,24 +1516,28 @@ describe('confirmations - parent/guardian confirmations', () => {
 })
 
 describe('checkIns - real-time program check-ins and meal checkouts', () => {
-  it('lets an owner read and write their own checkIn', async () => {
+  // Checking in is admin work; portal never reads or writes checkIns, so a
+  // parent has no reason to reach even their own child's record.
+  it("refuses a parent reading or writing their own child's checkIn", async () => {
     const db = as(UIDS.student, 'student')
-    await assertSucceeds(
+    for (const id of [UIDS.student, `${UIDS.student}-2`]) {
+      await assertFails(
+        setDoc(doc(db, `checkIns/${id}`), {
+          checkedIn: true,
+        }),
+      )
+      await assertFails(getDoc(doc(db, `checkIns/${id}`)))
+    }
+  })
+
+  it('refuses an instructor', async () => {
+    const db = as(UIDS.accepted, 'instructor')
+    await assertFails(getDoc(doc(db, `checkIns/${UIDS.student}`)))
+    await assertFails(
       setDoc(doc(db, `checkIns/${UIDS.student}`), {
         checkedIn: true,
       }),
     )
-    await assertSucceeds(getDoc(doc(db, `checkIns/${UIDS.student}`)))
-  })
-
-  it('lets an owner read and write a secondary child checkIn by uid prefix', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertSucceeds(
-      setDoc(doc(db, `checkIns/${UIDS.student}-2`), {
-        checkedIn: true,
-      }),
-    )
-    await assertSucceeds(getDoc(doc(db, `checkIns/${UIDS.student}-2`)))
   })
 
   it("refuses a user reading or writing another user's checkIn", async () => {
