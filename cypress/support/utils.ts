@@ -1,3 +1,8 @@
+import {
+  applicationsCollection,
+  decisionsCollection,
+} from '../../src/lib/data/collections'
+
 // Use this to include a unique hash within new records to help ensure edits
 // really work as expected, rather than seeing stale data from a previous test run.
 export const generateDateHash = (prefix: string): string => {
@@ -99,4 +104,54 @@ export const prepareDocForCompare = (
     }
   }
   return copy
+}
+
+/**
+ * Opens an applicant's details dialog by clicking their table row, and waits
+ * for it to finish loading.
+ *
+ * The dialog renders before its fetch lands, holding default values, and its
+ * decision buttons sit in a fieldset that is disabled until then. A
+ * `force: true` click ignores that: before Application.svelte refused such a
+ * click outright, an early Accept wrote the *default* scorecard over the
+ * applicant's real one. Waiting here is what makes a click mean what the test
+ * says.
+ */
+export function openApplication(name: string, timeout = 30000) {
+  cy.contains('td', name).click()
+  cy.get('[role="dialog"]', { timeout })
+    .find('fieldset')
+    .first()
+    .should('not.be.disabled')
+}
+
+/**
+ * Asserts a decision actually landed, in both of the documents
+ * `queueDecision` writes together: the decision document holds `expected`,
+ * and the application is flagged `meta.decided`. The table's icons and the
+ * email go out either way - the email from a separate API call, the icons
+ * from local state - so neither shows the write happened.
+ *
+ * `expected` is matched as a subset, since the single-applicant path writes
+ * the whole interview scorecard alongside the decision.
+ */
+export function expectDecision(
+  applicationId: string,
+  expected: Record<string, unknown>,
+) {
+  cy.task('readFirestoreDoc', `${decisionsCollection}/${applicationId}`).then(
+    (decision: any) => {
+      expect(decision, `${applicationId}'s decision`).to.not.equal(null)
+      expect(decision).to.include(expected)
+    },
+  )
+  cy.task(
+    'readFirestoreDoc',
+    `${applicationsCollection}/${applicationId}`,
+  ).then((application: any) => {
+    expect(
+      application.meta.decided,
+      `${applicationId} flagged as decided`,
+    ).to.equal(true)
+  })
 }

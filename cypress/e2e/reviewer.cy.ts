@@ -1,3 +1,5 @@
+import { expectDecision, openApplication } from '../support/utils'
+
 describe('Section O: Reviewer Role Access Control', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -101,8 +103,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.wait(1000)
 
     // Open application modal for David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Miller')
 
     // Click Likely Yes
     cy.contains('button', 'Likely Yes').click({ force: true })
@@ -117,8 +118,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     })
 
     // Re-open David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Miller')
 
     // Click Accept and confirm
     cy.captureConfirms().as('confirms')
@@ -130,6 +130,12 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.contains('button', /^Close$/).click({ force: true })
     cy.get('[role="dialog"]').should('not.exist')
     cy.verifyEmailSent('applicant1@gmail.com', 'gbSTEM Instructor Decision')
+    // A reviewer's decision goes through firestore.rules' reviewer branch,
+    // not the admin one, so it needs its own proof that it was written.
+    expectDecision('app-david', {
+      type: 'accepted',
+      likelyDecision: 'likely yes',
+    })
 
     // Row should show accepted decision (green check icon in Decision column)
     cy.contains('tr', 'David Miller').within(() => {
