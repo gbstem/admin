@@ -1,3 +1,4 @@
+import { registrationsCollection } from '../../src/lib/data/collections'
 import { expectDecision, openApplication } from '../support/utils'
 
 describe('Section O: Reviewer Role Access Control', () => {
@@ -152,6 +153,9 @@ describe('Section O: Reviewer Role Access Control', () => {
     // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
+    const charliePath = `${registrationsCollection}/reg-charlie`
+    cy.task('readFirestoreDoc', charliePath).as('charlieBefore')
+
     // Try to toggle "Bypass Age Limits?" which reviewer doesn't have permissions to write
     cy.contains('tr', 'Charlie Brown').find('input[id^="bypass-"]').click()
 
@@ -161,5 +165,11 @@ describe('Section O: Reviewer Role Access Control', () => {
       'bg-red-200',
       10000,
     )
+
+    // ...and that the refusal is real: the registration is exactly as it was.
+    // The toast only reports what the client was told.
+    cy.get('@charlieBefore').then((before) => {
+      cy.task('readFirestoreDoc', charliePath).should('deep.equal', before)
+    })
   })
 })

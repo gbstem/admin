@@ -93,6 +93,12 @@ describe('Section K: Registration Signup Tokens', () => {
         })
         cy.waitForNotification('Token deleted.')
         cy.get('tbody').should('not.contain', tokenId)
+        // Gone from Firestore too, not just from the table - a token left
+        // behind would still sign someone up.
+        cy.task('checkFirestoreDocExists', `tokens/${tokenId}`).should(
+          'eq',
+          false,
+        )
       })
   })
 })
