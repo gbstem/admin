@@ -155,3 +155,32 @@ export function expectDecision(
     ).to.equal(true)
   })
 }
+
+/**
+ * Asserts a token sign-up recorded both halves of `recordNewAccount`'s
+ * transaction: the account's `users/{uid}` profile, holding exactly its
+ * name, and the account's uid among the token's `consumers` - which is what
+ * makes a one-time token refuse a second sign-up. Landing on /profile shows
+ * neither: Auth creates the account before either write.
+ */
+export function expectAccountRecorded(account: {
+  email: string
+  firstName: string
+  lastName: string
+  token: string
+}) {
+  cy.task('getFirestoreUserId', account.email).then((uid) => {
+    expect(uid, `${account.email}'s uid`).to.be.a('string')
+    cy.task('readFirestoreDoc', `users/${uid}`).then((profile) => {
+      expect(profile, 'users profile').to.deep.equal({
+        firstName: account.firstName,
+        lastName: account.lastName,
+      })
+    })
+    cy.task('readFirestoreDoc', `tokens/${account.token}`).then(
+      (token: any) => {
+        expect(token.consumers, 'token consumers').to.include(uid)
+      },
+    )
+  })
+}

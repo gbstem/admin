@@ -1,3 +1,9 @@
+import { checkInsCollection } from '../../src/lib/data/collections'
+import { retreatMealSchedule } from '../../src/lib/data/retreatMealSchedule'
+
+/** Demo Student One's registration id, which keys their check-in record. */
+const CHECK_IN_PATH = `${checkInsCollection}/student-demo-uid-1`
+
 describe('Section M: Check In Details and Meals', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -16,6 +22,10 @@ describe('Section M: Check In Details and Meals', () => {
   })
 
   it('Test Case 22: Student Attendance and Meal Checkouts', () => {
+    // No record yet, so the one read below can only have come from this
+    // check-in - including on a retry.
+    cy.task('deleteFirestoreDoc', CHECK_IN_PATH)
+
     // Search for Demo Student
     cy.submitSearch('Demo Student')
 
@@ -27,8 +37,25 @@ describe('Section M: Check In Details and Meals', () => {
     cy.contains('h2', 'Check In & Meals').should('exist')
 
     // Click Check In button
+    const clickedAt = Date.now()
     cy.contains('button', 'Check In').click({ force: true })
     cy.waitForNotification('Student checked in successfully!')
+
+    // The record the check-in page and the meal buttons work from. Nothing
+    // else in the suite writes or reads it.
+    cy.task('readFirestoreDoc', CHECK_IN_PATH).then((record: any) => {
+      expect(record, 'check-in record').to.not.equal(null)
+      const { checkedInAt, ...rest } = record
+      expect(rest).to.deep.equal({
+        checkedIn: true,
+        food: retreatMealSchedule,
+      })
+      const checkedInMs = checkedInAt._seconds * 1000
+      expect(
+        checkedInMs,
+        'checked in when the button was clicked',
+      ).to.be.within(clickedAt - 1000, Date.now())
+    })
 
     // Meal Status should now be visible
     cy.contains('div', 'Meal Status').should('exist')

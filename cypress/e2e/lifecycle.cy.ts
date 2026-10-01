@@ -1,4 +1,4 @@
-import { generateDateHash } from '../support/utils'
+import { expectAccountRecorded, generateDateHash } from '../support/utils'
 
 describe('Section N: End-to-End Account Lifecycle', () => {
   beforeEach(() => {
@@ -102,6 +102,19 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     // Expect sign up to leave user signed in and redirect to profile page on success
     cy.url().should('include', '/profile')
     cy.get('h1').should('contain', 'Profile')
+    // The one-time token is now used up by exactly this account.
+    cy.then(() => {
+      const token = signupUrl.split('token=')[1]
+      expectAccountRecorded({
+        email: initialEmail,
+        firstName: 'Lifecycle',
+        lastName: 'Test',
+        token,
+      })
+      cy.task('readFirestoreDoc', `tokens/${token}`).then((doc: any) => {
+        expect(doc.consumers, 'one-time token consumers').to.have.length(1)
+      })
+    })
     cy.get('[role="dialog"]').should('exist')
     cy.contains('Please verify your email').should('be.visible')
     cy.get('[data-testid="email-unverified-banner"]')

@@ -226,6 +226,8 @@ describe('Section G: Pre-Registrations Directory', () => {
 
     // Toggle Bypass Age Limits on Charlie Brown's row
     // Charlie Brown row's bypass checkbox is in column 9 (index 8)
+    const charliePath = `${registrationsCollection}/reg-charlie`
+    cy.task('readFirestoreDoc', charliePath).as('charlieBefore')
     cy.contains('tr', 'Charlie Brown').scrollIntoView()
     cy.contains('tr', 'Charlie Brown').within(() => {
       cy.get('td').eq(8).find('input[type="checkbox"]').check()
@@ -233,6 +235,22 @@ describe('Section G: Pre-Registrations Directory', () => {
     cy.waitForNotification('Bypass age limits updated successfully.')
     cy.contains('tr', 'Charlie Brown').within(() => {
       cy.get('td').eq(8).find('input[type="checkbox"]').should('be.checked')
+    })
+    // The waiver is the only field this toggle owns - and nothing else, not
+    // even the registration form, writes it - so the whole document has to
+    // be what it was with just that one flag turned on. The checkbox above
+    // reflects local state either way.
+    cy.get<any>('@charlieBefore').then((before) => {
+      expect(
+        before.agreements.bypassAgeLimits,
+        'seeded without a waiver',
+      ).to.equal(false)
+      cy.task('readFirestoreDoc', charliePath).then((after: any) => {
+        expect(after).to.deep.equal({
+          ...before,
+          agreements: { ...before.agreements, bypassAgeLimits: true },
+        })
+      })
     })
 
     // Open Registration details modal for Charlie Brown
@@ -271,6 +289,12 @@ describe('Section G: Pre-Registrations Directory', () => {
       'have.value',
       "Bachelor's degree",
     )
+    // ...and the save left the waiver toggled above alone: the form never
+    // sends `bypassAgeLimits`, so a save that started to would undo it.
+    cy.task('readFirestoreDoc', charliePath).then((after: any) => {
+      expect(after.academic.grade, 'grade saved').to.equal('5')
+      expect(after.agreements.bypassAgeLimits, 'waiver kept').to.equal(true)
+    })
 
     // Close dialog
     cy.contains('button', 'Close').click()
