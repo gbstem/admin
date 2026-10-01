@@ -1,4 +1,4 @@
-import { generateDateHash } from '../support/utils'
+import { expectAccountRecorded, generateDateHash } from '../support/utils'
 
 describe('Section A: Authentication and Navigation', () => {
   it('Test Case 1: Unauthenticated Redirect to Sign In', () => {
@@ -124,6 +124,12 @@ describe('Section A: Authentication and Navigation', () => {
       // Expect sign up to leave user signed in and redirect to profile page on success
       cy.url().should('include', '/profile')
       cy.get('h1').should('contain', 'Profile')
+      expectAccountRecorded({
+        email,
+        firstName: first,
+        lastName: last,
+        token: 'demo-admin-token',
+      })
 
       // Expect a dialog to pop up asking the user to verify their email
       cy.get('[role="dialog"]').should('exist')
@@ -209,6 +215,12 @@ describe('Section A: Authentication and Navigation', () => {
       // Expect sign up to leave user signed in and redirect to profile page on success
       cy.url().should('include', '/profile')
       cy.get('h1').should('contain', 'Profile')
+      expectAccountRecorded({
+        email,
+        firstName: first,
+        lastName: last,
+        token: 'demo-reviewer-token',
+      })
 
       // Expect a dialog to pop up asking the user to verify their email
       cy.get('[role="dialog"]').should('exist')

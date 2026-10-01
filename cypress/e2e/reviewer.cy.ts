@@ -1,3 +1,6 @@
+import { registrationsCollection } from '../../src/lib/data/collections'
+import { expectDecision, openApplication } from '../support/utils'
+
 describe('Section O: Reviewer Role Access Control', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -101,8 +104,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.wait(1000)
 
     // Open application modal for David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Miller')
 
     // Click Likely Yes
     cy.contains('button', 'Likely Yes').click({ force: true })
@@ -117,8 +119,7 @@ describe('Section O: Reviewer Role Access Control', () => {
     })
 
     // Re-open David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Miller')
 
     // Click Accept and confirm
     cy.captureConfirms().as('confirms')
@@ -130,6 +131,12 @@ describe('Section O: Reviewer Role Access Control', () => {
     cy.contains('button', /^Close$/).click({ force: true })
     cy.get('[role="dialog"]').should('not.exist')
     cy.verifyEmailSent('applicant1@gmail.com', 'gbSTEM Instructor Decision')
+    // A reviewer's decision goes through firestore.rules' reviewer branch,
+    // not the admin one, so it needs its own proof that it was written.
+    expectDecision('app-david', {
+      type: 'accepted',
+      likelyDecision: 'likely yes',
+    })
 
     // Row should show accepted decision (green check icon in Decision column)
     cy.contains('tr', 'David Miller').within(() => {
@@ -146,6 +153,9 @@ describe('Section O: Reviewer Role Access Control', () => {
     // eslint-disable-next-line cypress/no-unnecessary-waiting
     cy.wait(1000)
 
+    const charliePath = `${registrationsCollection}/reg-charlie`
+    cy.task('readFirestoreDoc', charliePath).as('charlieBefore')
+
     // Try to toggle "Bypass Age Limits?" which reviewer doesn't have permissions to write
     cy.contains('tr', 'Charlie Brown').find('input[id^="bypass-"]').click()
 
@@ -155,5 +165,11 @@ describe('Section O: Reviewer Role Access Control', () => {
       'bg-red-200',
       10000,
     )
+
+    // ...and that the refusal is real: the registration is exactly as it was.
+    // The toast only reports what the client was told.
+    cy.get('@charlieBefore').then((before) => {
+      cy.task('readFirestoreDoc', charliePath).should('deep.equal', before)
+    })
   })
 })

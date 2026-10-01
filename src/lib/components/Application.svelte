@@ -134,7 +134,9 @@
     newDecision: 'likely yes' | 'likely no' | 'likely waitlist' | null,
   ) {
     const frozenId = id
-    if (frozenId === undefined) return
+    // Not before the applicant's own decision has loaded: until then
+    // `decision` is undefined, and saving would clear their real one.
+    if (frozenId === undefined || !loaded) return
     loading = true
     try {
       await applicationService.saveLikelyDecision(
@@ -156,14 +158,20 @@
   }
 
   async function handleDecision(newDecision: Data.Decision) {
+    const frozenId = id
+    // Not before the applicant's scorecard has loaded: until then `interview`
+    // holds createDefaultInterviewValues(), and the official decision writes
+    // the whole scorecard - so it would replace theirs with blank defaults
+    // (and a `likelyDecision` of 'likely no'). The fieldset disables the
+    // buttons while loading, but Cypress's `force: true` clicks went straight
+    // through it and wrote exactly that.
+    if (frozenId === undefined || !loaded) return
     const confirmation = confirm(
       'Are you sure you want to update the decision? An email will be sent to the applicant, and you should not be changing the decision after this.',
     )
     if (!confirmation) {
       return
     }
-    const frozenId = id
-    if (frozenId === undefined) return
     loading = true
     try {
       await applicationService.submitOfficialDecision(

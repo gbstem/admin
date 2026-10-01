@@ -315,7 +315,11 @@ export const applicationService = {
           { collection: decisionsColl, id },
           withSemester({ type: decision }, viewedSemester),
           appCollection,
-          { merge: false },
+          // Merged, unlike the single-applicant path: that one writes the
+          // whole scorecard it loaded, but this payload is the decision
+          // alone, so replacing the document would erase the interviewer's
+          // notes and likely decision for everyone in the selection.
+          { merge: true },
         )
       }
       await batch.commit()

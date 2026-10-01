@@ -1,9 +1,14 @@
 import {
   applicationsCollection,
   currentSemester,
+  decisionsCollection,
 } from '../../src/lib/data/collections'
 import collectionsList from '../../src/lib/data/collectionsList.json'
-import { prepareDocForCompare } from '../support/utils'
+import {
+  expectDecision,
+  openApplication,
+  prepareDocForCompare,
+} from '../support/utils'
 
 // The display name (e.g. "Spring 2026") for the current semester, as shown in the
 // CollectionFilter dropdown - derived from collections.ts/collectionsList.json so these
@@ -20,6 +25,12 @@ const currentSemesterName =
 // commands.ts) needs the same headroom for the same reason -- SvelteKit
 // doesn't update the URL until that same load resolves -- and now carries it.
 const TABLE_TIMEOUT = 30000
+
+/** The seeded applicants the decision tests act on - see scripts/seedLib.ts. */
+const DAVID_MILLER_ID = 'app-david'
+const DAVID_HERNANDEZ_ID = 'app-fake-10'
+const MARK_LEWIS_ID = 'app-fake-28'
+const MARY_JOHNSON_ID = 'app-fake-1'
 
 // Searches go through cy.submitSearch (cypress/support/commands.ts), which
 // works around a typing race that otherwise submits a truncated query.
@@ -253,6 +264,20 @@ describe('Section D: Instructor Applications Management', () => {
   })
 
   it('Test Case 10b: Bulk Decisions Persist', () => {
+    // Mark Lewis has an interview scorecard before anyone decides on him, the
+    // way an applicant does once they've been interviewed. A bulk decision
+    // sets the decision and nothing else, so the scorecard has to survive it.
+    const scorecard = {
+      likelyDecision: 'likely yes',
+      interviewer: 'Jane Doe',
+      conversationNotes: 'Explained loops clearly to a pretend 4th grader.',
+      notes: 'Strong mock lesson.',
+    }
+    cy.task('mergeFirestoreDoc', {
+      docPath: `${decisionsCollection}/${MARK_LEWIS_ID}`,
+      data: scorecard,
+    })
+
     // Select a single applicant by name, scoped to their row, instead of by checkbox index,
     // so this test doesn't depend on the row ordering assumed by Test Case 10/11.
     cy.contains('tr', 'Mark Lewis').within(() => {
@@ -265,6 +290,7 @@ describe('Section D: Instructor Applications Management', () => {
     // instead of this success toast.
     cy.waitForNotification('1 applicant waitlisted.')
     cy.verifyEmailSent('applicant-28@gmail.com', 'gbSTEM Instructor Decision')
+    expectDecision(MARK_LEWIS_ID, { type: 'waitlisted', ...scorecard })
 
     cy.contains('tr', 'Mark Lewis').within(() => {
       cy.get('.text-yellow-300').should('exist')
@@ -311,12 +337,12 @@ describe('Section D: Instructor Applications Management', () => {
       'applicant-1@gmail.com',
       'Please schedule your gbSTEM instructor interview',
     )
+    expectDecision(MARY_JOHNSON_ID, { type: 'interview' })
   })
 
   it('Test Case 11: Application Details Modal, Editing Details, and Decision Updates', () => {
     // Open application modal for David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Miller')
 
     // Click Close Interview Form to reveal Edit button
     cy.contains('button', 'Close Interview Form').click({ force: true })
@@ -365,8 +391,7 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Re-open David Miller
-    cy.contains('td', 'David Miller').click()
-    cy.get('[role="dialog"]', { timeout: 10000 }).should('exist')
+    openApplication('David Miller')
 
     // Click Accept and confirm
     cy.captureConfirms().as('confirms')
@@ -379,6 +404,12 @@ describe('Section D: Instructor Applications Management', () => {
     cy.get('[role="dialog"]').should('not.exist')
 
     cy.verifyEmailSent('applicant1@gmail.com', 'gbSTEM Instructor Decision')
+    // The likely decision is a separate, earlier write; the official one must
+    // carry it forward rather than resetting it.
+    expectDecision(DAVID_MILLER_ID, {
+      type: 'accepted',
+      likelyDecision: 'likely yes',
+    })
 
     // Row should show accepted decision (green check icon in Decision column)
     cy.contains('tr', 'David Miller').within(() => {
@@ -388,8 +419,7 @@ describe('Section D: Instructor Applications Management', () => {
 
     // Test individual decision to 'Interview' via modal header button
     cy.clearTestEmails()
-    cy.contains('td', 'David Hernandez').click()
-    cy.get('[role="dialog"]').should('exist')
+    openApplication('David Hernandez')
     // The capture above is still recording -- a confirm handler stays
     // registered for the rest of the test.
     cy.get('[role="dialog"]')
@@ -403,6 +433,7 @@ describe('Section D: Instructor Applications Management', () => {
       'applicant-10@gmail.com',
       'Please schedule your gbSTEM instructor interview',
     )
+    expectDecision(DAVID_HERNANDEZ_ID, { type: 'interview' })
   })
 
   it('Test Case 11b: Instructor Interview Guide and Evaluation Form', () => {

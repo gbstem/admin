@@ -1,5 +1,9 @@
 import { kebabCase } from 'lodash-es'
-import { currentSemester } from '../../src/lib/data/collections'
+import {
+  classesCollection,
+  currentSemester,
+  registrationsCollection,
+} from '../../src/lib/data/collections'
 import courses from '../../src/lib/data/courses.json'
 import { expectCellInColumn } from '../support/utils'
 
@@ -21,6 +25,38 @@ const seededCourse = (track: string) =>
 const MATH_COURSE = kebabCase(seededCourse('math'))
 const SCIENCE_COURSE = seededCourse('science')
 
+/** Demo Instructor's Python 1, and its roster as scripts/seedLib.ts seeds it. */
+const PYTHON_CLASS_PATH = `${classesCollection}/class-python1`
+const PYTHON_SEEDED_STUDENTS = ['student-demo-uid-1', 'student1', 'student2']
+/** Charlie Brown's registration, which the seed leaves in no class. */
+const CHARLIE_REGISTRATION_ID = 'reg-charlie'
+const CHARLIE_REGISTRATION_PATH = `${registrationsCollection}/${CHARLIE_REGISTRATION_ID}`
+
+/**
+ * Asserts both halves of Charlie's enrollment - the class roster and the
+ * registration's class list - which `enrollStudent` and
+ * `dropStudentFromClass` each write together. The toast, the email and the
+ * dialog's "Class 1 Information" all follow from local state or a separate
+ * API call, so none of them shows either write landed.
+ */
+function expectCharlieEnrollment(enrolled: boolean) {
+  cy.task('readFirestoreDoc', PYTHON_CLASS_PATH).then((classDoc: any) => {
+    expect(classDoc.students, 'Python 1 roster').to.deep.equal(
+      enrolled
+        ? [...PYTHON_SEEDED_STUDENTS, CHARLIE_REGISTRATION_ID]
+        : PYTHON_SEEDED_STUDENTS,
+    )
+  })
+  cy.task('readFirestoreDoc', CHARLIE_REGISTRATION_PATH).then(
+    (registration: any) => {
+      expect(registration.classes, "Charlie's classes").to.deep.equal(
+        enrolled ? ['class-python1'] : [],
+      )
+      expect(registration.enrolled, 'Charlie enrolled').to.equal(enrolled)
+    },
+  )
+}
+
 describe('Section F: Students Directory', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -39,6 +75,17 @@ describe('Section F: Students Directory', () => {
   })
 
   it('Test Case 14: Students Search, Filtering, and Enrolling/Dropping Classes', () => {
+    // Back to the seed's enrollment, so a retry starts where the first
+    // attempt did rather than from whatever it left behind.
+    cy.task('mergeFirestoreDoc', {
+      docPath: PYTHON_CLASS_PATH,
+      data: { students: PYTHON_SEEDED_STUDENTS },
+    })
+    cy.task('mergeFirestoreDoc', {
+      docPath: CHARLIE_REGISTRATION_PATH,
+      data: { classes: [], enrolled: false },
+    })
+
     // Verify initial state
     cy.get('table', { timeout: 10000 }).should(($table) => {
       expect($table).to.contain('Charlie Brown')
@@ -195,6 +242,8 @@ describe('Section F: Students Directory', () => {
       ])
     })
 
+    expectCharlieEnrollment(true)
+
     // Class 1 Information should appear, with the instructor's address
     cy.contains('h2', 'Class 1 Information').should('exist')
     expectCellInColumn(
@@ -233,6 +282,7 @@ describe('Section F: Students Directory', () => {
     // Click Drop Class
     cy.contains('button', 'Drop Class').click({ force: true })
     cy.waitForNotification('Dropped class successfully!')
+    expectCharlieEnrollment(false)
 
     // Class 1 Information should no longer exist
     cy.contains('h2', 'Class 1 Information').should('not.exist')
