@@ -33,7 +33,10 @@ describe('Section H: Interview Timeslots Configuration', () => {
     cy.contains('h2', 'Add A Time Slot')
       .parent()
       .within(() => {
-        cy.setFieldValue('input[type="datetime-local"]', '2027-10-10T10:00')
+        cy.setFieldValue(
+          'input[type="datetime-local"]',
+          ASSIGNED_SLOT_DATE_LOCAL,
+        )
         cy.setFieldValue(
           'input[name="interview-meeting-link"]',
           'https://zoom.us/j/9999999999',
@@ -58,6 +61,33 @@ describe('Section H: Interview Timeslots Configuration', () => {
       .should('contain', 'assign David Miller as the interviewee')
     cy.waitForNotification('Interviewee assigned and email sent.')
     cy.verifyEmailSent('applicant1@gmail.com', 'your interview with')
+
+    // Both halves of the booking `createOrAssignInterviewSlot` batches: the
+    // slot naming its interviewee, and the application flagged as having an
+    // interview, which is what takes it out of the "needs an interview" lists.
+    getDemoAdminUid().then((uid: string) => {
+      const docId = interviewSlotDocId(ASSIGNED_SLOT_DATE_LOCAL, uid)
+      readSlotDoc(docId).then((data: any) => {
+        expect(data, 'assigned slot document').to.not.equal(null)
+        expect(
+          prepareDocForCompare(data, { omit: SLOT_TIMESTAMP_FIELDS }),
+        ).to.deep.equal({
+          semester: currentSemester,
+          id: docId,
+          meetingLink: 'https://zoom.us/j/9999999999',
+          interviewerName: 'Demo Admin',
+          interviewerUid: uid,
+          intervieweeFirstName: 'David',
+          intervieweeLastName: 'Miller',
+          intervieweeId: 'app-david',
+          interviewSlotStatus: 'pending',
+        })
+        expect(slotTime(data.date), 'slot date').to.equal(
+          new Date(ASSIGNED_SLOT_DATE_LOCAL).getTime(),
+        )
+      })
+    })
+    expectInterviewFlag('app-david', true)
 
     // Verify slot is created and appears in list. Scope by the meeting link
     // we just typed rather than "David Miller" -- scripts/seed.ts also seeds
@@ -111,6 +141,17 @@ describe('Section H: Interview Timeslots Configuration', () => {
     // Verify it is removed from list
     cy.contains('a', 'https://zoom.us/j/8888888888').should('not.exist')
 
+    // ...and from Firestore, along with the applicant's interview flag -
+    // left `true`, it would hide him from every list an admin could use to
+    // book him again.
+    getDemoAdminUid().then((uid: string) => {
+      cy.task(
+        'checkFirestoreDocExists',
+        `${interviewTimesCollection}/${interviewSlotDocId(ASSIGNED_SLOT_DATE_LOCAL, uid)}`,
+      ).should('eq', false)
+    })
+    expectInterviewFlag('app-david', false)
+
     // Assigning the interviewee is the only prompt this flow should raise --
     // editing and deleting the slot must not.
     cy.get('@confirms').should('have.length', 1)
@@ -119,8 +160,9 @@ describe('Section H: Interview Timeslots Configuration', () => {
   it('Test Case 16a: Interview Time Requests - Each Request Shows Its Requester', () => {
     // The seed has no time requests, so this one is written the way portal's
     // "request a time" does. The list only shows requests from applicants
-    // still waiting for an interview, and Test Case 16 books David Miller, so
-    // he is put back first.
+    // still waiting for an interview. Test Case 16 books David Miller and
+    // then frees him again (and checks it), but this test can run without it
+    // on a retry, so he is put back explicitly.
     const requestDate = '2030-01-15T10:00'
     const requestId = slotRequestDocId('app-david', requestDate)
     cy.task('mergeFirestoreDoc', {
@@ -167,6 +209,26 @@ const SLOT_LINK = 'https://zoom.us/j/1231231234'
 
 /** `date` is a Firestore timestamp, which `getFirestoreDoc` returns as a raw wrapper. */
 const SLOT_TIMESTAMP_FIELDS = ['date']
+
+/** A stored slot `date`, as `getFirestoreDoc` returns it, in epoch ms. */
+const slotTime = (value: { timestampValue: string }) =>
+  new Date(value.timestampValue).getTime()
+
+/** The slot Test Case 16 creates with an interviewee already assigned. */
+const ASSIGNED_SLOT_DATE_LOCAL = '2027-10-10T10:00'
+
+/** Asserts an application's `meta.interview` flag, read through the Admin SDK. */
+function expectInterviewFlag(applicationId: string, expected: boolean) {
+  cy.task(
+    'readFirestoreDoc',
+    `${applicationsCollection}/${applicationId}`,
+  ).then((application: any) => {
+    expect(
+      application.meta.interview,
+      `${applicationId}'s meta.interview`,
+    ).to.equal(expected)
+  })
+}
 
 function getDemoAdminUid(): Cypress.Chainable<string> {
   return cy
@@ -245,7 +307,9 @@ describe('Section F: Interview Slot Field Coverage', () => {
             intervieweeId: '',
             interviewSlotStatus: 'available',
           })
-          expect(data.date, 'slot date').to.not.equal(null)
+          expect(slotTime(data.date), 'slot date').to.equal(
+            new Date(SLOT_DATE_LOCAL).getTime(),
+          )
         })
       })
     })
