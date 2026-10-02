@@ -3,6 +3,7 @@
  */
 const mockSaveApplicationEdits = jest.fn()
 const mockSaveRegistrationEdits = jest.fn()
+const mockSetBypassAgeLimits = jest.fn()
 
 jest.mock('$lib/server/applicationService', () => ({
   applicationService: {
@@ -14,6 +15,7 @@ jest.mock('$lib/server/registrationService', () => ({
   registrationService: {
     saveRegistrationEdits: (...args: any[]) =>
       mockSaveRegistrationEdits(...args),
+    setBypassAgeLimits: (...args: any[]) => mockSetBypassAgeLimits(...args),
   },
 }))
 
@@ -199,5 +201,59 @@ describe('/registrations?/saveRegistration', () => {
     expect(result.status).toBe(400)
     expect(result.data.form.errors.personal.studentFirstName).toBeDefined()
     expect(mockSaveRegistrationEdits).not.toHaveBeenCalled()
+  })
+})
+
+describe('/registrations?/setBypassAgeLimits', () => {
+  const at = (semester = currentSemester) =>
+    new URL(
+      `http://localhost/registrations?/setBypassAgeLimits&id=uid-1-1&semester=${semester}`,
+    )
+  const set = (user: unknown, value: string | null, url = at()) => {
+    const body = new FormData()
+    if (value !== null) body.set('bypassAgeLimits', value)
+    return (registrationsActions.setBypassAgeLimits as any)({
+      request: new Request('http://localhost/', { method: 'POST', body }),
+      locals: { user },
+      url,
+    })
+  }
+
+  beforeEach(() => {
+    mockSetBypassAgeLimits.mockReset().mockResolvedValue(undefined)
+  })
+
+  it.each([
+    ['true', true],
+    ['false', false],
+  ])('sets the flag to %s for an admin', async (value, expected) => {
+    await expect(set(admin, value)).resolves.toEqual({
+      bypassAgeLimits: expected,
+    })
+    expect(mockSetBypassAgeLimits).toHaveBeenCalledWith(
+      currentSemester,
+      'uid-1-1',
+      expected,
+    )
+  })
+
+  it('refuses a reviewer, as firestore.rules does', async () => {
+    await expect(set(reviewer, 'true')).rejects.toMatchObject({ status: 403 })
+    expect(mockSetBypassAgeLimits).not.toHaveBeenCalled()
+  })
+
+  it.each([null, '', 'yes'])(
+    'refuses a missing or non-boolean value (%s)',
+    async (value) => {
+      await expect(set(admin, value)).rejects.toMatchObject({ status: 400 })
+      expect(mockSetBypassAgeLimits).not.toHaveBeenCalled()
+    },
+  )
+
+  it('refuses an unknown semester', async () => {
+    await expect(set(admin, 'true', at('Nope99'))).rejects.toMatchObject({
+      status: 400,
+    })
+    expect(mockSetBypassAgeLimits).not.toHaveBeenCalled()
   })
 })

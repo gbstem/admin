@@ -132,10 +132,10 @@ A **Data Access Layer (DAL)** is just a name for "the one place in the app allow
 A `.svelte` component then just calls something like:
 
 ```ts
-await studentService.enrollStudent(studentData, selectedClass, studentId)
+await studentService.enrollStudent(classId, registrationId)
 ```
 
-instead of constructing a raw `updateDoc(doc(db, classesCollection, classId), { students: arrayUnion(studentId) })` call inline, mixed in with template markup and UI state.
+instead of constructing a raw Firestore call or `fetch('/api/enroll', ...)` inline, mixed in with template markup and UI state. (That one goes through an API route because the write has to update the class and the registration together, which no client may do.)
 
 Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`, `applicationService.ts`, `registrationService.ts`, `classService.ts`, `studentService.ts`, `tokenService.ts`, `announcementService.ts`, `instructorFeedbackService.ts`, `studentFeedbackService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` and live under `__tests__/server/` — a flat `__tests__/<name>Service.test.ts` would collide with the client DAL's test of the same base name (e.g. `applicationService.ts` exists in both `src/lib/services/` and `src/lib/server/`); `subRequestService.test.ts` predates that convention and is the one exception still at the top level.
 

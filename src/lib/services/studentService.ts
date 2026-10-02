@@ -8,27 +8,34 @@ import {
 import { retreatMealSchedule } from '$lib/data/retreatMealSchedule'
 import type ClassData from '$lib/data/types/ClassData'
 import type Student from '$lib/data/types/Student'
+import type {
+  EnrollRequestBody,
+  EnrollResponse,
+} from '../../routes/api/enroll/+server'
 import {
-  buildEnrollApiPayload,
   parseAttendanceRecords,
   parseStudentProfileData,
 } from '$lib/helpers/studentDetails'
 import { registrationParentUid } from '$lib/data/docIds'
 import { accountEmailService } from '$lib/services/accountEmailService'
 import {
-  arrayRemove,
-  arrayUnion,
   collection,
   doc,
   getDoc,
   getDocs,
   query,
-  runTransaction,
   setDoc,
   updateDoc,
-  writeBatch,
 } from 'firebase/firestore'
 import { cloneDeep } from 'lodash-es'
+
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    return (await res.json()).message ?? res.statusText
+  } catch {
+    return res.statusText
+  }
+}
 
 /**
  * Service providing Data Access Layer for student details, class enrollment, and attendance.
@@ -220,73 +227,48 @@ export const studentService = {
   },
 
   /**
-   * Enrolls a student into a class, then sends the enrollment email.
-   *
-   * The class's `students` and the registration's `classes` have to agree -
-   * the roster, capacity and reminders read one side, the family's view reads
-   * the other - so both are written in one batch. They used to be two
-   * sequential updates, and a failure between them (a reviewer, say, who may
-   * write classes but not registrations) left the student on one and not the
-   * other. Portal's /api/enroll keeps the same pair in a transaction.
+   * Enrolls a student in a class through `/api/enroll`, which writes the
+   * class's roster and the registration's class list together and then
+   * emails the family. Resolves to whether that email went out; throws if
+   * the enrollment itself was refused.
    */
   async enrollStudent(
-    studentData: Student,
-    selectedClass: ClassData,
-    studentId: string,
-  ): Promise<void> {
-    const batch = writeBatch(db)
-    batch.update(doc(db, classesCollection, selectedClass.id), {
-      students: arrayUnion(studentId),
-    })
-    batch.update(doc(db, registrationsCollection, studentId), {
-      classes: arrayUnion(selectedClass.id),
-      enrolled: true,
-    })
-    await batch.commit()
-
-    const payload = buildEnrollApiPayload(
-      { ...studentData, id: studentId },
-      selectedClass,
-    )
+    classId: string,
+    registrationId: string,
+  ): Promise<EnrollResponse> {
     const res = await fetch('/api/enroll', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        classId,
+        registrationId,
+      } satisfies EnrollRequestBody),
     })
-
     if (!res.ok) {
-      throw new Error('Failed to send enrollment email notification')
+      throw new Error(await errorMessage(res))
     }
+    return res.json()
   },
 
   /**
-   * Drops a student from a class: off the class's `students`, and the class
-   * off their registration, with `enrolled` saying whether any class is left.
-   *
-   * One transaction, because `enrolled` is computed from the registration as
-   * it stands. This used to be three writes and a read between them, so a
-   * concurrent enrollment could land after the read and leave `enrolled`
-   * false on a student who is in a class.
+   * Drops a student from a class through `/api/enroll`, off both the class's
+   * roster and the registration's class list.
    */
   async dropStudentFromClass(
     classId: string,
-    studentId: string,
+    registrationId: string,
   ): Promise<void> {
-    const classDocRef = doc(db, classesCollection, classId)
-    const registrationDocRef = doc(db, registrationsCollection, studentId)
-    await runTransaction(db, async (transaction) => {
-      const registrationSnap = await transaction.get(registrationDocRef)
-      const remainingClasses = (
-        (registrationSnap.data()?.classes ?? []) as string[]
-      ).filter((id) => id !== classId)
-      transaction.update(classDocRef, { students: arrayRemove(studentId) })
-      transaction.update(registrationDocRef, {
-        classes: remainingClasses,
-        enrolled: remainingClasses.length > 0,
-      })
+    const res = await fetch('/api/enroll', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        classId,
+        registrationId,
+      } satisfies EnrollRequestBody),
     })
+    if (!res.ok) {
+      throw new Error(await errorMessage(res))
+    }
   },
 
   /**

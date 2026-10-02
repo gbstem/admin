@@ -165,6 +165,10 @@ describe('Section O: Reviewer Role Access Control', () => {
       'bg-red-200',
       10000,
     )
+    // The checkbox goes back to the stored value.
+    cy.contains('tr', 'Charlie Brown')
+      .find('input[id^="bypass-"]')
+      .should('not.be.checked')
 
     // ...and that the refusal is real: the registration is exactly as it was.
     // The toast only reports what the client was told.

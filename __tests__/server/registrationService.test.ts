@@ -14,7 +14,7 @@ mockToDateSafe.mockImplementation((ts: any) =>
 )
 
 const mockGetUsers = jest.fn()
-const mockTransaction = { get: jest.fn(), set: jest.fn() }
+const mockTransaction = { get: jest.fn(), set: jest.fn(), update: jest.fn() }
 const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
 jest.mock('$lib/server/firebase', () => ({
@@ -324,5 +324,31 @@ describe('registrationService.saveRegistrationEdits', () => {
       registrationService.saveRegistrationEdits('Spring26', 'nope', formData),
     ).rejects.toMatchObject({ status: 404 })
     expect(mockTransaction.set).not.toHaveBeenCalled()
+  })
+})
+
+describe('registrationService.setBypassAgeLimits', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("sets the flag on that semester's registration", async () => {
+    mockTransaction.get.mockResolvedValue({ exists: true })
+
+    await registrationService.setBypassAgeLimits('Spring26', 'uid-1-1', true)
+
+    expect(mockTransaction.update).toHaveBeenCalledWith(
+      { path: 'semesters/Spring26/registrations/uid-1-1' },
+      { 'agreements.bypassAgeLimits': true },
+    )
+  })
+
+  it('refuses a registration that does not exist, writing nothing', async () => {
+    mockTransaction.get.mockResolvedValue({ exists: false })
+
+    await expect(
+      registrationService.setBypassAgeLimits('Spring26', 'nope', false),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(mockTransaction.update).not.toHaveBeenCalled()
   })
 })

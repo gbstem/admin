@@ -163,21 +163,21 @@
       checked = []
     }
   }
-  function bypassAgeLimits(id: string) {
+  function bypassAgeLimits(id: string, checkbox: HTMLInputElement) {
+    const requested = checkbox.checked
     registrationService
-      .toggleBypassAgeLimits(id)
+      .setBypassAgeLimits(selectedCollection, id, requested)
       .then(() => {
         alert.trigger('success', 'Bypass age limits updated successfully.')
       })
       .catch((err) => {
         console.error('Failed to update bypass age limits:', err)
-        const isPermissionDenied =
-          err.code === 'permission-denied' ||
-          String(err).includes('permission') ||
-          String(err).includes('Permission')
-        const msg = isPermissionDenied
-          ? 'You do not have permission to modify this registration.'
-          : `Failed to update bypass age limits: ${err.message || err}`
+        // Show the value that is actually stored.
+        checkbox.checked = !requested
+        const msg =
+          err.status === 403
+            ? 'You do not have permission to modify this registration.'
+            : `Failed to update bypass age limits: ${err.message || err}`
         alert.trigger('error', msg)
       })
   }
@@ -321,7 +321,7 @@
             class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
             type="checkbox"
             checked={registration.values.agreements.bypassAgeLimits}
-            onchange={() => bypassAgeLimits(registration.id)}
+            onchange={(e) => bypassAgeLimits(registration.id, e.currentTarget)}
           />
         </td>
         {#await getCourses(registration.id) then courses}

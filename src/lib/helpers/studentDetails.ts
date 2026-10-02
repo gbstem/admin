@@ -1,7 +1,6 @@
 import type {} from '../../data.d.ts'
 import type ClassData from '$lib/data/types/ClassData'
 import type Student from '$lib/data/types/Student'
-import type { EnrollRequestBody } from '../../routes/api/enroll/+server'
 
 /**
  * Formats a human-readable display string for a class option.
@@ -40,32 +39,6 @@ export function parseStudentProfileData(id: string, data: any): Student {
     school: data.academic?.school ?? '',
     parentName:
       `${data.personal.parentFirstName ?? ''} ${data.personal.parentLastName ?? ''}`.trim(),
-  }
-}
-
-/**
- * Constructs request payload for /api/enroll endpoint.
- */
-export function buildEnrollApiPayload(
-  studentData: Student,
-  classSelected: ClassData,
-): EnrollRequestBody {
-  const parentFirstName = (studentData.parentName || '').split(' ')[0]
-  return {
-    // The registration, not an address: the server mails the parent account
-    // behind it at that account's current address.
-    registrationId: studentData.id,
-    firstName: parentFirstName,
-    instructor: `${classSelected.instructorFirstName} ${classSelected.instructorLastName}`,
-    // The uid only: the server resolves the instructor's current address from
-    // Auth.
-    instructorUid: classSelected.instructorUid,
-    classTimes: [classSelected.classTime1, classSelected.classTime2],
-    classDays: [classSelected.classDay1, classSelected.classDay2],
-    course: classSelected.course,
-    meetingLink: classSelected.meetingLink,
-    online: classSelected.online,
-    studentName: studentData.name,
   }
 }
 

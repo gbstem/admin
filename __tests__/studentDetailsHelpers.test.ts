@@ -2,11 +2,9 @@ import type {} from '../src/data.d.ts'
 import {
   formatClassName,
   parseStudentProfileData,
-  buildEnrollApiPayload,
   parseAttendanceRecords,
 } from '$lib/helpers/studentDetails'
 import type ClassData from '$lib/data/types/ClassData'
-import type Student from '$lib/data/types/Student'
 
 describe('StudentDetails Helpers', () => {
   describe('formatClassName', () => {
@@ -66,81 +64,6 @@ describe('StudentDetails Helpers', () => {
         school: 'Lincoln Middle',
         parentName: 'Sarah Tables',
       })
-    })
-  })
-
-  describe('buildEnrollApiPayload', () => {
-    test('constructs API payload for student enrollment', () => {
-      const student: Student = {
-        id: 'parent-uid-1',
-        name: 'Bobby Tables',
-        email: 'bobby@example.com',
-        secondaryEmail: 'parent@example.com',
-        phone: '555-1234',
-        grade: 6,
-        school: 'Lincoln Middle',
-        parentName: 'Sarah Tables',
-      }
-
-      const classSelected: Partial<ClassData> = {
-        instructorFirstName: 'Jane',
-        instructorLastName: 'Doe',
-        instructorUid: 'inst-123',
-        classTime1: '4:00 PM',
-        classTime2: '4:00 PM',
-        classDay1: 'Monday',
-        classDay2: 'Wednesday',
-        course: 'Python 1',
-        meetingLink: 'https://teams.microsoft.com/...',
-        online: true,
-      }
-
-      const payload = buildEnrollApiPayload(student, classSelected as ClassData)
-
-      // No addresses: the server resolves the parent account's from the
-      // registration id, and the instructor's from instructorUid.
-      expect(payload).toEqual({
-        registrationId: 'parent-uid-1',
-        firstName: 'Sarah',
-        instructor: 'Jane Doe',
-        instructorUid: 'inst-123',
-        classTimes: ['4:00 PM', '4:00 PM'],
-        classDays: ['Monday', 'Wednesday'],
-        course: 'Python 1',
-        meetingLink: 'https://teams.microsoft.com/...',
-        online: true,
-        studentName: 'Bobby Tables',
-      })
-    })
-
-    test('sends an empty instructorUid for a class with none, for the server to refuse', () => {
-      const student: Student = {
-        id: 'parent-uid-1',
-        name: 'Bobby Tables',
-        email: 'bobby@example.com',
-        secondaryEmail: '',
-        phone: '555-1234',
-        grade: 6,
-        school: 'Lincoln Middle',
-        parentName: 'Sarah Tables',
-      }
-
-      const classSelected: Partial<ClassData> = {
-        instructorFirstName: 'Jane',
-        instructorLastName: 'Doe',
-        instructorUid: '',
-        classTime1: '4:00 PM',
-        classTime2: '4:00 PM',
-        classDay1: 'Monday',
-        classDay2: 'Wednesday',
-        course: 'Python 1',
-        meetingLink: '',
-        online: true,
-      }
-
-      const payload = buildEnrollApiPayload(student, classSelected as ClassData)
-      expect(payload.instructorUid).toBe('')
-      expect(payload).not.toHaveProperty('instructorEmail')
     })
   })
 

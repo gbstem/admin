@@ -1,6 +1,4 @@
 import { retreatMealSchedule } from '$lib/data/retreatMealSchedule'
-import type ClassData from '$lib/data/types/ClassData'
-import type Student from '$lib/data/types/Student'
 import { studentService } from '$lib/services/studentService'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
@@ -375,132 +373,72 @@ describe('studentService (Data Access Layer)', () => {
   })
 
   describe('enrollStudent', () => {
-    const student: Student = {
-      id: 'stale-id-the-caller-overrides',
-      name: 'Bobby Tables',
-      email: 'bobby@example.com',
-      secondaryEmail: 'parent@example.com',
-      phone: '555-0000',
-      grade: 6,
-      school: 'Lincoln',
-      parentName: 'Sarah Tables',
-    }
+    it('asks /api/enroll to enroll the registration in the class, by id alone', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ emailSent: true }),
+      })
 
-    const classData: ClassData = {
-      id: 'c-1',
-      instructorFirstName: 'Jane',
-      instructorLastName: 'Doe',
-      instructorUid: 'jane-uid',
-      classTime1: '4:00 PM',
-      classTime2: '4:00 PM',
-      course: 'Python 1',
-      online: true,
-    } as ClassData
-
-    it('writes the class roster and the registration in one batch, then sends the enrollment email', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
-
-      await studentService.enrollStudent(student, classData, 's-1')
-
-      expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
-      expect(mockBatch.update.mock.calls.map(([, data]) => data)).toEqual([
-        { students: 's-1' },
-        { classes: 'c-1', enrolled: true },
-      ])
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
-      expect(firestore.updateDoc).not.toHaveBeenCalled()
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/enroll',
-        expect.objectContaining({ method: 'POST' }),
+      await expect(studentService.enrollStudent('c-1', 's-1')).resolves.toEqual(
+        { emailSent: true },
       )
-      // The instructor is named by uid alone; the stored address stays home.
-      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
-      const body = JSON.parse(init.body)
-      expect(body.instructorUid).toBe('jane-uid')
-      expect(body).not.toHaveProperty('instructorEmail')
-      // The registration the caller named, not an address.
-      expect(body.registrationId).toBe('s-1')
-      expect(body).not.toHaveProperty('email')
+
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/enroll')
+      expect(init.method).toBe('POST')
+      expect(JSON.parse(init.body)).toEqual({
+        classId: 'c-1',
+        registrationId: 's-1',
+      })
+      expect(firestore.writeBatch).not.toHaveBeenCalled()
     })
 
-    it('throws if the enrollment email API responds not-ok', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false })
+    it("throws the route's refusal", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'That class no longer exists.' }),
+      })
 
-      await expect(
-        studentService.enrollStudent(student, classData, 's-1'),
-      ).rejects.toThrow('Failed to send enrollment email notification')
-    })
-
-    it('sends no email when the batch is refused', async () => {
-      mockBatch.commit.mockRejectedValueOnce(new Error('permission-denied'))
-
-      await expect(
-        studentService.enrollStudent(student, classData, 's-1'),
-      ).rejects.toThrow('permission-denied')
-      expect(global.fetch).not.toHaveBeenCalled()
+      await expect(studentService.enrollStudent('c-1', 's-1')).rejects.toThrow(
+        'That class no longer exists.',
+      )
     })
   })
 
   describe('dropStudentFromClass', () => {
-    let transaction: { get: jest.Mock; update: jest.Mock }
-
-    /** Runs the drop's transaction against a registration holding `data`. */
-    function withRegistration(data: Record<string, unknown>) {
-      transaction = {
-        get: jest.fn().mockResolvedValue({ data: () => data }),
-        update: jest.fn(),
-      }
-      ;(firestore.runTransaction as jest.Mock).mockImplementation(
-        async (_db: unknown, fn: any) => fn(transaction),
-      )
-    }
-
-    it('clears the class from both documents in one transaction, staying enrolled while classes remain', async () => {
-      withRegistration({ classes: ['c-1', 'c-2'] })
-
-      await studentService.dropStudentFromClass('c-1', 's-1')
-
-      expect(firestore.runTransaction).toHaveBeenCalledTimes(1)
-      expect(transaction.update.mock.calls.map(([, data]) => data)).toEqual([
-        { students: 's-1' },
-        { classes: ['c-2'], enrolled: true },
-      ])
-      expect(firestore.updateDoc).not.toHaveBeenCalled()
-    })
-
-    it('sets enrolled=false when no classes remain', async () => {
-      withRegistration({ classes: ['c-1'] })
-
-      await studentService.dropStudentFromClass('c-1', 's-1')
-
-      expect(transaction.update).toHaveBeenLastCalledWith(expect.anything(), {
-        classes: [],
-        enrolled: false,
+    it('asks /api/enroll to drop the registration from the class', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
       })
-    })
-
-    it('defaults to enrolled=false when the registration doc has no classes field', async () => {
-      withRegistration({})
 
       await studentService.dropStudentFromClass('c-1', 's-1')
 
-      expect(transaction.update).toHaveBeenLastCalledWith(expect.anything(), {
-        classes: [],
-        enrolled: false,
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/enroll')
+      expect(init.method).toBe('DELETE')
+      expect(JSON.parse(init.body)).toEqual({
+        classId: 'c-1',
+        registrationId: 's-1',
       })
+      expect(firestore.runTransaction).not.toHaveBeenCalled()
     })
 
-    it('propagates a failed transaction', async () => {
-      ;(firestore.runTransaction as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
-      )
+    it("throws the route's refusal, falling back to the status text", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Forbidden',
+        json: async () => {
+          throw new Error('not json')
+        },
+      })
 
       await expect(
         studentService.dropStudentFromClass('c-1', 's-1'),
-      ).rejects.toThrow('permission-denied')
+      ).rejects.toThrow('Forbidden')
     })
   })
-
   describe('checkInStudent', () => {
     it('sets checked-in status with a default meal schedule, merging into the doc', async () => {
       ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)

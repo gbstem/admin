@@ -197,4 +197,29 @@ export const registrationService = {
       )
     })
   },
+
+  /**
+   * Sets a registration's `agreements.bypassAgeLimits`, which lets the student
+   * enroll in classes above their grade. Takes the value rather than flipping
+   * it, so a repeated or concurrent request can't undo itself. Refuses (404) a
+   * registration that doesn't exist.
+   */
+  async setBypassAgeLimits(
+    semesterId: string,
+    registrationId: string,
+    bypassAgeLimits: boolean,
+  ): Promise<void> {
+    const ref = adminDb.doc(
+      `${semesterCollectionPath(semesterId, 'registrations')}/${registrationId}`,
+    )
+    await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref)
+      if (!snap.exists) {
+        throw error(404, 'Registration not found.')
+      }
+      transaction.update(ref, {
+        'agreements.bypassAgeLimits': bypassAgeLimits,
+      })
+    })
+  },
 }

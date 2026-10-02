@@ -1,6 +1,7 @@
 import { db } from '$lib/client/firebase'
-import { registrationsCollection } from '$lib/data/collections'
-import { doc, getDoc, runTransaction } from 'firebase/firestore'
+import { deserialize } from '$app/forms'
+import { currentSemester, semesterIdFromPath } from '$lib/data/collections'
+import { doc, getDoc } from 'firebase/firestore'
 
 /**
  * Service providing Data Access Layer for Admin Registration review & editing.
@@ -21,25 +22,32 @@ export const registrationService = {
   },
 
   /**
-   * Toggles a registration's `agreements.bypassAgeLimits` flag.
-   *
-   * Note: this always targets the current semester's registrations collection,
-   * regardless of which semester is being viewed - this mirrors pre-existing
-   * behavior rather than deriving the semester from a caller-provided path.
+   * Sets a registration's `agreements.bypassAgeLimits` through the
+   * `/registrations?/setBypassAgeLimits` action, in the semester
+   * `collectionPath` belongs to. Throws an `HttpError`-shaped `{ status,
+   * message }` when the action refuses.
    */
-  async toggleBypassAgeLimits(registrationId: string): Promise<void> {
-    const registrationDocRef = doc(db, registrationsCollection, registrationId)
-    // A transaction, since the new value is the old one flipped: two admins
-    // toggling at once would otherwise both read the same value and both
-    // write its opposite.
-    await runTransaction(db, async (transaction) => {
-      const snap = await transaction.get(registrationDocRef)
-      if (!snap.exists()) {
-        return
+  async setBypassAgeLimits(
+    collectionPath: string,
+    registrationId: string,
+    bypassAgeLimits: boolean,
+  ): Promise<void> {
+    const semesterId = semesterIdFromPath(collectionPath) ?? currentSemester
+    const body = new FormData()
+    body.set('bypassAgeLimits', String(bypassAgeLimits))
+    const res = await fetch(
+      `/registrations?/setBypassAgeLimits&id=${encodeURIComponent(registrationId)}&semester=${semesterId}`,
+      { method: 'POST', body, headers: { 'x-sveltekit-action': 'true' } },
+    )
+    const result = deserialize(await res.text())
+    if (result.type === 'error') {
+      throw {
+        status: result.status ?? res.status,
+        message: result.error?.message ?? 'Request failed.',
       }
-      transaction.update(registrationDocRef, {
-        'agreements.bypassAgeLimits': !snap.data().agreements.bypassAgeLimits,
-      })
-    })
+    }
+    if (result.type !== 'success') {
+      throw { status: res.status, message: 'Request failed.' }
+    }
   },
 }

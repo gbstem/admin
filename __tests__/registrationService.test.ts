@@ -54,49 +54,55 @@ describe('admin registrationService (Data Access Layer)', () => {
     })
   })
 
-  describe('toggleBypassAgeLimits', () => {
-    let transaction: { get: jest.Mock; update: jest.Mock }
+  describe('setBypassAgeLimits', () => {
+    const actionResponse = (body: unknown, status = 200) =>
+      ({ status, text: async () => JSON.stringify(body) }) as Response
 
-    function withRegistration(snapshot: Record<string, unknown>) {
-      transaction = {
-        get: jest.fn().mockResolvedValue(snapshot),
-        update: jest.fn(),
-      }
-      ;(firestore.runTransaction as jest.Mock).mockImplementation(
-        async (_db: unknown, fn: any) => fn(transaction),
+    beforeEach(() => {
+      global.fetch = jest.fn()
+    })
+
+    it("posts the value to the action, in the collection's semester", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+        actionResponse({ type: 'success', status: 200, data: '[{}]' }),
       )
-    }
 
-    it('flips the flag it read, inside one transaction', async () => {
-      withRegistration({
-        exists: () => true,
-        data: () => ({ agreements: { bypassAgeLimits: false } }),
-      })
+      await registrationService.setBypassAgeLimits(
+        'semesters/Spring26/registrations',
+        'reg-1',
+        true,
+      )
 
-      await registrationService.toggleBypassAgeLimits('reg-1')
-
-      expect(firestore.runTransaction).toHaveBeenCalledTimes(1)
-      expect(transaction.update).toHaveBeenCalledWith(expect.anything(), {
-        'agreements.bypassAgeLimits': true,
-      })
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe(
+        '/registrations?/setBypassAgeLimits&id=reg-1&semester=Spring26',
+      )
+      expect(init.method).toBe('POST')
+      expect(init.body.get('bypassAgeLimits')).toBe('true')
     })
 
-    it('does nothing if the registration document does not exist', async () => {
-      withRegistration({ exists: () => false })
-
-      await registrationService.toggleBypassAgeLimits('reg-1')
-
-      expect(transaction.update).not.toHaveBeenCalled()
-    })
-
-    it('propagates a failed transaction', async () => {
-      ;(firestore.runTransaction as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
+    it("throws the action's refusal with its status", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+        actionResponse(
+          {
+            type: 'error',
+            status: 403,
+            error: { message: 'Unauthorized: Admin role required.' },
+          },
+          403,
+        ),
       )
 
       await expect(
-        registrationService.toggleBypassAgeLimits('reg-1'),
-      ).rejects.toThrow('permission-denied')
+        registrationService.setBypassAgeLimits(
+          'semesters/Spring26/registrations',
+          'reg-1',
+          false,
+        ),
+      ).rejects.toEqual({
+        status: 403,
+        message: 'Unauthorized: Admin role required.',
+      })
     })
   })
 })
