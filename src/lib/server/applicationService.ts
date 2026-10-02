@@ -1,12 +1,16 @@
-import { semesterCollectionPath } from '$lib/data/collections'
+import type { applicationSchema } from '$lib/components/forms/schemas'
+import { semesterCollectionPath, withSemester } from '$lib/data/collections'
+import { applicationEditedFields } from '$lib/helpers/editApplicationForm'
 import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb, toDateSafe } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
+import { error } from '@sveltejs/kit'
 import type {
   DocumentSnapshot,
   Query,
   QueryDocumentSnapshot,
 } from 'firebase-admin/firestore'
+import type { z } from 'zod'
 
 /** The decision doc attached to an application once `meta.decided` is true. */
 export interface AdminDecision {
@@ -236,5 +240,36 @@ export const applicationService = {
         emails,
       ),
     )
+  },
+
+  /**
+   * Saves an admin's or reviewer's edits to one application: the five field
+   * groups EditApplicationForm owns, merged in, never `meta` or `timestamps`.
+   *
+   * `formData` has to have passed `applicationSchema`; the
+   * `/applications?/saveApplication` action validates it.
+   *
+   * Refuses (404) an application that doesn't exist, which a merge write would
+   * otherwise create as a stray document missing `meta`.
+   */
+  async saveApplicationEdits(
+    semesterId: string,
+    applicationId: string,
+    formData: z.infer<typeof applicationSchema>,
+  ): Promise<void> {
+    const ref = adminDb.doc(
+      `${semesterCollectionPath(semesterId, 'applications')}/${applicationId}`,
+    )
+    await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref)
+      if (!snap.exists) {
+        throw error(404, 'Application not found.')
+      }
+      transaction.set(
+        ref,
+        withSemester(applicationEditedFields(formData), semesterId),
+        { merge: true },
+      )
+    })
   },
 }

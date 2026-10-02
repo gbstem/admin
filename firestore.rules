@@ -62,8 +62,11 @@ service cloud.firestore {
       // Applicants create, save and submit their applications through
       // portal's /apply form actions, which validate and write with the Admin
       // SDK (bypassing these rules), so no applicant write is allowed here.
-      // Admins and reviewers still write through the client SDK - decisions,
-      // notes and meta.interview.
+      // The edit dialog saves through admin's /applications?/saveApplication
+      // action, also with the Admin SDK. Admins and reviewers still write
+      // through the client SDK for decisions (meta.decided), notes and
+      // meta.interview. TODO(server-side-forms): move those to the server
+      // too, then drop the create/update rules below.
       match /applications/{userId} {
         allow read: if isInstructorUser(userId) || isAdminOrReviewer();
         allow create: if isAdminOrReviewer();
@@ -76,8 +79,11 @@ service cloud.firestore {
       // form actions and enroll through /api/enroll, all with the Admin SDK
       // (bypassing these rules), so no parent write is allowed here - which
       // also keeps `classes`/`enrolled` in step with each class's `students`.
-      // Admins still write through the client SDK (studentService enrollment,
-      // the edit dialog).
+      // The edit dialog saves through admin's /registrations?/saveRegistration
+      // action, also with the Admin SDK. Admins still write through the
+      // client SDK for studentService enrollment and the bypassAgeLimits
+      // toggle. TODO(server-side-forms): move those to the server too, then
+      // drop the create/update rules below.
       //
       // A registration is a minor's date of birth, race, phone number, school
       // and family income indicator (FRLP). Instructors never read this collection

@@ -6,14 +6,12 @@
     registrationsCollection,
     semesterIdFromPath,
   } from '$lib/data/collections'
-  import { registrationService } from '$lib/services/registrationService'
   import { studentService } from '$lib/services/studentService'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
-  import { registrationSchema } from './schemas'
+  import { EDIT_REGISTRATION_FORM_ID, registrationSchema } from './schemas'
   import {
     registrationDisplayValues,
-    registrationEditedFields,
     toRegistrationFormValues as toFormValues,
   } from '$lib/helpers/editRegistrationForm'
   import { cloneDeep } from 'lodash-es'
@@ -82,43 +80,43 @@
       )
   })
 
+  const semesterId = $derived(semesterIdFromPath(collection) ?? currentSemester)
+
+  // Saved by `/registrations?/saveRegistration` - see the same note in
+  // EditApplicationForm.svelte.
   const formResult = superForm(
-    defaults(toFormValues(values) as any, zod(schema as any) as any) as any,
+    defaults(toFormValues(values) as any, zod(schema as any) as any, {
+      id: EDIT_REGISTRATION_FORM_ID,
+    }) as any,
     {
-      SPA: true,
       validators: zod(schema as any) as any,
       resetForm: false,
       dataType: 'json',
-      async onUpdate({ form: formVal }) {
-        if (!formVal.valid) return
-        if (id !== undefined) {
-          const updatedValues = registrationDisplayValues(values, formVal.data)
-          try {
-            // Send the validated form data rather than `updatedValues`: the latter
-            // re-merges `values`, the snapshot taken when the dialog opened, so it
-            // would rewrite fields this form doesn't render (the parent's name).
-            await registrationService.saveRegistration(
-              collection,
-              id,
-              registrationEditedFields(formVal.data),
-            )
-            values = updatedValues
-            dbValues = cloneDeep(updatedValues)
-            disabled = true
-            await invalidate('app:registrations')
-            alert.trigger('success', 'Changes were saved successfully.')
-          } catch (err: any) {
-            console.error('Registration save changes error:', err)
-            const isPermissionDenied =
-              err.code === 'permission-denied' ||
-              String(err).includes('permission') ||
-              String(err).includes('Permission')
-            const msg = isPermissionDenied
-              ? 'You do not have permission to modify this registration.'
-              : err.code || err.message
-            alert.trigger('error', msg, !isPermissionDenied)
-          }
-        }
+      // `invalidate('app:registrations')` below is the only load to re-run.
+      invalidateAll: false,
+      onSubmit({ cancel }) {
+        if (id === undefined) cancel()
+      },
+      // Also called for a form that fails validation, client or server side.
+      async onUpdate({ form: formVal, result }) {
+        if (result.type !== 'success') return
+        values = registrationDisplayValues(values, formVal.data)
+        dbValues = cloneDeep(values)
+        disabled = true
+        await invalidate('app:registrations')
+        alert.trigger('success', 'Changes were saved successfully.')
+      },
+      onError({ result }) {
+        console.error('Registration save changes error:', result.error)
+        // A reviewer: the action is admin-only.
+        const isPermissionDenied = result.status === 403
+        alert.trigger(
+          'error',
+          isPermissionDenied
+            ? 'You do not have permission to modify this registration.'
+            : result.error.message || 'Could not save the changes.',
+          !isPermissionDenied,
+        )
       },
     },
   )
@@ -146,7 +144,14 @@
   })
 </script>
 
-<form novalidate bind:this={formEl} use:enhance class="w-full max-w-2xl">
+<form
+  novalidate
+  method="POST"
+  action={`?/saveRegistration&id=${encodeURIComponent(id ?? '')}&semester=${semesterId}`}
+  bind:this={formEl}
+  use:enhance
+  class="w-full max-w-2xl"
+>
   <fieldset class="space-y-14" disabled={disabled || $submitting || !loaded}>
     <div class="grid gap-1">
       <span class="font-bold">Personal</span>

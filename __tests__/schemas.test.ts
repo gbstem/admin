@@ -323,7 +323,7 @@ describe('Zod Validation Schemas', () => {
 
     // The admin edit dialog sends this schema's output straight to Firestore as a
     // merge write, so anything zod fails to strip here would clobber a field the
-    // form doesn't own - see applicationService's ApplicationEditableFields.
+    // form doesn't own - see editApplicationForm's ApplicationEditableFields.
     it('strips fields the edit form does not own so a merge write cannot clobber them', () => {
       const result = applicationSchema.safeParse({
         ...validApplication,
@@ -453,7 +453,7 @@ describe('Zod Validation Schemas', () => {
 
     // The admin edit dialog sends this schema's output straight to Firestore as a
     // merge write, so anything zod fails to strip here would clobber a field the
-    // form doesn't own - see registrationService's RegistrationEditableFields.
+    // form doesn't own - see editRegistrationForm's RegistrationEditableFields.
     it('strips fields the edit form does not own so a merge write cannot clobber them', () => {
       const result = registrationSchema.safeParse({
         ...validRegistration,

@@ -1,8 +1,12 @@
-import { semesterCollectionPath } from '$lib/data/collections'
+import type { registrationSchema } from '$lib/components/forms/schemas'
+import { semesterCollectionPath, withSemester } from '$lib/data/collections'
+import { registrationEditedFields } from '$lib/helpers/editRegistrationForm'
 import { resolveRegistrationParentEmails } from '$lib/server/accountEmails'
 import { adminDb, toDateSafe } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
+import { error } from '@sveltejs/kit'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
+import type { z } from 'zod'
 
 /** A registration as the admin registrations page shows it. */
 export interface AdminRegistrationRow {
@@ -161,5 +165,36 @@ export const registrationService = {
         emails,
       ),
     )
+  },
+
+  /**
+   * Saves an admin's edits to one registration: the five field groups
+   * EditRegistrationForm owns, merged in, never `meta` or `timestamps`. The
+   * parent's name isn't in the schema, so it is never rewritten from the
+   * dialog's snapshot.
+   *
+   * `formData` has to have passed `registrationSchema`; the
+   * `/registrations?/saveRegistration` action validates it. Refuses (404) a
+   * registration that doesn't exist rather than creating a stray one.
+   */
+  async saveRegistrationEdits(
+    semesterId: string,
+    registrationId: string,
+    formData: z.infer<typeof registrationSchema>,
+  ): Promise<void> {
+    const ref = adminDb.doc(
+      `${semesterCollectionPath(semesterId, 'registrations')}/${registrationId}`,
+    )
+    await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref)
+      if (!snap.exists) {
+        throw error(404, 'Registration not found.')
+      }
+      transaction.set(
+        ref,
+        withSemester(registrationEditedFields(formData), semesterId),
+        { merge: true },
+      )
+    })
   },
 }

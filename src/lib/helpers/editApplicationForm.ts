@@ -1,5 +1,18 @@
 import type {} from '../../data.d.ts'
-import type { ApplicationEditableFields } from '../services/applicationService'
+
+/**
+ * The field groups the admin edit form owns, each `Partial` because the write is a
+ * merge: the form sends only the sub-fields it renders, and Firestore merges nested
+ * maps key by key. Sub-fields it deliberately doesn't render - `personal.firstName`,
+ * `lastName` and `email`, which the applicant changes from their portal profile, and
+ * `program.numClasses` - are therefore left untouched instead of being rewritten from
+ * the dialog's stale snapshot.
+ */
+export type ApplicationEditableFields = {
+  [K in 'personal' | 'academic' | 'program' | 'essay' | 'agreements']: Partial<
+    Data.Application<'client'>[K]
+  >
+}
 
 /**
  * Maps a stored application into superform-compatible values.

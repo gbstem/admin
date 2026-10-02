@@ -1,6 +1,18 @@
 import type {} from '../../data.d.ts'
 import { type Timestamp, serverTimestamp } from 'firebase/firestore'
-import type { RegistrationEditableFields } from '../services/registrationService'
+
+/**
+ * The field groups the admin edit form owns, each `Partial` because the write is a
+ * merge: the form sends only the sub-fields it renders, and Firestore merges nested
+ * maps key by key. Sub-fields it deliberately doesn't render - `personal.parentFirstName`
+ * and `parentLastName` - are therefore left untouched instead of being rewritten from
+ * the dialog's stale snapshot.
+ */
+export type RegistrationEditableFields = {
+  [
+    K in 'personal' | 'academic' | 'program' | 'inPerson' | 'agreements'
+  ]: Partial<Data.Registration<'client'>[K]>
+}
 
 /**
  * Returns clean default empty Data.Registration state.
