@@ -10,6 +10,8 @@ Admin and portal share the **same Firestore database and Firebase project**, the
 
 **Ship a cross-repo change as two PRs on a branch of the same name in both repos.** Portal's e2e job seeds the shared emulator from _this_ repo — from an admin branch with the same name when one exists, and from admin's default branch otherwise (see portal's `.github/workflows/ci.yml`). So a change to `scripts/seed.ts` here is what portal's Cypress suite runs against, and matching the branch name is what lets a portal PR that depends on a new fixture go green before this one merges.
 
+**`src/lib/shared/` is the same in both repos, file for file.** It holds small utilities both sites need (`timestamps.ts`: `toDate`/`toDateOrNull` for a stored date in any shape; `apiErrors.ts`: `errorMessage(res, fallback)` for a refused `fetch` to one of our routes), each with a test of the same name in `__tests__/`. Files there import nothing from `$lib`, so they can be copied across verbatim: change one in both repos together, on branches of the same name. Before writing a helper that isn't specific to this site (another `typeof value.toDate === 'function'`, another `res.json().catch(...)`), look there first, and put a new one there rather than in the file that happens to need it.
+
 ## Route groups are auth gates, not just folders
 
 - `(signedIn)/+layout.server.ts` redirects to `/signin` if `locals.user === null`.

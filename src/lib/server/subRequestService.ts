@@ -1,3 +1,4 @@
+import { toDateOrNull } from '$lib/shared/timestamps'
 import { semesterDates, subRequestsCollection } from '$lib/data/collections'
 import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb } from '$lib/server/firebase'
@@ -44,15 +45,6 @@ export function currentSemesterCutoff(): Date {
   return new Date(semesterDates.registrationsOpen)
 }
 
-function toDate(value: unknown): Date | null {
-  if (value === null || value === undefined || value === '') return null
-  if (typeof (value as { toDate?: unknown }).toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate()
-  }
-  const date = new Date(value as string | number | Date)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
 function toAdminSubRequest(
   id: string,
   data: DocumentData,
@@ -62,7 +54,7 @@ function toAdminSubRequest(
     id,
     classNumber: data.classNumber,
     course: data.course,
-    dateOfClass: toDate(data.dateOfClass),
+    dateOfClass: toDateOrNull(data.dateOfClass),
     originalInstructorEmail: emails.get(data.originalInstructorUid) ?? '',
     originalInstructorUid: data.originalInstructorUid ?? '',
     subInstructorId: data.subInstructorId,

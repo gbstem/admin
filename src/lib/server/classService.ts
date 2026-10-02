@@ -1,3 +1,4 @@
+import { toDate } from '$lib/shared/timestamps'
 import type { editClassFormSchema } from '$lib/components/forms/schemas'
 import {
   classesCollection,
@@ -53,15 +54,6 @@ type ClassSearchHit = Omit<
     updated: Date
     created: Date
   }
-}
-
-/** A stored session time - a Firestore Timestamp, or a Date in tests. */
-function toDate(value: unknown): Date {
-  if (value instanceof Date) return value
-  if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate()
-  }
-  return new Date(value as string)
 }
 
 function toClassRow(

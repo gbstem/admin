@@ -1,13 +1,5 @@
+import { errorMessage } from '$lib/shared/apiErrors'
 import type { DeleteTokensRequestBody } from '../../routes/api/tokens/+server'
-
-/** A server error's message, or the status text when the body isn't JSON. */
-async function errorMessage(res: Response): Promise<string> {
-  try {
-    return (await res.json()).message ?? res.statusText
-  } catch {
-    return res.statusText
-  }
-}
 
 /**
  * Service providing Data Access Layer for signup Tokens. Creating one is

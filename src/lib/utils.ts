@@ -1,3 +1,4 @@
+import { toDate } from '$lib/shared/timestamps'
 import { alert } from '$lib/stores'
 import type { ClassValue } from 'clsx'
 import clsx from 'clsx'
@@ -192,15 +193,9 @@ export function parseGbstemDateTime(
   return new Date(utcGuess - offsetMinutes * 60 * 1000)
 }
 
-export const timestampToDate = (timestamp: Timestamp | Date) => {
-  if (timestamp instanceof Date) {
-    return timestamp
-  }
-  if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
-    return new Date(timestamp.seconds * 1000)
-  }
-  return new Date(timestamp)
-}
+/** `toDate` under the name the components know it by. */
+export const timestampToDate = (timestamp: Timestamp | Date) =>
+  toDate(timestamp)
 
 export const classHeldToday = (datesHeld: Date[], classTimeToday: Date) => {
   return (

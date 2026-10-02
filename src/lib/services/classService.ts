@@ -1,3 +1,4 @@
+import { errorMessage } from '$lib/shared/apiErrors'
 import { db } from '$lib/client/firebase'
 import { studentService } from '$lib/services/studentService'
 import {
@@ -23,15 +24,6 @@ export interface ClientInstructorFeedback {
   attendanceList: Record<string, { present: boolean }>
   id: string
   students: string[]
-}
-
-/** A server error's message, or the status text when the body isn't JSON. */
-async function errorMessage(res: Response): Promise<string> {
-  try {
-    return (await res.json()).message ?? res.statusText
-  } catch {
-    return res.statusText
-  }
 }
 
 /**
