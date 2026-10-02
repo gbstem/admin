@@ -97,19 +97,19 @@ service cloud.firestore {
         allow read: if isInstructorUser(userId) || isAdminOrReviewer();
       }
 
-      // Instructors write classes only through portal API routes, which check
-      // the caller with the Admin SDK and write with it, bypassing these rules:
+      // No client writes a class. Instructors go through portal API routes:
       // /api/classDetails (creation, details, co-instructors and ownership),
       // /api/classSchedule (rescheduling and holding a session),
       // /api/instructorFeedback (marking a session's feedback filed), and
       // /api/substituteSession and /api/substituteFeedback for a substitute,
-      // who is never on a class's uid lists. Each route computes the derived
-      // session state (classStatuses, feedbackCompleted) itself rather than
-      // taking it from the client.
+      // who is never on a class's uid lists. Admins and reviewers edit a
+      // class's details through admin's /classes?/saveClass action; admins
+      // enroll and drop students through admin's /api/enroll. Each computes
+      // the derived session state (classStatuses, feedbackCompleted) itself
+      // rather than taking it from the client, and writes with the Admin SDK,
+      // bypassing these rules.
       match /classes/{classId} {
         allow read: if isSignedIn();
-        allow create: if isAdmin();
-        allow update, delete: if isAdminOrReviewer();
       }
 
       // Admins and reviewers manage interview slots through admin's

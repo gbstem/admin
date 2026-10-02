@@ -682,10 +682,11 @@ describe('registrations - instructors never read directly; client access restric
   })
 })
 
-describe('classes - teaching requires having been accepted to teach', () => {
-  it('lets an admin create a class', async () => {
+describe('classes - written only by the server', () => {
+  // Admin never creates classes; instructors do, through portal.
+  it('refuses an admin creating a class', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, classes, `${UIDS.accepted}-2`), { course: 'Python 1' }),
     )
   })
@@ -739,14 +740,18 @@ describe('classes - teaching requires having been accepted to teach', () => {
     )
   })
 
-  it('lets an admin update any class field', async () => {
+  // Edits go through admin's /classes?/saveClass action, which merges only
+  // the fields the edit form owns.
+  it('refuses an admin updating a class', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
-      updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
-        meetingLink: 'https://teams.example/join',
-        otherInstructorUids: [UIDS.substitute],
-      }),
+    const ref = doc(db, classes, `${UIDS.accepted}-1`)
+    await assertFails(
+      updateDoc(ref, { meetingLink: 'https://teams.example/join' }),
     )
+    await assertFails(
+      updateDoc(ref, { otherInstructorUids: [UIDS.substitute] }),
+    )
+    await assertFails(updateDoc(ref, { students: [] }))
   })
 
   it('refuses a co-instructor updating the class', async () => {
@@ -771,9 +776,11 @@ describe('classes - teaching requires having been accepted to teach', () => {
     )
   })
 
-  it('lets a reviewer update a class', async () => {
+  // Session statuses are refreshed by admin's /api/classStatuses, which
+  // computes them itself.
+  it('refuses a reviewer updating a class', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, classes, `${UIDS.accepted}-1`), {
         classStatuses: ['FeedbackIncomplete'],
       }),
@@ -790,14 +797,12 @@ describe('classes - teaching requires having been accepted to teach', () => {
     await assertFails(getDoc(doc(db, classes, `${UIDS.accepted}-1`)))
   })
 
-  it('lets an admin delete a class', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(deleteDoc(doc(db, classes, `${UIDS.accepted}-1`)))
-  })
-
-  it('lets a reviewer delete a class', async () => {
-    const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(deleteDoc(doc(db, classes, `${UIDS.accepted}-1`)))
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)('refuses %s deleting a class', async (_, uid, role) => {
+    const db = as(uid, role)
+    await assertFails(deleteDoc(doc(db, classes, `${UIDS.accepted}-1`)))
   })
 
   it('refuses an instructor deleting their own class', async () => {

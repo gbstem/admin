@@ -4,6 +4,7 @@
 const mockSaveApplicationEdits = jest.fn()
 const mockSaveRegistrationEdits = jest.fn()
 const mockSetBypassAgeLimits = jest.fn()
+const mockSaveClassEdits = jest.fn()
 
 jest.mock('$lib/server/applicationService', () => ({
   applicationService: {
@@ -19,12 +20,20 @@ jest.mock('$lib/server/registrationService', () => ({
   },
 }))
 
+jest.mock('$lib/server/classService', () => ({
+  classService: {
+    saveClassEdits: (...args: any[]) => mockSaveClassEdits(...args),
+  },
+}))
+
 import {
   EDIT_APPLICATION_FORM_ID,
+  EDIT_CLASS_FORM_ID,
   EDIT_REGISTRATION_FORM_ID,
 } from '$lib/components/forms/schemas'
 import { currentSemester } from '$lib/data/collections'
 import { actions as applicationsActions } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
+import { actions as classesActions } from '../src/routes/(signedIn)/(emailVerified)/classes/+page.server'
 import { actions as registrationsActions } from '../src/routes/(signedIn)/(emailVerified)/registrations/+page.server'
 import { stringify } from 'devalue'
 
@@ -255,5 +264,86 @@ describe('/registrations?/setBypassAgeLimits', () => {
       status: 400,
     })
     expect(mockSetBypassAgeLimits).not.toHaveBeenCalled()
+  })
+})
+
+describe('/classes?/saveClass', () => {
+  const url = new URL(
+    `http://localhost/classes?/saveClass&id=inst-uid-1&semester=${currentSemester}`,
+  )
+  const save = (user: unknown, data: unknown, at = url) =>
+    (classesActions.saveClass as any)({
+      request: superformRequest(EDIT_CLASS_FORM_ID, data),
+      locals: { user },
+      url: at,
+    })
+
+  function validClass() {
+    return {
+      course: 'Python 1',
+      gradeRecommendation: '3-5',
+      classCap: 12,
+      meetingLink: 'https://mit.zoom.us/j/99593863281',
+      classDay1: 'Monday',
+      classTime1: '16:00',
+      classDay2: 'Wednesday',
+      classTime2: '16:00',
+      online: true,
+    }
+  }
+
+  beforeEach(() => {
+    mockSaveClassEdits.mockReset().mockResolvedValue(undefined)
+  })
+
+  it.each([
+    ['an admin', admin],
+    ['a reviewer', reviewer],
+  ])('saves the validated form for %s', async (_, user) => {
+    const result = await save(user, validClass())
+
+    expect(result.form.valid).toBe(true)
+    expect(result.form.message).toBe('Changes were saved successfully.')
+    expect(mockSaveClassEdits).toHaveBeenCalledWith(
+      currentSemester,
+      'inst-uid-1',
+      validClass(),
+    )
+  })
+
+  it('refuses an online class with no meeting link, writing nothing', async () => {
+    const result = await save(admin, { ...validClass(), meetingLink: '' })
+
+    expect(result.status).toBe(400)
+    expect(result.data.form.errors.meetingLink).toBeDefined()
+    expect(mockSaveClassEdits).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a signed-out caller', null, 401],
+    ['an instructor', { uid: 'inst-uid', role: 'instructor' }, 403],
+  ])('refuses %s', async (_, user, status) => {
+    await expect(save(user, validClass())).rejects.toMatchObject({ status })
+    expect(mockSaveClassEdits).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unknown semester rather than writing to the current one', async () => {
+    const at = new URL(
+      'http://localhost/classes?/saveClass&id=inst-uid-1&semester=Nope99',
+    )
+    await expect(save(admin, validClass(), at)).rejects.toMatchObject({
+      status: 400,
+    })
+    expect(mockSaveClassEdits).not.toHaveBeenCalled()
+  })
+
+  it('refuses an id that addresses another path', async () => {
+    const at = new URL(
+      `http://localhost/classes?/saveClass&id=a/b/c&semester=${currentSemester}`,
+    )
+    await expect(save(admin, validClass(), at)).rejects.toMatchObject({
+      status: 400,
+    })
+    expect(mockSaveClassEdits).not.toHaveBeenCalled()
   })
 })

@@ -4,12 +4,15 @@ import {
   classesCollection,
   instructorFeedbackCollection,
   registrationsCollection,
-  withSemester,
 } from '$lib/data/collections'
 import type ClassData from '$lib/data/types/ClassData'
 import type Student from '$lib/data/types/Student'
 import { normalizeCapitals, timestampToDate } from '$lib/utils'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
+import type {
+  ClassStatusesRequestBody,
+  ClassStatusesResponse,
+} from '../../routes/api/classStatuses/+server'
 
 export interface ClientInstructorFeedback {
   courseName: string
@@ -22,23 +25,18 @@ export interface ClientInstructorFeedback {
   students: string[]
 }
 
+/** A server error's message, or the status text when the body isn't JSON. */
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    return (await res.json()).message ?? res.statusText
+  } catch {
+    return res.statusText
+  }
+}
+
 /**
  * Service providing Data Access Layer for Admin Class operations.
  */
-/** The class fields admin's EditClassForm edits. */
-export type ClassEditableFields = Pick<
-  ClassData,
-  | 'course'
-  | 'gradeRecommendation'
-  | 'classCap'
-  | 'meetingLink'
-  | 'classDay1'
-  | 'classTime1'
-  | 'classDay2'
-  | 'classTime2'
-  | 'online'
->
-
 export const classService = {
   /**
    * Fetches a single class document by ID and normalizes meeting times.
@@ -58,30 +56,20 @@ export const classService = {
   },
 
   /**
-   * Updates classStatuses for a given class document.
+   * Brings a class's per-session statuses up to date with the clock, through
+   * `/api/classStatuses`, and returns them. The server works them out from the
+   * stored class; only the class id is sent.
    */
-  async updateClassStatuses(
-    classId: string,
-    classStatuses: string[],
-  ): Promise<void> {
-    const classRef = doc(db, classesCollection, classId)
-    await updateDoc(classRef, { classStatuses })
-  },
-
-  /**
-   * Merges edited configuration values into a class document. Only the fields
-   * the edit form owns (see classEditedFields), so the roster and schedule
-   * that other writers keep are never overwritten from a stale copy.
-   */
-  async saveClassDetails(
-    classId: string,
-    editedFields: ClassEditableFields,
-  ): Promise<void> {
-    await setDoc(
-      doc(db, classesCollection, classId),
-      withSemester(editedFields),
-      { merge: true },
-    )
+  async refreshClassStatuses(classId: string): Promise<string[]> {
+    const res = await fetch('/api/classStatuses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId } satisfies ClassStatusesRequestBody),
+    })
+    if (!res.ok) {
+      throw new Error(await errorMessage(res))
+    }
+    return ((await res.json()) as ClassStatusesResponse).classStatuses
   },
 
   /**

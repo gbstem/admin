@@ -265,8 +265,8 @@ declare global {
       classTime2: string
       course: string
       // Absent on classes written before this field existed. Such a class has
-      // no owner any code can act on: firestore.rules grants class writes on
-      // this alone, and notifications resolve the instructor's address from it.
+      // no owner any code can act on: portal's class routes authorize the
+      // instructor by it, and notifications resolve their address from it.
       instructorUid: string
       otherInstructorUids: string[]
       instructorFirstName: string
