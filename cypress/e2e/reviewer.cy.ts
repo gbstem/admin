@@ -98,10 +98,6 @@ describe('Section O: Reviewer Role Access Control', () => {
   it('Test Case 26: Reviewer Allowed Operations', () => {
     cy.visit('/applications')
     cy.title().should('contain', 'Applications')
-    // Raw cy.visit() (not cy.signedInSession()), so there's no built-in
-    // settle time for Svelte to attach event handlers before the click below.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
 
     // Open application modal for David Miller
     openApplication('David Miller')
@@ -148,10 +144,6 @@ describe('Section O: Reviewer Role Access Control', () => {
   it('Test Case 27: Reviewer Disallowed Write Operations (Firestore Level)', () => {
     cy.visit('/registrations')
     cy.title().should('contain', 'Registrations')
-    // Raw cy.visit() (not cy.signedInSession()), so there's no built-in
-    // settle time for Svelte to attach event handlers before the click below.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
 
     const charliePath = `${registrationsCollection}/reg-charlie`
     cy.task('readFirestoreDoc', charliePath).as('charlieBefore')
