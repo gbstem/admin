@@ -3,10 +3,10 @@
   import { invalidate } from '$app/navigation'
   import { coursesJson, daysOfWeekJson } from '$lib/data'
   import type ClassData from '$lib/data/types/ClassData'
-  import { classService } from '$lib/services/classService'
+  import { currentSemester } from '$lib/data/collections'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
-  import { editClassFormSchema } from './schemas'
+  import { EDIT_CLASS_FORM_ID, editClassFormSchema } from './schemas'
   import {
     classEditedFields,
     toClassFormValues as toFormValues,
@@ -40,28 +40,36 @@
 
   const schema = editClassFormSchema
 
+  // Saved by `/classes?/saveClass` - see the same note in
+  // EditApplicationForm.svelte.
   const formResult = superForm(
-    defaults(toFormValues(values), zod(schema as any) as any) as any,
+    defaults(toFormValues(values), zod(schema as any) as any, {
+      id: EDIT_CLASS_FORM_ID,
+    }) as any,
     {
-      SPA: true,
       validators: zod(schema as any) as any,
       resetForm: false,
-      applyAction: false,
-      async onUpdate({ form: formVal }) {
-        if (!formVal.valid) return
-        if (id !== undefined) {
-          const editedFields = classEditedFields(formVal.data)
-          try {
-            await classService.saveClassDetails(id, editedFields)
-            values = { ...values, ...editedFields }
-            disabled = true
-            await invalidate('app:registrations')
-            alert.trigger('success', 'Changes were saved successfully.')
-          } catch (err: any) {
-            console.error('Class save changes error:', err)
-            alert.trigger('error', err.code || err.message, true)
-          }
-        }
+      dataType: 'json',
+      // `invalidate('app:classes')` below is the only load to re-run.
+      invalidateAll: false,
+      onSubmit({ cancel }) {
+        if (id === undefined) cancel()
+      },
+      // Also called for a form that fails validation, client or server side.
+      async onUpdate({ form: formVal, result }) {
+        if (result.type !== 'success') return
+        values = { ...values, ...classEditedFields(formVal.data) }
+        disabled = true
+        await invalidate('app:classes')
+        alert.trigger('success', 'Changes were saved successfully.')
+      },
+      onError({ result }) {
+        console.error('Class save changes error:', result.error)
+        alert.trigger(
+          'error',
+          result.error.message || 'Could not save the changes.',
+          true,
+        )
       },
     },
   )
@@ -81,7 +89,14 @@
   })
 </script>
 
-<form novalidate bind:this={formEl} use:enhance class="w-full max-w-4xl">
+<form
+  novalidate
+  method="POST"
+  action={`?/saveClass&id=${encodeURIComponent(id ?? '')}&semester=${currentSemester}`}
+  bind:this={formEl}
+  use:enhance
+  class="w-full max-w-4xl"
+>
   <fieldset
     class="mt-4 space-y-4"
     disabled={disabled || $submitting || !loaded}

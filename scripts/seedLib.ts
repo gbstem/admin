@@ -353,8 +353,8 @@ export async function seedEmulator(): Promise<void> {
     classTime1: '16:00',
     classTime2: '16:00',
     course: 'Python 1',
-    // A class identifies its instructor by uid alone - firestore.rules grants
-    // class writes on it, and whoever needs an address resolves it from Auth.
+    // A class identifies its instructor by uid alone - portal's class routes
+    // authorize on it, and whoever needs an address resolves it from Auth.
     // A seeded class without one is not a shape production has, and would
     // leave its own instructor unable to edit it in the emulator.
     instructorUid: 'instructor-demo-uid',

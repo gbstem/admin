@@ -5,8 +5,6 @@ import type {} from '../src/data.d.ts'
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn(() => ({})),
   getDoc: jest.fn(),
-  setDoc: jest.fn(),
-  updateDoc: jest.fn(),
 }))
 
 describe('admin classService (Data Access Layer)', () => {
@@ -52,12 +50,34 @@ describe('admin classService (Data Access Layer)', () => {
     })
   })
 
-  describe('updateClassStatuses', () => {
-    it('calls updateDoc with updated classStatuses', async () => {
-      ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
+  describe('refreshClassStatuses', () => {
+    it('asks /api/classStatuses for the class and returns its statuses', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ classStatuses: ['ClassNotHeld'] }),
+      })
 
-      await classService.updateClassStatuses('c1', ['Status 1'])
-      expect(firestore.updateDoc).toHaveBeenCalled()
+      await expect(classService.refreshClassStatuses('c1')).resolves.toEqual([
+        'ClassNotHeld',
+      ])
+
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/classStatuses')
+      expect(init.method).toBe('POST')
+      // Only the class is named: the statuses are the server's to work out.
+      expect(JSON.parse(init.body)).toEqual({ classId: 'c1' })
+    })
+
+    it("throws the server's message when the refresh is refused", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'Class not found.' }),
+      })
+
+      await expect(classService.refreshClassStatuses('c1')).rejects.toThrow(
+        'Class not found.',
+      )
     })
   })
 
@@ -160,37 +180,6 @@ describe('admin classService (Data Access Layer)', () => {
       const list = await classService.fetchStudentList(['s1'])
       expect(list[0].grade).toBe('5')
       expect(list[0].school).toBe('Example Elementary')
-    })
-  })
-
-  describe('saveClassDetails', () => {
-    it('merges the edited fields, stamped with the current semester', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
-
-      await classService.saveClassDetails('c1', {
-        course: 'Python 1',
-      } as any)
-
-      expect(firestore.setDoc).toHaveBeenCalledTimes(1)
-      const [, payload, options] = (firestore.setDoc as jest.Mock).mock.calls[0]
-      expect(payload).toEqual(
-        expect.objectContaining({
-          course: 'Python 1',
-          semester: expect.any(String),
-        }),
-      )
-      // A merge, so the roster and schedule other writers keep survive.
-      expect(options).toEqual({ merge: true })
-    })
-
-    it('propagates errors from setDoc', async () => {
-      ;(firestore.setDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
-      )
-
-      await expect(
-        classService.saveClassDetails('c1', {} as any),
-      ).rejects.toThrow('permission-denied')
     })
   })
 

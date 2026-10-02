@@ -10,7 +10,6 @@
     copyEmails,
     formatDate,
     getNearestFutureClass,
-    isClassUpcoming,
     timestampToDate,
   } from '$lib/utils'
   import Button from './Button.svelte'
@@ -76,7 +75,7 @@
         if (studentUids) {
           getStudentList(studentUids)
         }
-        checkStatuses()
+        checkStatuses(classId)
       } else {
         alert.trigger('error', 'Registration not found.')
       }
@@ -103,42 +102,18 @@
   }
 
   /**
-   * Update the status of each class session in the array based on the current time.
+   * Brings each session's status up to date with the clock. The server works
+   * them out and stores them; until it answers, and if it can't, the stored
+   * statuses stay on show.
    */
-  function checkStatuses() {
-    if (id === undefined) return
-    const { meetingTimes, classStatuses, feedbackCompleted } = values
-    let changed = false
-    const newStatuses = [...classStatuses]
-    for (let i = 0; i < meetingTimes.length; i++) {
-      let targetStatus = newStatuses[i]
-      if (
-        new Date().getTime() > new Date(meetingTimes[i]).getTime() &&
-        newStatuses[i] !== ClassStatus.EverythingComplete &&
-        newStatuses[i] !== ClassStatus.FeedbackIncomplete
-      ) {
-        targetStatus = feedbackCompleted[i]
-          ? ClassStatus.EverythingComplete
-          : ClassStatus.ClassNotHeld
-      } else if (isClassUpcoming(new Date(meetingTimes[i]))) {
-        targetStatus = ClassStatus.ClassUpcomingSoon
-      } else if (
-        newStatuses[i] === ClassStatus.FeedbackIncomplete &&
-        feedbackCompleted[i]
-      ) {
-        targetStatus = ClassStatus.EverythingComplete
-      }
-      if (targetStatus !== newStatuses[i]) {
-        newStatuses[i] = targetStatus
-        changed = true
-      }
-    }
-    if (changed) {
-      values.classStatuses = newStatuses
-      classService
-        .updateClassStatuses(id, newStatuses)
-        .catch((err) => console.warn('Failed to update classStatuses:', err))
-    }
+  function checkStatuses(classId: string) {
+    classService
+      .refreshClassStatuses(classId)
+      .then((classStatuses) => {
+        // A late reply for a class the dialog has since moved on from.
+        if (id === classId) values.classStatuses = classStatuses
+      })
+      .catch((err) => console.warn('Failed to update classStatuses:', err))
   }
 
   const getStudentList = async (studentUids: string[]) => {

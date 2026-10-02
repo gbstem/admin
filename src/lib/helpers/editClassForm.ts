@@ -1,5 +1,18 @@
 import type ClassData from '../data/types/ClassData'
-import type { ClassEditableFields } from '../services/classService'
+
+/** The class fields admin's EditClassForm edits. */
+export type ClassEditableFields = Pick<
+  ClassData,
+  | 'course'
+  | 'gradeRecommendation'
+  | 'classCap'
+  | 'meetingLink'
+  | 'classDay1'
+  | 'classTime1'
+  | 'classDay2'
+  | 'classTime2'
+  | 'online'
+>
 
 /**
  * Maps a stored class into superform-compatible values.

@@ -338,6 +338,7 @@ graph TD
   8. Change the **Class capacity** value.
   9. Click the **"Save changes"** button.
 - **Expected Results (Assertions)**:
+  - Opening the modal triggers a POST request to `/api/classStatuses`, and the class document's `classStatuses` match its response: the seeded first session, never held, reads `ClassNotHeld`.
   - Form fields become editable when "Edit" is clicked.
   - Saving updates the database document and shows the toast notification: `"Changes were saved successfully."`.
 

@@ -1,9 +1,18 @@
-import { classesCollection } from '$lib/data/collections'
+import type { editClassFormSchema } from '$lib/components/forms/schemas'
+import {
+  classesCollection,
+  semesterCollectionPath,
+  withSemester,
+} from '$lib/data/collections'
+import { computeUpdatedClassStatuses } from '$lib/helpers/classStatuses'
+import { classEditedFields } from '$lib/helpers/editClassForm'
 import { resolveAccountEmails } from '$lib/server/accountEmails'
 import { adminDb } from '$lib/server/firebase'
 import { searchIndex } from '$lib/server/search'
 import { formatClassTimes } from '$lib/utils'
+import { error } from '@sveltejs/kit'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
+import type { z } from 'zod'
 
 /** A class as the admin classes page shows it. */
 export interface AdminClassRow {
@@ -44,6 +53,15 @@ type ClassSearchHit = Omit<
     updated: Date
     created: Date
   }
+}
+
+/** A stored session time - a Firestore Timestamp, or a Date in tests. */
+function toDate(value: unknown): Date {
+  if (value instanceof Date) return value
+  if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  return new Date(value as string)
 }
 
 function toClassRow(
@@ -121,5 +139,65 @@ export const classService = {
       hits.map((hit) => hit.instructorUid).filter(Boolean),
     )
     return hits.map((hit) => toClassRow(hit.objectID, hit, emails))
+  },
+
+  /**
+   * Saves an admin's or reviewer's edits to one class: the fields
+   * EditClassForm owns, merged in, so the roster, schedule and instructors
+   * that other writers keep are never overwritten from the dialog's copy.
+   *
+   * `formData` has to have passed `editClassFormSchema`; the
+   * `/classes?/saveClass` action validates it. Refuses (404) a class that
+   * doesn't exist rather than creating a stray one.
+   */
+  async saveClassEdits(
+    semesterId: string,
+    classId: string,
+    formData: z.infer<typeof editClassFormSchema>,
+  ): Promise<void> {
+    const ref = adminDb.doc(
+      `${semesterCollectionPath(semesterId, 'classes')}/${classId}`,
+    )
+    await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref)
+      if (!snap.exists) {
+        throw error(404, 'Class not found.')
+      }
+      transaction.set(
+        ref,
+        withSemester(classEditedFields(formData), semesterId),
+        { merge: true },
+      )
+    })
+  },
+
+  /**
+   * Brings a class's per-session statuses up to date with the clock (see
+   * computeUpdatedClassStatuses) and returns them, writing only when one
+   * changed. Everything is worked out from the class as stored; the caller
+   * names the class and nothing else.
+   */
+  async refreshClassStatuses(
+    classId: string,
+    now: Date = new Date(),
+  ): Promise<string[]> {
+    const ref = adminDb.doc(`${classesCollection}/${classId}`)
+    return adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref)
+      if (!snap.exists) {
+        throw error(404, 'Class not found.')
+      }
+      const klass = snap.data() as Data.Class
+      const { updatedStatuses, hasChanged } = computeUpdatedClassStatuses(
+        klass.classStatuses ?? [],
+        klass.feedbackCompleted ?? [],
+        (klass.meetingTimes ?? []).map(toDate),
+        now,
+      )
+      if (hasChanged) {
+        transaction.update(ref, { classStatuses: updatedStatuses })
+      }
+      return updatedStatuses
+    })
   },
 }

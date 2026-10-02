@@ -11,9 +11,19 @@ const mockSearchIndex = jest.fn()
 
 const mockGetUsers = jest.fn()
 
+const mockTransaction = {
+  get: jest.fn(),
+  set: jest.fn(),
+  update: jest.fn(),
+}
+const mockAdminDoc = jest.fn((path: string) => ({ path }))
+
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+    doc: (path: string) => mockAdminDoc(path),
+    runTransaction: (run: (transaction: unknown) => unknown) =>
+      run(mockTransaction),
   },
   adminAuth: {
     getUsers: (...args: any[]) => mockGetUsers(...args),
@@ -25,6 +35,7 @@ jest.mock('$lib/server/search', () => ({
 }))
 
 import { classesCollection } from '$lib/data/collections'
+import { ClassStatus } from '$lib/data/types/ClassStatus'
 import { classService } from '$lib/server/classService'
 
 const storedClass = (overrides: Record<string, unknown> = {}) => ({
@@ -151,5 +162,131 @@ describe('classService (server Data Access Layer)', () => {
         'search boom',
       )
     })
+  })
+})
+
+describe('classService.saveClassEdits', () => {
+  const formData = {
+    course: 'Python 1',
+    gradeRecommendation: '3-5',
+    classCap: 12,
+    meetingLink: 'https://mit.zoom.us/j/99593863281',
+    classDay1: 'Monday',
+    classTime1: '16:00',
+    classDay2: 'Wednesday',
+    classTime2: '16:00',
+    online: true,
+  } as const
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("merges only the form's fields into that semester's class", async () => {
+    mockTransaction.get.mockResolvedValue({ exists: true })
+
+    await classService.saveClassEdits('Spring26', 'inst-uid-1', {
+      ...formData,
+      // Not the form's to write: a roster from a stale copy would drop
+      // whoever enrolled since.
+      students: [],
+      instructorUid: 'someone-else',
+    } as any)
+
+    expect(mockAdminDoc).toHaveBeenCalledWith(
+      'semesters/Spring26/classes/inst-uid-1',
+    )
+    expect(mockTransaction.set).toHaveBeenCalledWith(
+      { path: 'semesters/Spring26/classes/inst-uid-1' },
+      { ...formData, semester: 'Spring26' },
+      { merge: true },
+    )
+  })
+
+  it('refuses a class that does not exist, writing nothing', async () => {
+    mockTransaction.get.mockResolvedValue({ exists: false })
+
+    await expect(
+      classService.saveClassEdits('Spring26', 'nope', formData),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(mockTransaction.set).not.toHaveBeenCalled()
+  })
+})
+
+describe('classService.refreshClassStatuses', () => {
+  const now = new Date('2026-10-10T12:00:00Z')
+  const past = new Date('2026-10-01T20:00:00Z')
+  const future = new Date('2026-10-20T20:00:00Z')
+  /** A session time as Firestore stores it. */
+  const timestamp = (date: Date) => ({ toDate: () => date })
+  const stored = (klass: Record<string, unknown>) =>
+    mockTransaction.get.mockResolvedValue({ exists: true, data: () => klass })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('works the statuses out from the stored class and writes them', async () => {
+    stored({
+      meetingTimes: [timestamp(past), timestamp(past), timestamp(future)],
+      feedbackCompleted: [true, false, false],
+      classStatuses: [
+        ClassStatus.ClassInFuture,
+        ClassStatus.ClassInFuture,
+        ClassStatus.ClassInFuture,
+      ],
+    })
+    const expected = [
+      ClassStatus.EverythingComplete,
+      ClassStatus.ClassNotHeld,
+      ClassStatus.ClassInFuture,
+    ]
+
+    await expect(
+      classService.refreshClassStatuses('inst-uid-1', now),
+    ).resolves.toEqual(expected)
+
+    expect(mockAdminDoc).toHaveBeenCalledWith(`${classesCollection}/inst-uid-1`)
+    expect(mockTransaction.update).toHaveBeenCalledWith(
+      { path: `${classesCollection}/inst-uid-1` },
+      { classStatuses: expected },
+    )
+  })
+
+  it('writes nothing when every status is already current', async () => {
+    stored({
+      meetingTimes: [timestamp(past), timestamp(future)],
+      feedbackCompleted: [false, false],
+      classStatuses: [
+        ClassStatus.FeedbackIncomplete,
+        ClassStatus.ClassInFuture,
+      ],
+    })
+
+    await expect(
+      classService.refreshClassStatuses('inst-uid-1', now),
+    ).resolves.toEqual([
+      ClassStatus.FeedbackIncomplete,
+      ClassStatus.ClassInFuture,
+    ])
+    expect(mockTransaction.update).not.toHaveBeenCalled()
+  })
+
+  it('pads a class stored without its per-session arrays', async () => {
+    stored({ meetingTimes: [timestamp(future)] })
+
+    await expect(
+      classService.refreshClassStatuses('inst-uid-1', now),
+    ).resolves.toEqual([ClassStatus.ClassInFuture])
+    expect(mockTransaction.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses a class that does not exist, writing nothing', async () => {
+    mockTransaction.get.mockResolvedValue({ exists: false })
+
+    await expect(
+      classService.refreshClassStatuses('nope', now),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(mockTransaction.update).not.toHaveBeenCalled()
   })
 })

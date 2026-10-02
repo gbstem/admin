@@ -174,8 +174,24 @@ describe('Section E: Classes Directory', () => {
 
   it('Test Case 13: Class Details Modal Actions', () => {
     // Open modal for Python 1 class taught by Demo Instructor
+    cy.intercept('POST', '/api/classStatuses').as('refreshStatuses')
     classRow(DEMO_INSTRUCTOR, DEMO_INSTRUCTOR_EMAIL).click()
     cy.get('[role="dialog"]').should('exist')
+
+    // Opening the dialog brings the stored session statuses up to date. The
+    // seed starts this class's first session at the moment it runs, as
+    // "upcoming", and nobody holds it - so by now it was not held.
+    cy.wait('@refreshStatuses')
+      .its('response.body.classStatuses')
+      .then((classStatuses: string[]) => {
+        expect(classStatuses[0]).to.equal('ClassNotHeld')
+        cy.getFirebaseAuthToken()
+          .then((authToken: string) =>
+            cy.getFirestoreDoc(authToken, classesCollection, 'class-python1'),
+          )
+          .its('classStatuses')
+          .should('deep.equal', classStatuses)
+      })
 
     // Verify Class List columns
     cy.get('table', { timeout: 10000 }).should('exist')
