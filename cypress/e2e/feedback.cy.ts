@@ -18,13 +18,6 @@ describe('Section I: Feedback Views', () => {
     cy.visit('/student-feedback')
     cy.url().should('include', '/student-feedback')
     cy.title().should('contain', 'Student Feedback')
-    // This is a raw cy.visit(), unlike other specs' cy.signedInSession(), so
-    // there's no built-in settle time for Svelte to attach event handlers --
-    // submitSearch's typing/click below needs the page to actually be
-    // interactive, which a retrying assertion on visible content doesn't
-    // guarantee on its own.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
 
     // Verify columns
     cy.get('th').contains('Student Name').should('be.visible')
@@ -141,10 +134,6 @@ describe('Section I: Feedback Views', () => {
     cy.visit('/instructor-feedback')
     cy.url().should('include', '/instructor-feedback')
     cy.title().should('contain', 'Class Feedback') // The title is Class Feedback or similar
-    // See the same comment in Test Case 17 -- raw cy.visit() with no built-in
-    // settle time before submitSearch's typing/click.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
 
     // Verify columns
     cy.get('th').contains('Instructor Name').should('be.visible')

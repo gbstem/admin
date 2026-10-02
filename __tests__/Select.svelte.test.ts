@@ -158,7 +158,9 @@ describe('StatusFilter', () => {
     fireEvent.click(all as HTMLButtonElement)
     flushSync()
 
-    expect(gotoMock).toHaveBeenCalledWith('?filter=all')
+    expect(gotoMock).toHaveBeenCalledWith('?filter=all', {
+      keepFocus: true,
+    })
   })
 
   it('does not navigate when the committed value is empty', async () => {

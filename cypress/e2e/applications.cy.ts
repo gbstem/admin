@@ -304,12 +304,6 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Test bulk decision to 'Interview' and verify interview scheduling email.
-    // cy.reload() re-hydrates the page from scratch, so give Svelte a beat to
-    // attach event handlers before interacting -- the row is visible from SSR
-    // markup well before its checkbox's onclick listener is wired up, so a
-    // retrying assertion on the row itself doesn't catch this.
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(1000)
     // Search for this one rather than expecting to find her row on the first
     // page. Selecting by name already made the test independent of row
     // *ordering*, but not of the 25-row page: the default view lists submitted

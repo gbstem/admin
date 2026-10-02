@@ -35,19 +35,22 @@
     }
   })
 
+  // Each search keeps focus where it is (keepFocus - see PerPageControl).
   async function handleSearch() {
     searching = true
     const base = new URLSearchParams(page.url.searchParams)
     if (search === '') {
       base.delete('query')
       base.delete('updated')
-      goto(`${basePath}?${base.toString()}`).finally(() => {
-        searching = false
-      })
+      goto(`${basePath}?${base.toString()}`, { keepFocus: true }).finally(
+        () => {
+          searching = false
+        },
+      )
     } else {
       base.set('query', search)
       base.delete('updated')
-      goto(`?${base.toString()}`).finally(() => {
+      goto(`?${base.toString()}`, { keepFocus: true }).finally(() => {
         searching = false
       })
     }
@@ -59,7 +62,7 @@
     const base = new URLSearchParams(page.url.searchParams)
     base.delete('query')
     base.delete('updated')
-    goto(`${basePath}?${base.toString()}`).finally(() => {
+    goto(`${basePath}?${base.toString()}`, { keepFocus: true }).finally(() => {
       searching = false
     })
   }

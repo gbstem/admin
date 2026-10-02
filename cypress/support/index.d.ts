@@ -16,6 +16,7 @@ declare namespace Cypress {
       text: string,
       options?: Partial<Cypress.Timeoutable>,
     ): Chainable<any>
+    waitForHydration(): Chainable<any>
     waitForFormHydration(selector?: string): Chainable<any>
     parseCsv(csvText: string): Chainable<string[][]>
     parseCopiedEmails(clipboardText: string): Chainable<string[]>

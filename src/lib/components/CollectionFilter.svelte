@@ -37,7 +37,8 @@
     base.set('semester', targetId)
     base.delete('updated') // Reset pagination
     base.delete('page') // Reset page parameter
-    goto(`?${base.toString()}`)
+    // keepFocus: see PerPageControl.
+    goto(`?${base.toString()}`, { keepFocus: true })
   }
 
   const options = collectionsList.map((col) => ({ name: col.name }))

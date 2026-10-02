@@ -14,7 +14,10 @@
     const base = new URLSearchParams(page.url.searchParams)
     base.set('limit', newLimit)
     base.set('page', '1') // Reset to page 1
-    goto(`?${base.toString()}`)
+    // keepFocus: when the results land, SvelteKit would otherwise move focus
+    // back to the page - away from this control, or from a dialog field the
+    // person has gone on to in the meantime.
+    goto(`?${base.toString()}`, { keepFocus: true })
   }
 
   const limitOptions = [

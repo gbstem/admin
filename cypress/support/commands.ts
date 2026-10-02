@@ -37,6 +37,52 @@ Cypress.Commands.add('fillInput', (selector: string, text: string) => {
   cy.get(selector).should('have.value', text)
 })
 
+// Waits until the page's JavaScript is attached to the server-rendered
+// markup, which the root layout marks with `data-hydrated` on <html>.
+//
+// Server-rendered content is visible, and passes any assertion on what the
+// page shows, well before it responds to anything: until hydration a click on
+// a row opens no dialog, a Select shows no options, and a form submits
+// natively. How long that takes varies with machine load and with how warm
+// the dev server is - anywhere from a fraction of a second to several - so no
+// fixed wait is right. cy.visit and cy.reload are overwritten below to wait
+// on this themselves; call it directly only after something else loads a new
+// document (a native form submit, a `window.location` change).
+const HYDRATION_TIMEOUT = 30000
+Cypress.Commands.add('waitForHydration', () => {
+  cy.get('html[data-hydrated]', { timeout: HYDRATION_TIMEOUT, log: false })
+})
+
+// The same wait as a plain promise, for the overwrites below: a command that
+// returns a promise may not also issue cy commands from inside it.
+function hydrated(win: Cypress.AUTWindow): Promise<Cypress.AUTWindow> {
+  return new Cypress.Promise<Cypress.AUTWindow>((resolve, reject) => {
+    const deadline = Date.now() + HYDRATION_TIMEOUT
+    const check = () => {
+      if (win.document.documentElement.dataset.hydrated) {
+        resolve(win)
+      } else if (Date.now() > deadline) {
+        reject(
+          new Error(
+            `${win.location.pathname} was not hydrated after ${HYDRATION_TIMEOUT}ms: <html> never got data-hydrated (see the root +layout.svelte).`,
+          ),
+        )
+      } else {
+        setTimeout(check, 50)
+      }
+    }
+    check()
+  })
+}
+
+Cypress.Commands.overwrite('visit', (originalFn, ...args) =>
+  originalFn(...args).then(hydrated),
+)
+
+Cypress.Commands.overwrite('reload', (originalFn, ...args) =>
+  originalFn(...args).then(hydrated),
+)
+
 // Waits until a form's `use:enhance` action has actually run.
 //
 // Every form in this app is a Superforms SPA form (`<form use:enhance>`), and
@@ -117,8 +163,6 @@ Cypress.Commands.add(
       () => {
         cy.visit('/signin')
         cy.get('input[type="email"]').should('be.visible')
-        // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
-        cy.wait(2500)
         const password = 'penguin'
 
         cy.fillInput('input[type="email"]', emailToUse)
@@ -190,8 +234,6 @@ Cypress.Commands.add(
     } else if (initialPage.startsWith('/user/')) {
       cy.title().should('contain', 'Check In')
     }
-    // eslint-disable-next-line cypress/no-unnecessary-waiting -- Wait for Svelte page and HMR to settle
-    cy.wait(1000)
   },
 )
 
