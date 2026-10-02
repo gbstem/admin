@@ -11,10 +11,9 @@
   import { applicationService } from '$lib/services/applicationService'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
-  import { applicationSchema } from './schemas'
+  import { EDIT_APPLICATION_FORM_ID, applicationSchema } from './schemas'
   import {
     applicationDisplayValues,
-    applicationEditedFields,
     toApplicationFormValues as toFormValues,
   } from '$lib/helpers/editApplicationForm'
   import { cloneDeep } from 'lodash-es'
@@ -78,40 +77,45 @@
       )
   })
 
+  const semesterId = $derived(semesterIdFromPath(collection) ?? currentSemester)
+
+  // Saved by `/applications?/saveApplication`, which validates the form
+  // against the same schema and writes with the Admin SDK.
   const formResult = superForm(
-    defaults(toFormValues(values) as any, zod(schema as any) as any) as any,
+    defaults(toFormValues(values) as any, zod(schema as any) as any, {
+      id: EDIT_APPLICATION_FORM_ID,
+    }) as any,
     {
-      SPA: true,
       validators: zod(schema as any) as any,
       resetForm: false,
       dataType: 'json',
-      async onUpdate({ form: formVal }) {
-        if (!formVal.valid) return
+      // `invalidate('app:applications')` below is the only load to re-run.
+      invalidateAll: false,
+      onSubmit({ cancel }) {
+        if (id === undefined) return cancel()
         loading = true
-        if (id !== undefined) {
-          const updatedValues = applicationDisplayValues(values, formVal.data)
-          try {
-            // Send the validated form data rather than `updatedValues`: the latter
-            // re-merges `values`, the snapshot taken when the dialog opened, so it
-            // would rewrite fields this form only displays (name, email).
-            await applicationService.saveApplicationDetails(
-              collection,
-              id,
-              applicationEditedFields(formVal.data),
-              semesterIdFromPath(collection) ?? currentSemester,
-            )
-            values = updatedValues
-            dbValues = cloneDeep(updatedValues)
-            disabled = true
-            await invalidate('app:applications')
-            alert.trigger('success', 'Changes were saved successfully.')
-          } catch (err: any) {
-            console.error('Applications save changes error:', err)
-            alert.trigger('error', err.code || err.message, true)
-          } finally {
-            loading = false
-          }
+      },
+      // Also called for a form that fails validation, client or server side.
+      async onUpdate({ form: formVal, result }) {
+        try {
+          if (result.type !== 'success') return
+          values = applicationDisplayValues(values, formVal.data)
+          dbValues = cloneDeep(values)
+          disabled = true
+          await invalidate('app:applications')
+          alert.trigger('success', 'Changes were saved successfully.')
+        } finally {
+          loading = false
         }
+      },
+      onError({ result }) {
+        loading = false
+        console.error('Applications save changes error:', result.error)
+        alert.trigger(
+          'error',
+          result.error.message || 'Could not save the changes.',
+          true,
+        )
       },
     },
   )
@@ -131,7 +135,14 @@
   })
 </script>
 
-<form novalidate bind:this={formEl} use:enhance class="w-full">
+<form
+  novalidate
+  method="POST"
+  action={`?/saveApplication&id=${encodeURIComponent(id ?? '')}&semester=${semesterId}`}
+  bind:this={formEl}
+  use:enhance
+  class="w-full"
+>
   <fieldset class="space-y-14" disabled={disabled || $submitting || !loaded}>
     <div class="grid gap-1">
       <span class="font-bold">Personal</span>

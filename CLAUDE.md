@@ -23,9 +23,11 @@ Admin and portal share the **same Firestore database and Firebase project**, the
 
 When a value is derived from other reactive state, use `$derived`/`$derived.by` — don't reach for `$effect` to "copy" one piece of state into another; that's the guard-variable-hack shape this codebase spent real effort removing.
 
-## Forms: SPA Superforms, not server actions
+## Forms: server-side actions (new) and SPA Superforms (legacy)
 
-Nearly every form writes directly to Firestore client-side; only `(signedOut)/signup` uses a real SvelteKit form `action`. The pattern (see `EditClassForm.svelte`):
+**Forms are moving to server-side form actions, as in portal.** EditApplicationForm and EditRegistrationForm post to `/applications?/saveApplication` and `/registrations?/saveRegistration`. Each action checks the role (`verifyAdminOrReviewer` and `verifyAdmin` respectively, matching `firestore.rules`), takes its target from `&id=…&semester=…` through `$lib/server/editTarget` (which refuses an unknown semester rather than falling back to the current one), validates with `superValidate` against the same schema, and writes through the server `applicationService`/`registrationService` with the Admin SDK. The client keeps `superForm(defaults(..., { id }))` without `SPA`, sharing the form id with the action (`EDIT_APPLICATION_FORM_ID`, ...), and uses `invalidateAll: false` plus an explicit `invalidate(...)`. Unlike portal, the dialogs still read their document with the client SDK, so only the write moved. New and migrated forms follow this shape; `__tests__/editFormActions.test.ts` shows how to drive an action with a superforms request.
+
+Every other form still writes directly to Firestore client-side; `(signedOut)/signup` also uses a real SvelteKit form `action`. The SPA pattern (see `EditClassForm.svelte`):
 
 ```js
 superForm(defaults(initialValues, zod(schema)), {

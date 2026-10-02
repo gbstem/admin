@@ -118,6 +118,13 @@ const agreementSchema = z
   .default(false)
   .refine((checked) => checked, { message: 'Please check this box to submit' })
 
+/**
+ * The superforms id EditApplicationForm and `/applications?/saveApplication`
+ * share: superforms only applies an action's result to the form whose id it
+ * carries.
+ */
+export const EDIT_APPLICATION_FORM_ID = 'editApplication'
+
 export const applicationSchema = z.object({
   personal: z.object({
     phoneNumber: z
@@ -205,6 +212,9 @@ export const applicationSchema = z.object({
     submitting: agreementSchema,
   }),
 })
+
+/** EditRegistrationForm's id - see `EDIT_APPLICATION_FORM_ID`. */
+export const EDIT_REGISTRATION_FORM_ID = 'editRegistration'
 
 export const registrationSchema = z.object({
   personal: z.object({

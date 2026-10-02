@@ -16,13 +16,7 @@ import {
   createDefaultInterviewValues,
   normalizeInterviewData,
 } from '$lib/helpers/application'
-import {
-  doc,
-  getDoc,
-  setDoc,
-  writeBatch,
-  type WriteBatch,
-} from 'firebase/firestore'
+import { doc, getDoc, writeBatch, type WriteBatch } from 'firebase/firestore'
 import { cloneDeep } from 'lodash-es'
 
 export interface ApplicationLoadResult {
@@ -63,20 +57,6 @@ function getDecisionsCollection(viewedSemester?: string): string {
   return viewedSemester
     ? semesterCollectionPath(viewedSemester, 'decisions')
     : decisionsCollection
-}
-
-/**
- * The field groups the admin edit form owns, each `Partial` because the write is a
- * merge: the form sends only the sub-fields it renders, and Firestore merges nested
- * maps key by key. Sub-fields it deliberately doesn't render - `personal.firstName`,
- * `lastName` and `email`, which the applicant changes from their portal profile, and
- * `program.numClasses` - are therefore left untouched instead of being rewritten from
- * the dialog's stale snapshot.
- */
-export type ApplicationEditableFields = {
-  [K in 'personal' | 'academic' | 'program' | 'essay' | 'agreements']: Partial<
-    Data.Application<'client'>[K]
-  >
 }
 
 /**
@@ -259,29 +239,6 @@ export const applicationService = {
     } catch (emailErr) {
       console.warn('Email notification request failed:', emailErr)
     }
-  },
-
-  /**
-   * Saves edited application field values (personal/academic/program/essay/agreements).
-   *
-   * Takes only the fields the edit form actually owns and merges them in, rather
-   * than a full application object - the edit dialog loads `values` once when it
-   * opens and can go stale relative to concurrent writes (e.g. a backfill script,
-   * the applicant saving their own form in the portal, or another admin action).
-   * A full `setDoc()` from that stale snapshot would silently revert whatever
-   * those writers changed; merging only the edited fields can't.
-   */
-  async saveApplicationDetails(
-    appCollection: string,
-    appId: string,
-    editedFields: ApplicationEditableFields,
-    viewedSemester?: string,
-  ): Promise<void> {
-    await setDoc(
-      doc(db, appCollection, appId),
-      withSemester(editedFields, viewedSemester),
-      { merge: true },
-    )
   },
 
   /**

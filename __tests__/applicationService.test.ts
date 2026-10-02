@@ -298,45 +298,6 @@ describe('admin applicationService (Data Access Layer)', () => {
     })
   })
 
-  describe('saveApplicationDetails', () => {
-    it('saves the updated values with semester stamping', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
-
-      await applicationService.saveApplicationDetails(
-        'applications',
-        'app-1',
-        { personal: { firstName: 'Alice' } } as any,
-        'Spring26',
-      )
-
-      expect(firestore.setDoc).toHaveBeenCalledTimes(1)
-      const [, payload, options] = (firestore.setDoc as jest.Mock).mock.calls[0]
-      expect(payload).toEqual(
-        expect.objectContaining({
-          personal: { firstName: 'Alice' },
-          semester: 'Spring26',
-        }),
-      )
-      // Merge-only write so fields the edit form doesn't own (timestamps, meta, ...)
-      // can't be clobbered by a stale in-memory snapshot - see saveApplicationDetails's docstring.
-      expect(options).toEqual({ merge: true })
-    })
-
-    it('propagates errors from setDoc', async () => {
-      ;(firestore.setDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
-      )
-
-      await expect(
-        applicationService.saveApplicationDetails(
-          'applications',
-          'app-1',
-          {} as any,
-        ),
-      ).rejects.toThrow('permission-denied')
-    })
-  })
-
   describe('bulkSetDecision', () => {
     it('writes every decision and flag in one batch, then emails every applicant', async () => {
       ;(firestore.getDoc as jest.Mock).mockResolvedValue({

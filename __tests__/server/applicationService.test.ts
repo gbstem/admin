@@ -17,10 +17,15 @@ mockToDateSafe.mockImplementation((ts: any) =>
 )
 
 const mockGetUsers = jest.fn()
+const mockTransaction = { get: jest.fn(), set: jest.fn() }
+const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+    doc: (path: string) => mockAdminDoc(path),
+    runTransaction: (fn: (t: typeof mockTransaction) => unknown) =>
+      fn(mockTransaction),
   },
   adminAuth: {
     getUsers: (...args: any[]) => mockGetUsers(...args),
@@ -291,5 +296,65 @@ describe('applicationService (server Data Access Layer)', () => {
         applicationService.searchApplications('Fall26', 'Ada'),
       ).rejects.toThrow('search boom')
     })
+  })
+})
+
+describe('applicationService.saveApplicationEdits', () => {
+  const formData = {
+    personal: {
+      phoneNumber: '5551234567',
+      dateOfBirth: '2005-01-01',
+      gender: 'Female',
+      race: [],
+    },
+    academic: { school: 'MIT', graduationYear: 2027 },
+    program: {
+      courses: ['Python 1'],
+      preferences: '',
+      timeSlots: 'Weekends',
+      notAvailable: 'None',
+      inPerson: false,
+      reason: 'School',
+    },
+    essay: {
+      taughtBefore: true,
+      academicBackground: 'CS',
+      teachingScenario: '',
+      why: '',
+    },
+    agreements: { entireProgram: true, timeCommitment: true, submitting: true },
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("merges only the form's five field groups into that semester's application", async () => {
+    mockTransaction.get.mockResolvedValue({ exists: true })
+
+    await applicationService.saveApplicationEdits('Spring26', 'uid-1', {
+      ...formData,
+      // Not in the schema, so the action never passes it - but if it did,
+      // it must not reach the document.
+      meta: { submitted: false },
+    } as any)
+
+    expect(mockAdminDoc).toHaveBeenCalledWith(
+      'semesters/Spring26/applications/uid-1',
+    )
+    expect(mockTransaction.set).toHaveBeenCalledWith(
+      { path: 'semesters/Spring26/applications/uid-1' },
+      { ...formData, semester: 'Spring26' },
+      { merge: true },
+    )
+  })
+
+  it('refuses an application that does not exist, writing nothing', async () => {
+    mockTransaction.get.mockResolvedValue({ exists: false })
+
+    await expect(
+      applicationService.saveApplicationEdits('Spring26', 'nope', formData),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(mockTransaction.set).not.toHaveBeenCalled()
   })
 })

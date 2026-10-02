@@ -14,10 +14,15 @@ mockToDateSafe.mockImplementation((ts: any) =>
 )
 
 const mockGetUsers = jest.fn()
+const mockTransaction = { get: jest.fn(), set: jest.fn() }
+const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
 jest.mock('$lib/server/firebase', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
+    doc: (path: string) => mockAdminDoc(path),
+    runTransaction: (fn: (t: typeof mockTransaction) => unknown) =>
+      fn(mockTransaction),
   },
   adminAuth: {
     getUsers: (...args: any[]) => mockGetUsers(...args),
@@ -255,5 +260,69 @@ describe('registrationService (server Data Access Layer)', () => {
         registrationService.searchRegistrations('Fall26', 'Ada'),
       ).rejects.toThrow('search boom')
     })
+  })
+})
+
+describe('registrationService.saveRegistrationEdits', () => {
+  const formData = {
+    personal: {
+      studentFirstName: 'Sally',
+      studentLastName: 'Brown',
+      secondaryEmail: '',
+      phoneNumber: '5551234567',
+      dateOfBirth: '2015-01-01',
+      gender: 'Female',
+      race: [],
+      frlp: 'No',
+      parentEducation: 'College',
+    },
+    academic: { school: 'Riverdale', grade: '3' },
+    program: {
+      csCourse: '',
+      mathCourse: '',
+      engineeringCourse: '',
+      scienceCourse: '',
+      inPerson: false,
+      reason: '',
+    },
+    inPerson: { allergies: '', parentPickup: '' },
+    agreements: {
+      mediaRelease: false,
+      bypassAgeLimits: false,
+      entireProgram: true,
+      timeCommitment: true,
+      submitting: true,
+    },
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("merges only the form's five field groups into that semester's registration", async () => {
+    mockTransaction.get.mockResolvedValue({ exists: true })
+
+    await registrationService.saveRegistrationEdits('Spring26', 'uid-1-1', {
+      ...formData,
+      meta: { submitted: false },
+    } as any)
+
+    expect(mockAdminDoc).toHaveBeenCalledWith(
+      'semesters/Spring26/registrations/uid-1-1',
+    )
+    expect(mockTransaction.set).toHaveBeenCalledWith(
+      { path: 'semesters/Spring26/registrations/uid-1-1' },
+      { ...formData, semester: 'Spring26' },
+      { merge: true },
+    )
+  })
+
+  it('refuses a registration that does not exist, writing nothing', async () => {
+    mockTransaction.get.mockResolvedValue({ exists: false })
+
+    await expect(
+      registrationService.saveRegistrationEdits('Spring26', 'nope', formData),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(mockTransaction.set).not.toHaveBeenCalled()
   })
 })

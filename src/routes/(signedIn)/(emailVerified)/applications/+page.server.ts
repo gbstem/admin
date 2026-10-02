@@ -1,8 +1,16 @@
+import {
+  EDIT_APPLICATION_FORM_ID,
+  applicationSchema,
+} from '$lib/components/forms/schemas'
 import { resolveSemester } from '$lib/data/collections'
+import { verifyAdminOrReviewer } from '$lib/server/apiHelpers'
 import { applicationService } from '$lib/server/applicationService'
+import { editTarget } from '$lib/server/editTarget'
 import { parsePagination } from '$lib/utils'
-import { error } from '@sveltejs/kit'
-import type { PageServerLoad } from './$types'
+import { error, fail } from '@sveltejs/kit'
+import { message, superValidate } from 'sveltekit-superforms'
+import { zod } from 'sveltekit-superforms/adapters'
+import type { Actions, PageServerLoad } from './$types'
 
 export const load = (async ({ url, depends }) => {
   depends('app:applications')
@@ -50,3 +58,20 @@ export const load = (async ({ url, depends }) => {
     }
   }
 }) satisfies PageServerLoad
+
+export const actions: Actions = {
+  /**
+   * EditApplicationForm's save, for `?/saveApplication&id=…&semester=…`.
+   * Reviewers may edit applications too, as firestore.rules lets them.
+   */
+  saveApplication: async ({ request, locals, url }) => {
+    verifyAdminOrReviewer(locals)
+    const { id, semesterId } = editTarget(url)
+    const form = await superValidate(request, zod(applicationSchema), {
+      id: EDIT_APPLICATION_FORM_ID,
+    })
+    if (!form.valid) return fail(400, { form })
+    await applicationService.saveApplicationEdits(semesterId, id, form.data)
+    return message(form, 'Changes were saved successfully.')
+  },
+}
