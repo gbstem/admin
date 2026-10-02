@@ -109,7 +109,7 @@ describe('SetInterviewTimesForm Component', () => {
       .mockResolvedValue({ names: [], options: [] })
     jest
       .spyOn(interviewService, 'createOrAssignInterviewSlot')
-      .mockImplementation(async (slot) => ({ ...slot, id: 'new-slot' }))
+      .mockResolvedValue({ id: 'new-slot', emailSent: true })
     jest.spyOn(interviewService, 'deleteInterviewSlot').mockResolvedValue()
     jest.spyOn(interviewService, 'updateInterviewSlot').mockResolvedValue()
   })

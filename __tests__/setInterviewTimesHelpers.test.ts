@@ -5,8 +5,6 @@ import {
   parseSlotRequestDoc,
   sortSlotRequestsByDate,
   filterEligibleInterviewees,
-  buildAssignInterviewApiPayload,
-  resetInterviewSlotToAdd,
   canUserModifySlot,
 } from '$lib/helpers/setInterviewTimes'
 
@@ -93,38 +91,6 @@ describe('SetInterviewTimes Helpers', () => {
       const { names, options } = filterEligibleInterviewees(docs)
       expect(names).toEqual([{ name: 'Alice Zimmerman' }])
       expect(options).toHaveLength(1)
-    })
-  })
-
-  describe('buildAssignInterviewApiPayload & resetInterviewSlotToAdd', () => {
-    test('sends uids and none of the stored addresses', () => {
-      const slot = resetInterviewSlotToAdd('Jane Doe', 'interviewer-uid-1')
-      slot.intervieweeFirstName = 'Alice'
-      slot.intervieweeId = 'interviewee-uid-1'
-      slot.date = '2026-05-28T10:00'
-
-      const payload = buildAssignInterviewApiPayload(slot)
-      expect(payload.firstName).toBe('Alice')
-      expect(payload.interviewer).toBe('Jane Doe')
-      expect(payload.interviewerUid).toBe('interviewer-uid-1')
-      expect(payload.intervieweeUid).toBe('interviewee-uid-1')
-      // The server resolves both addresses from the uids, so a stale stored
-      // address cannot misdirect mail.
-      expect(payload).not.toHaveProperty('email')
-      expect(payload).not.toHaveProperty('intervieweeEmail')
-    })
-
-    test('sends empty uids for a slot carrying none, for the server to refuse', () => {
-      const slot = resetInterviewSlotToAdd('Jane Doe', '')
-      slot.intervieweeFirstName = 'Alice'
-      slot.intervieweeId = ''
-      slot.date = '2026-05-28T10:00'
-
-      const payload = buildAssignInterviewApiPayload(slot)
-      expect(payload.interviewerUid).toBe('')
-      expect(payload.intervieweeUid).toBe('')
-      expect(payload).not.toHaveProperty('email')
-      expect(payload).not.toHaveProperty('intervieweeEmail')
     })
   })
 

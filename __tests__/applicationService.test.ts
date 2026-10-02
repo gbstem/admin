@@ -2,37 +2,14 @@ import { applicationService } from '$lib/services/applicationService'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 
-const mockBatch = { set: jest.fn(), update: jest.fn(), commit: jest.fn() }
-
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn(() => ({})),
   getDoc: jest.fn(),
-  setDoc: jest.fn(),
-  writeBatch: jest.fn(() => mockBatch),
 }))
-
-/** Asserts one batch wrote a decision document and its `meta.decided` flag. */
-function expectDecisionBatch({ merge }: { merge: boolean }) {
-  expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
-  expect(mockBatch.set).toHaveBeenCalledTimes(1)
-  const setCall = mockBatch.set.mock.calls[0]
-  if (merge) {
-    expect(setCall[2]).toEqual({ merge: true })
-  } else {
-    // A full decision replaces the document, so it is written without merge.
-    expect(setCall).toHaveLength(2)
-  }
-  expect(mockBatch.update).toHaveBeenCalledWith(expect.anything(), {
-    'meta.decided': true,
-  })
-  expect(mockBatch.commit).toHaveBeenCalledTimes(1)
-  expect(firestore.setDoc).not.toHaveBeenCalled()
-}
 
 describe('admin applicationService (Data Access Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockBatch.commit.mockReset().mockResolvedValue(undefined)
     global.fetch = jest.fn() as jest.Mock
   })
 
@@ -92,285 +69,105 @@ describe('admin applicationService (Data Access Layer)', () => {
       expect(res.decision).toBeNull()
     })
   })
+})
 
-  describe('saveNotes', () => {
-    it('merges the notes into the decision doc and flags the application, in one batch', async () => {
-      await applicationService.saveNotes('applications', 'app-1', {} as any)
+describe('applicationService decision writes', () => {
+  const interview = {
+    date: '2026-09-01T10:00',
+    interviewer: 'Jane',
+    notes: 'Good',
+    type: 'interview',
+    likelyDecision: 'likely yes',
+    attendance: 'On Time',
+    conversation: 4,
+  } as Data.Interview
 
-      expectDecisionBatch({ merge: true })
+  const respond = (body: unknown, ok = true) =>
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok,
+      statusText: 'Bad Request',
+      json: async () => body,
     })
+  const posted = () => {
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+    expect(url).toBe('/api/decision')
+    expect(init.method).toBe('POST')
+    return JSON.parse(init.body)
+  }
 
-    it('flags nothing when the batch is refused', async () => {
-      mockBatch.commit.mockRejectedValueOnce(new Error('permission-denied'))
+  beforeEach(() => {
+    jest.clearAllMocks()
+    global.fetch = jest.fn() as jest.Mock
+  })
 
-      await expect(
-        applicationService.saveNotes('applications', 'app-1', {} as any),
-      ).rejects.toThrow('permission-denied')
-    })
+  it('saveNotes posts the scorecard for the viewed semester', async () => {
+    respond({ emailsFailed: 0 })
 
-    it('writes to the viewed semester decisions collection when provided', async () => {
-      ;(firestore.doc as jest.Mock).mockClear()
-      await applicationService.saveNotes(
-        'semesters/Fall25/applications',
-        'app-1',
-        {} as any,
-        'Fall25',
-      )
+    await applicationService.saveNotes('app-1', interview, 'Spring26')
 
-      expect(firestore.doc).toHaveBeenCalledWith(
-        undefined,
-        'semesters/Fall25/decisions',
-        'app-1',
-      )
+    expect(posted()).toEqual({
+      action: 'saveNotes',
+      semesterId: 'Spring26',
+      applicationId: 'app-1',
+      interview,
     })
   })
 
-  describe('saveLikelyDecision', () => {
-    it('merges the likely decision into the decision doc and flags the application, in one batch', async () => {
-      await applicationService.saveLikelyDecision(
-        'applications',
-        'app-1',
-        'likely yes',
-        null,
-      )
+  it('saveLikelyDecision posts the likely decision, null included', async () => {
+    respond({ emailsFailed: 0 })
 
-      expectDecisionBatch({ merge: true })
+    await applicationService.saveLikelyDecision('app-1', null, 'Spring26')
+
+    expect(posted()).toEqual({
+      action: 'setLikelyDecision',
+      semesterId: 'Spring26',
+      applicationId: 'app-1',
+      likelyDecision: null,
     })
   })
 
-  describe('submitOfficialDecision', () => {
-    it('submits interview decision and calls scheduleInterview API', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
+  it('submitOfficialDecision posts one application with its scorecard and reports the email', async () => {
+    respond({ emailsFailed: 1 })
 
-      await applicationService.submitOfficialDecision(
-        'applications',
-        'app-1',
-        'interview',
-        {} as any,
-        'Alice',
-        '2026-09-01',
-      )
-
-      expectDecisionBatch({ merge: false })
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/scheduleInterview',
-        expect.objectContaining({ method: 'POST' }),
-      )
-    })
-
-    it('sends no email when the decision batch is refused', async () => {
-      mockBatch.commit.mockRejectedValueOnce(new Error('permission-denied'))
-
-      await expect(
-        applicationService.submitOfficialDecision(
-          'applications',
-          'app-1',
-          'accepted',
-          {} as any,
-          'Alice',
-          '2026-09-01',
-        ),
-      ).rejects.toThrow('permission-denied')
-      expect(global.fetch).not.toHaveBeenCalled()
-    })
-
-    it('submits accepted decision and calls decision API', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
-
-      await applicationService.submitOfficialDecision(
-        'applications',
+    await expect(
+      applicationService.submitOfficialDecision(
         'app-1',
         'accepted',
-        {} as any,
-        'Alice',
-        '2026-09-01',
-      )
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/decision',
-        expect.objectContaining({ method: 'POST' }),
-      )
-    })
-
-    it('fetches application document to use the current first name, and sends no address', async () => {
-      ;(firestore.getDoc as jest.Mock).mockResolvedValueOnce({
-        exists: () => true,
-        data: () => ({
-          personal: { email: 'david-h@example.com', firstName: 'David' },
-        }),
-      })
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
-
-      await applicationService.submitOfficialDecision(
-        'applications',
-        'app-10',
-        'interview',
-        {} as any,
-        'Stale',
-        '2026-09-01',
-      )
-
-      // The applicant is named by the application id alone; the server
-      // resolves their current address from it.
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/scheduleInterview',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({
-            applicantUid: 'app-10',
-            name: 'David',
-            deadline: 'Mon, Aug 31',
-          }),
-        }),
-      )
-    })
-
-    it('warns but does not throw if the interview scheduling email API responds not-ok', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Request',
-      })
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-
-      await expect(
-        applicationService.submitOfficialDecision(
-          'applications',
-          'app-1',
-          'interview',
-          {} as any,
-          'Alice',
-          '2026-09-01',
-        ),
-      ).resolves.toBeUndefined()
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Failed to send interview scheduling email:',
-        'Bad Request',
-      )
-      warnSpy.mockRestore()
-    })
-
-    it('warns but does not throw if the decision notification email API responds not-ok', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Request',
-      })
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-
-      await applicationService.submitOfficialDecision(
-        'applications',
-        'app-1',
-        'rejected',
-        {} as any,
-        'Alice',
-        '2026-09-01',
-      )
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Failed to send decision notification email:',
-        'Bad Request',
-      )
-      warnSpy.mockRestore()
-    })
-
-    it('warns but does not throw if the email fetch call itself rejects', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('network down'),
-      )
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-
-      await expect(
-        applicationService.submitOfficialDecision(
-          'applications',
-          'app-1',
-          'accepted',
-          {} as any,
-          'Alice',
-          '2026-09-01',
-        ),
-      ).resolves.toBeUndefined()
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Email notification request failed:',
-        expect.any(Error),
-      )
-      warnSpy.mockRestore()
-    })
-  })
-
-  describe('bulkSetDecision', () => {
-    it('writes every decision and flag in one batch, then emails every applicant', async () => {
-      ;(firestore.getDoc as jest.Mock).mockResolvedValue({
-        exists: () => true,
-        data: () => ({
-          personal: { email: 'alice@example.com', firstName: 'Alice' },
-        }),
-      })
-      ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true })
-
-      await applicationService.bulkSetDecision(
-        ['app-1', 'app-2'],
-        'applications',
-        'decisions',
-        'accepted',
+        interview,
         'Spring26',
-      )
+      ),
+    ).resolves.toEqual({ emailSent: false })
 
-      expect(firestore.writeBatch).toHaveBeenCalledTimes(1)
-      expect(mockBatch.set).toHaveBeenCalledTimes(2)
-      expect(mockBatch.update).toHaveBeenCalledTimes(2)
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
-      expect(global.fetch).toHaveBeenCalledTimes(2)
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/decision',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({
-            decision: 'accepted',
-            applicantUid: 'app-1',
-            name: 'Alice',
-          }),
-        }),
-      )
-      const [, payload] = mockBatch.set.mock.calls[0]
-      expect(payload).toEqual(
-        expect.objectContaining({ type: 'accepted', semester: 'Spring26' }),
-      )
+    expect(posted()).toEqual({
+      action: 'decide',
+      semesterId: 'Spring26',
+      applicationIds: ['app-1'],
+      decision: 'accepted',
+      interview,
     })
+  })
 
-    it('rejects and emails nobody if the batch is refused', async () => {
-      mockBatch.commit.mockRejectedValueOnce(new Error('permission-denied'))
+  it('bulkSetDecision posts every id with the decision alone', async () => {
+    respond({ emailsFailed: 0 })
 
-      await expect(
-        applicationService.bulkSetDecision(
-          ['app-1', 'app-2'],
-          'applications',
-          'decisions',
-          'rejected',
-        ),
-      ).rejects.toThrow('permission-denied')
-      expect(global.fetch).not.toHaveBeenCalled()
+    await expect(
+      applicationService.bulkSetDecision(['a', 'b'], 'rejected', 'Spring26'),
+    ).resolves.toEqual({ emailsFailed: 0 })
+
+    expect(posted()).toEqual({
+      action: 'decide',
+      semesterId: 'Spring26',
+      applicationIds: ['a', 'b'],
+      decision: 'rejected',
     })
+  })
 
-    it("splits a selection past Firestore's 500-write batch limit", async () => {
-      ;(firestore.getDoc as jest.Mock).mockResolvedValue({
-        exists: () => false,
-      })
-      const ids = Array.from({ length: 251 }, (_, i) => `app-${i}`)
+  it("throws the route's refusal", async () => {
+    respond({ message: 'Application app-1 not found.' }, false)
 
-      await applicationService.bulkSetDecision(
-        ids,
-        'applications',
-        'decisions',
-        'waitlisted',
-      )
-
-      // Two writes per application, so 250 fill the first batch.
-      expect(firestore.writeBatch).toHaveBeenCalledTimes(2)
-      expect(mockBatch.commit).toHaveBeenCalledTimes(2)
-      expect(mockBatch.set).toHaveBeenCalledTimes(251)
-      expect(mockBatch.update).toHaveBeenCalledTimes(251)
-    })
+    await expect(
+      applicationService.saveNotes('app-1', interview, 'Spring26'),
+    ).rejects.toThrow('Application app-1 not found.')
   })
 })
 

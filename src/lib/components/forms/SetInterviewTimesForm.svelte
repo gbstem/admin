@@ -227,22 +227,29 @@
     }
 
     try {
-      // `id` comes from `interviewSlotToAdd` rather than the form: the schema
-      // doesn't describe it and the service generates the real one anyway.
-      const addedSlot = await interviewService.createOrAssignInterviewSlot(
-        { ...interviewSlotToAdd, ...formData },
-        selectedIntervieweeDocId,
-        currentUser?.object?.uid,
-      )
-      allInterviewSlots = [...allInterviewSlots, addedSlot]
-      if (formData.intervieweeId != '') {
+      const assigning = formData.intervieweeId != ''
+      const { id, emailSent } =
+        await interviewService.createOrAssignInterviewSlot(
+          formData,
+          assigning ? selectedIntervieweeDocId : undefined,
+        )
+      allInterviewSlots = [
+        ...allInterviewSlots,
+        { ...interviewSlotToAdd, ...formData, id },
+      ]
+      if (!assigning) {
+        alert.trigger('success', 'Timeslot added successfully.')
+      } else if (emailSent) {
         alert.trigger('success', 'Interviewee assigned and email sent.')
       } else {
-        alert.trigger('success', 'Timeslot added successfully.')
+        alert.trigger(
+          'error',
+          'Interviewee assigned, but their email could not be sent.',
+        )
       }
     } catch (err: any) {
       console.error('Add timeslot error:', err)
-      alert.trigger('error', 'Failed to add timeslot.')
+      alert.trigger('error', `Failed to add timeslot: ${err.message}`)
     }
 
     interviewSlotToAdd = resetInterviewSlotToAdd(
@@ -292,7 +299,7 @@
       await refetchSlots()
     } catch (err: any) {
       console.error('Update timeslot error:', err)
-      alert.trigger('error', 'Failed to update timeslot.')
+      alert.trigger('error', `Failed to update timeslot: ${err.message}`)
     }
   }
 
@@ -321,7 +328,7 @@
       await refetchSlots()
     } catch (err: any) {
       console.error('Delete timeslot error:', err)
-      alert.trigger('error', 'Failed to delete timeslot.')
+      alert.trigger('error', `Failed to delete timeslot: ${err.message}`)
     }
   }
 </script>

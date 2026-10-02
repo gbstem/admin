@@ -107,7 +107,11 @@ export function formatDateString(dateString: string) {
   })
 }
 
-export function formatDateLocal(date: Date | string) {
+/**
+ * `timeZone` defaults to the runtime's own, which is the reader's in a
+ * browser. Server code passes `GBSTEM_TIME_ZONE`.
+ */
+export function formatDateLocal(date: Date | string, timeZone?: string) {
   return new Date(date).toLocaleString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -116,14 +120,17 @@ export function formatDateLocal(date: Date | string) {
     hour: '2-digit',
     minute: '2-digit',
     timeZoneName: 'short',
+    timeZone,
   })
 }
 
-export const formatDateShort = (date: Date) => {
+/** `timeZone` as for `formatDateLocal`. */
+export const formatDateShort = (date: Date, timeZone?: string) => {
   return date.toLocaleString('en-US', {
     weekday: 'short', // long, short, narrow
     month: 'short', // numeric, 2-digit, long, short, narrow
     day: 'numeric', // numeric, 2-digit
+    timeZone,
   })
 }
 

@@ -6,8 +6,6 @@ import {
 import { formatDateShort, toLocalISOString } from '$lib/utils'
 import type { Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore'
-import type { DecisionRequestBody } from '../../routes/api/decision/+server'
-import type { ScheduleInterviewRequestBody } from '../../routes/api/scheduleInterview/+server'
 
 /**
  * Resolves the semester ID from a Firestore collection path, falling back to currentSemester.
@@ -260,48 +258,11 @@ export function buildFullDecisionPayload(interview: Data.Interview) {
 export function calculateInterviewDeadline(
   today: Date,
   instructorOrientationDate: string | Date,
+  timeZone?: string,
 ): string {
   const weekDeadline = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
   const orientationTime = new Date(instructorOrientationDate).getTime()
 
   const targetTime = Math.min(weekDeadline.getTime(), orientationTime)
-  return formatDateShort(new Date(targetTime))
-}
-
-/**
- * Constructs request payload for /api/scheduleInterview endpoint.
- *
- * `applicantUid` is the application document's id. The server resolves the
- * applicant's current address from Auth, so a `personal.email` that has gone
- * stale since they filed the application can't misdirect the mail. No address
- * is sent at all.
- */
-export function buildScheduleInterviewPayload(
-  applicantUid: string,
-  firstName: string,
-  deadline: string,
-): ScheduleInterviewRequestBody {
-  return {
-    applicantUid,
-    name: firstName,
-    deadline,
-  }
-}
-
-/**
- * Constructs request payload for /api/decision endpoint.
- *
- * See buildScheduleInterviewPayload for why this sends only `applicantUid`.
- */
-export function buildDecisionApiPayload(
-  newDecision: Data.Decision,
-  applicantUid: string,
-  firstName: string,
-): DecisionRequestBody {
-  return {
-    decision: newDecision as
-      'rejected' | 'waitlisted' | 'substitute' | 'accepted',
-    applicantUid,
-    name: firstName,
-  }
+  return formatDateShort(new Date(targetTime), timeZone)
 }

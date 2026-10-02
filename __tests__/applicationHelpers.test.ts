@@ -10,8 +10,6 @@ import {
   buildLikelyDecisionPayload,
   buildFullDecisionPayload,
   calculateInterviewDeadline,
-  buildScheduleInterviewPayload,
-  buildDecisionApiPayload,
 } from '$lib/helpers/application'
 import { currentSemester, semesterCollectionPath } from '$lib/data/collections'
 
@@ -149,35 +147,6 @@ describe('Application Helper Functions', () => {
       const orientationClose = new Date('2025-09-03T12:00:00Z')
       const deadlineClose = calculateInterviewDeadline(today, orientationClose)
       expect(deadlineClose).toContain('Sep 3')
-    })
-
-    test('buildScheduleInterviewPayload sends the applicant uid and no address', () => {
-      const payload = buildScheduleInterviewPayload(
-        'applicant-uid-1',
-        'John',
-        'Sep 8',
-      )
-      // The uid is the application document's id, so the server resolves the
-      // applicant's *current* address rather than the one they typed on the
-      // form.
-      expect(payload).toEqual({
-        applicantUid: 'applicant-uid-1',
-        name: 'John',
-        deadline: 'Sep 8',
-      })
-    })
-
-    test('buildDecisionApiPayload sends the applicant uid and no address', () => {
-      const payload = buildDecisionApiPayload(
-        'accepted',
-        'applicant-uid-1',
-        'John',
-      )
-      expect(payload).toEqual({
-        decision: 'accepted',
-        applicantUid: 'applicant-uid-1',
-        name: 'John',
-      })
     })
   })
 })
