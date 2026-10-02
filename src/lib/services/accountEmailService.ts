@@ -1,3 +1,4 @@
+import { errorMessage } from '$lib/shared/apiErrors'
 import type {
   ResolveEmailsRequestBody,
   ResolveEmailsResponse,
@@ -28,9 +29,11 @@ export const accountEmailService = {
       body: JSON.stringify(request),
     })
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
       throw new Error(
-        errData?.message || `Could not look up email addresses (${res.status})`,
+        await errorMessage(
+          res,
+          `Could not look up email addresses (${res.status})`,
+        ),
       )
     }
     const { emails } = (await res.json()) as ResolveEmailsResponse

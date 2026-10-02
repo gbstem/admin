@@ -193,7 +193,7 @@ describe('studentService (Data Access Layer)', () => {
       expect(firestore.getDoc).toHaveBeenCalledTimes(2)
     })
 
-    it('treats a checkedInAt without toDate() as already a plain value', async () => {
+    it('converts a checkedInAt stored as a string to a Date', async () => {
       baseMocks({
         checkInResult: {
           exists: () => true,
@@ -207,7 +207,7 @@ describe('studentService (Data Access Layer)', () => {
 
       const res = await studentService.fetchStudentFullDetails('student-1')
 
-      expect(res.checkedInAt).toBe('2026-01-01')
+      expect(res.checkedInAt).toEqual(new Date('2026-01-01'))
       expect(res.food).toEqual({})
     })
 

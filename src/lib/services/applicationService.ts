@@ -1,3 +1,4 @@
+import { errorMessage } from '$lib/shared/apiErrors'
 import { db } from '$lib/client/firebase'
 import { accountEmailService } from '$lib/services/accountEmailService'
 import {
@@ -35,13 +36,7 @@ async function postDecision(
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    let message = res.statusText
-    try {
-      message = (await res.json()).message ?? message
-    } catch {
-      // Not JSON: keep the status text.
-    }
-    throw new Error(message)
+    throw new Error(await errorMessage(res))
   }
   return res.json()
 }

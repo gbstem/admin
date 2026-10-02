@@ -1,3 +1,5 @@
+import { errorMessage } from '$lib/shared/apiErrors'
+import { toDateOrNull } from '$lib/shared/timestamps'
 import { db } from '$lib/client/firebase'
 import {
   checkInsCollection,
@@ -23,14 +25,6 @@ import {
 import { registrationParentUid } from '$lib/data/docIds'
 import { accountEmailService } from '$lib/services/accountEmailService'
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore'
-
-async function errorMessage(res: Response): Promise<string> {
-  try {
-    return (await res.json()).message ?? res.statusText
-  } catch {
-    return res.statusText
-  }
-}
 
 /**
  * Service providing Data Access Layer for student details, class enrollment, and attendance.
@@ -137,9 +131,7 @@ export const studentService = {
       const checkInData = checkInDoc.data()
       if (checkInData) {
         checkedIn = checkInData.checkedIn
-        checkedInAt = checkInData.checkedInAt?.toDate
-          ? checkInData.checkedInAt.toDate()
-          : checkInData.checkedInAt
+        checkedInAt = toDateOrNull(checkInData.checkedInAt)
         food = checkInData.food || {}
       }
     }

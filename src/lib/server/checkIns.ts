@@ -1,3 +1,4 @@
+import { toDate } from '$lib/shared/timestamps'
 import {
   checkInsCollection,
   registrationsCollection,
@@ -15,15 +16,6 @@ export interface CheckIn {
   /** ISO instant. */
   checkedInAt: string
   food: MealRecord
-}
-
-/** A stored check-in time - a Firestore Timestamp, or a Date in tests. */
-function toDate(value: unknown): Date {
-  if (value instanceof Date) return value
-  if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate()
-  }
-  return new Date(value as string)
 }
 
 /**

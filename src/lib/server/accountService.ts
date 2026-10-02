@@ -1,3 +1,4 @@
+import { toDate } from '$lib/shared/timestamps'
 import { interviewTimesCollection } from '$lib/data/collections'
 import { planAdminAccountDeletion } from '$lib/helpers/accountDeletion'
 import { tokenRejection } from '$lib/helpers/signupTokens'
@@ -19,14 +20,10 @@ export interface AccountDeletionEligibility {
 
 function toSlotForDeletion(doc: QueryDocumentSnapshot) {
   const data = doc.data() as Data.InterviewSlot
-  const rawDate = data.date as unknown as { toDate?: () => Date }
   return {
     id: doc.id,
     intervieweeId: data.intervieweeId,
-    date:
-      rawDate && typeof rawDate.toDate === 'function'
-        ? rawDate.toDate()
-        : new Date(data.date),
+    date: toDate(data.date),
   }
 }
 
