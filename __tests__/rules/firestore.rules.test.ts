@@ -257,10 +257,11 @@ describe('users/{uid} - a name and nothing else', () => {
   })
 })
 
-describe('registrations - only admins write, and no client deletes', () => {
+describe('registrations - no client writes at all', () => {
   // Parents create and edit their registrations through portal's /apply form
-  // actions, and enroll through /api/enroll, all with the Admin SDK. So no
-  // parent write is allowed here at all - including the enrollment fields
+  // actions, and admins through admin's /registrations actions; both sites
+  // enroll through their /api/enroll. All of those use the Admin SDK. So no
+  // client write is allowed here at all - including the enrollment fields
   // (`classes`, `enrolled`), whose other half is the class's `students`: a
   // parent changing only the registration side would leave the two
   // disagreeing.
@@ -345,16 +346,14 @@ describe('registrations - only admins write, and no client deletes', () => {
     await assertFails(deleteDoc(doc(db, registrations, `${UIDS.student}-2`)))
   })
 
-  it('lets an admin change the enrollment through the client SDK', async () => {
-    // admin's studentService enrolls and unenrolls with client writes, not the
-    // Admin SDK.
+  it('refuses an admin changing the enrollment through the client SDK', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, registrations, UIDS.student), {
         classes: [`${UIDS.accepted}-1`, `${UIDS.accepted}-2`],
       }),
     )
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, registrations, UIDS.student), {
         classes: [],
         enrolled: false,
@@ -362,9 +361,25 @@ describe('registrations - only admins write, and no client deletes', () => {
     )
   })
 
-  it('lets an admin create an enrolled registration', async () => {
+  it('refuses an admin editing a registration through the client SDK', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
+      updateDoc(doc(db, registrations, UIDS.student), {
+        'agreements.bypassAgeLimits': true,
+      }),
+    )
+    await assertFails(
+      setDoc(
+        doc(db, registrations, UIDS.student),
+        { personal: { studentFirstName: 'Augusta' } },
+        { merge: true },
+      ),
+    )
+  })
+
+  it('refuses an admin creating a registration', async () => {
+    const db = as(UIDS.admin, 'admin')
+    await assertFails(
       setDoc(doc(db, registrations, `${UIDS.student}-2`), {
         personal: { studentFirstName: 'Charles' },
         ...ENROLLED,
@@ -640,15 +655,6 @@ describe('registrations - instructors never read directly; client access restric
     await assertFails(
       updateDoc(doc(db, registrations, UIDS.student), {
         'personal.studentFirstName': 'Reviewer',
-      }),
-    )
-  })
-
-  it('lets an admin write a registration', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
-      updateDoc(doc(db, registrations, UIDS.student), {
-        'personal.studentFirstName': 'AdminModified',
       }),
     )
   })

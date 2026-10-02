@@ -148,14 +148,24 @@
       return
     }
     try {
-      await studentService.enrollStudent(studentData, selectedClass, studentID)
-      alert.trigger('success', 'Enrolled in class successfully!')
+      const { emailSent } = await studentService.enrollStudent(
+        selectedClass.id,
+        studentID,
+      )
+      if (emailSent) {
+        alert.trigger('success', 'Enrolled in class successfully!')
+      } else {
+        alert.trigger(
+          'error',
+          "Enrolled in class, but the family's email could not be sent.",
+        )
+      }
       selectedAddClass = ''
       await tick()
       await loadStudentClasses(studentID)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Class addition error:', error)
-      alert.trigger('error', 'Failed to add class.')
+      alert.trigger('error', `Failed to add class: ${error.message}`)
     }
   }
 
@@ -171,9 +181,9 @@
       selectedDropClass = ''
       await tick()
       await loadStudentClasses(studentID)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Class drop error:', error)
-      alert.trigger('error', 'Failed to drop class.')
+      alert.trigger('error', `Failed to drop class: ${error.message}`)
     }
   }
 

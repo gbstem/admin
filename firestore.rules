@@ -76,14 +76,11 @@ service cloud.firestore {
       }
 
       // Parents create, save and submit registrations through portal's /apply
-      // form actions and enroll through /api/enroll, all with the Admin SDK
-      // (bypassing these rules), so no parent write is allowed here - which
-      // also keeps `classes`/`enrolled` in step with each class's `students`.
-      // The edit dialog saves through admin's /registrations?/saveRegistration
-      // action, also with the Admin SDK. Admins still write through the
-      // client SDK for studentService enrollment and the bypassAgeLimits
-      // toggle. TODO(server-side-forms): move those to the server too, then
-      // drop the create/update rules below.
+      // form actions and enroll through /api/enroll; admins edit them through
+      // admin's /registrations actions and enroll through admin's
+      // /api/enroll. All of those write with the Admin SDK (bypassing these
+      // rules), so no client write is allowed here at all - which also keeps
+      // `classes`/`enrolled` in step with each class's `students`.
       //
       // A registration is a minor's date of birth, race, phone number, school
       // and family income indicator (FRLP). Instructors never read this collection
@@ -92,8 +89,6 @@ service cloud.firestore {
       // enforce class ownership and return only the minimal necessary fields.
       match /registrations/{userId} {
         allow read: if isStudentUserOrTheirChild(userId) || isAdminOrReviewer();
-        allow create: if isAdmin();
-        allow update: if isAdmin();
         // No delete rule: a parent's own registrations are removed as part
         // of account deletion (portal's /api/account), with the Admin SDK.
       }

@@ -75,4 +75,23 @@ export const actions: Actions = {
     await registrationService.saveRegistrationEdits(semesterId, id, form.data)
     return message(form, 'Changes were saved successfully.')
   },
+  /**
+   * The registrations table's "Bypass Age Limits?" checkbox, for
+   * `?/setBypassAgeLimits&id=…&semester=…` with a `bypassAgeLimits` field of
+   * `true` or `false`. Admins only, like the edit form.
+   */
+  setBypassAgeLimits: async ({ request, locals, url }) => {
+    verifyAdmin(locals)
+    const { id, semesterId } = editTarget(url)
+    const value = (await request.formData()).get('bypassAgeLimits')
+    if (value !== 'true' && value !== 'false') {
+      error(400, 'bypassAgeLimits must be true or false.')
+    }
+    await registrationService.setBypassAgeLimits(
+      semesterId,
+      id,
+      value === 'true',
+    )
+    return { bypassAgeLimits: value === 'true' }
+  },
 }
