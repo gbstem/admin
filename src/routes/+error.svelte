@@ -58,6 +58,17 @@
           >{page.error.code}</code
         >
       {/if}
+
+      {#if page.error?.errorId}
+        <div
+          class="mt-3 text-xs font-semibold tracking-wider text-red-800 uppercase"
+        >
+          Error Reference
+        </div>
+        <code class="mt-1 block font-mono text-xs break-all text-red-900"
+          >{page.error.errorId}</code
+        >
+      {/if}
     </div>
 
     <div class="flex gap-4">

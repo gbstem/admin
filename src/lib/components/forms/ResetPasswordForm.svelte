@@ -35,7 +35,7 @@
           if (res.ok) {
             alert.trigger(
               'info',
-              'Password reset email was sent. Please check your inbox.',
+              'If that address has a gbSTEM account, a password reset email is on its way. Please check your inbox.',
             )
           } else {
             const { message } = await res.json()

@@ -5,8 +5,13 @@ declare global {
   namespace App {
     interface Error {
       message: string
+      // `code` and `details` (the stack, for an unexpected error) only ever
+      // go to a signed-in user; see hooks.server.ts's handleError.
       code?: string
       details?: string
+      // Set by handleError on unexpected errors: the id the full error is
+      // logged under, for a user to quote when reporting it.
+      errorId?: string
     }
     interface Locals {
       user: Data.User.Peek | null

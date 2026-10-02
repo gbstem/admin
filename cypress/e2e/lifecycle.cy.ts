@@ -234,7 +234,7 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.get('h1').should('contain', 'Reset password')
     cy.fillInput('input[type="email"]', updatedEmail)
     cy.get('button[type="submit"]').click()
-    cy.get('body').should('contain', 'Password reset email was sent')
+    cy.get('body').should('contain', 'a password reset email is on its way')
 
     // Get the password reset link (emulated email side-channel)
     const finalPassword = 'finalPassword456'

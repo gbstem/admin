@@ -1,4 +1,4 @@
-import { handle } from '../src/hooks.server'
+import { handle, handleError } from '../src/hooks.server'
 import { adminAuth } from '$lib/server/firebase'
 
 function createEvent(sessionCookie?: string) {
@@ -104,5 +104,117 @@ describe('hooks.server handle', () => {
     expect(event.locals.user).toBeNull()
     expect(resolve).toHaveBeenCalledWith(event)
     expect(result).toBe('resolved-response')
+  })
+})
+
+describe('hooks.server handleError', () => {
+  let errorSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  const admin = { uid: 'uid-1', email: 'admin@example.com', role: 'admin' }
+
+  const shape = (
+    error: unknown,
+    {
+      user = null,
+      status = 500,
+      message = 'Internal Error',
+    }: { user?: unknown; status?: number; message?: string } = {},
+  ) =>
+    handleError({
+      error,
+      event: { locals: { user } },
+      status,
+      message,
+    } as any) as App.Error
+
+  // Unauthenticated callers reach this (a malformed POST to /api/auth is
+  // enough), so nothing about the server may leave in the response.
+  it('gives a signed-out caller only the generic message and an id, never the stack or raw message', () => {
+    const err = new Error(
+      'ENOENT: /var/task/.svelte-kit/output/server/secret.js',
+    )
+
+    const result = shape(err)
+
+    expect(result).toEqual({
+      message: 'Internal Error',
+      errorId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    })
+    expect(JSON.stringify(result)).not.toContain('ENOENT')
+    expect(JSON.stringify(result)).not.toContain(err.stack!.split('\n')[1])
+  })
+
+  it('treats a request with no locals at all as signed out', () => {
+    const result = handleError({
+      error: new Error('boom'),
+      event: {},
+      status: 500,
+      message: 'Internal Error',
+    } as any) as App.Error
+
+    expect(result).toEqual({
+      message: 'Internal Error',
+      errorId: expect.any(String),
+    })
+  })
+
+  // Admins and reviewers are trusted, and often this site's developers.
+  it('gives a signed-in user the raw message, code and stack', () => {
+    const err: any = new Error('Firestore index missing')
+    err.code = 'failed-precondition'
+
+    const result = shape(err, { user: admin })
+
+    expect(result).toEqual({
+      message: 'Firestore index missing',
+      errorId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      code: 'failed-precondition',
+      details: err.stack,
+    })
+  })
+
+  it('falls back to the generic message and code for a signed-in user when the error has none', () => {
+    const result = shape('a thrown string', { user: admin })
+
+    expect(result).toMatchObject({
+      message: 'Internal Error',
+      code: 'INTERNAL_ERROR',
+      details: 'a thrown string',
+    })
+  })
+
+  it('logs the full error under the id it returns', () => {
+    const err = new Error('boom')
+
+    const { errorId } = shape(err)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      `[SvelteKit Server Error ${errorId}]:`,
+      err,
+    )
+  })
+
+  it('gives each error its own id', () => {
+    expect(shape(new Error('a')).errorId).not.toBe(
+      shape(new Error('b')).errorId,
+    )
+  })
+
+  it("passes a 404's message through without logging it", () => {
+    const result = shape(new Error('Not found: /nope'), {
+      status: 404,
+      message: 'Not Found',
+    })
+
+    expect(result.message).toBe('Not Found')
+    expect(errorSpy).not.toHaveBeenCalled()
   })
 })

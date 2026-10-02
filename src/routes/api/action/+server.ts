@@ -77,7 +77,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         if (!email) {
           throw error(400, 'Email is required for password reset.')
         }
-        const link = await adminAuth.generatePasswordResetLink(email)
+        let link: string
+        try {
+          link = await adminAuth.generatePasswordResetLink(email)
+        } catch (err) {
+          // Answer exactly as if the email had gone out. An error here used
+          // to reach the caller as Firebase's "no user record" message, so
+          // anyone, signed out, could learn whether an address has a gbSTEM
+          // account. For an email lookup Firebase reports
+          // `auth/email-not-found`; `auth/user-not-found` is covered too so a
+          // change in which one it uses can't reopen this.
+          const code = (err as { code?: string })?.code
+          if (
+            code === 'auth/email-not-found' ||
+            code === 'auth/user-not-found'
+          ) {
+            return json({ message: 'Email sent successfully.' })
+          }
+          throw err
+        }
         to = email
         data = {
           subject: 'Reset Password for gbSTEM Account',
