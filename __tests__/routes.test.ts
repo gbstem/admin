@@ -1067,6 +1067,55 @@ describe('API routes POST endpoints', () => {
     )
   })
 
+  // Firebase's "no user record" error used to reach the caller as a 400, so
+  // a signed-out caller could tell which addresses have accounts.
+  it.each(['auth/email-not-found', 'auth/user-not-found'])(
+    'actionPOST resetPassword answers an unknown address (%s) exactly like a known one, sending nothing',
+    async (code) => {
+      const notFound: any = new Error(
+        'There is no user record corresponding to the provided email.',
+      )
+      notFound.code = code
+      mockAdminAuth.generatePasswordResetLink.mockRejectedValueOnce(notFound)
+      ;(MailService.send as jest.Mock).mockClear()
+      mockRequest.json.mockResolvedValue({
+        type: 'resetPassword',
+        email: 'nobody@test.com',
+      })
+
+      const res: any = await actionPOST({
+        request: mockRequest as any,
+        locals: { user: null },
+      } as any)
+
+      expect(res.body).toEqual({ message: 'Email sent successfully.' })
+      expect(res.init?.status ?? 200).toBe(200)
+      expect(MailService.send).not.toHaveBeenCalled()
+    },
+  )
+
+  it('actionPOST resetPassword still reports other Firebase errors', async () => {
+    const invalid: any = new Error('The email address is improperly formatted.')
+    invalid.code = 'auth/invalid-email'
+    mockAdminAuth.generatePasswordResetLink.mockRejectedValueOnce(invalid)
+    mockRequest.json.mockResolvedValue({
+      type: 'resetPassword',
+      email: 'someone@test.com',
+    })
+
+    await expect(
+      actionPOST({
+        request: mockRequest as any,
+        locals: { user: null },
+      } as any),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        status: 400,
+        message: 'The email address is improperly formatted.',
+      }),
+    )
+  })
+
   it('actionPOST resetPassword ignores a signed-in caller-supplied email and uses their own', async () => {
     // A signed-in caller can only reset their own password - otherwise a
     // logged-in attacker could target any other account by supplying its

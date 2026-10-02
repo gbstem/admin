@@ -95,7 +95,23 @@ describe('Section A: Authentication and Navigation', () => {
     cy.get('button[type="submit"]').click()
 
     // Verify reset notification toast shows up
-    cy.get('body').should('contain', 'Password reset email was sent')
+    cy.get('body').should('contain', 'a password reset email is on its way')
+    cy.get('input[type="email"]').should('have.value', '')
+  })
+
+  // An address with no account gets the same answer, so the form can't be
+  // used to find out who has a gbSTEM account.
+  it('Test Case 4b: Password Reset Form for an address with no account', () => {
+    cy.visit('/reset-password')
+    cy.get('input[type="email"]').should('be.visible')
+    cy.waitForFormHydration()
+
+    cy.intercept('POST', '/api/action').as('resetPassword')
+    cy.fillInput('input[type="email"]', 'nobody-here@example.com')
+    cy.get('button[type="submit"]').click()
+
+    cy.wait('@resetPassword').its('response.statusCode').should('eq', 200)
+    cy.get('body').should('contain', 'a password reset email is on its way')
     cy.get('input[type="email"]').should('have.value', '')
   })
 
