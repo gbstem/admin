@@ -94,20 +94,23 @@
       callback: async () => {
         try {
           const ids = checked.map((i) => data.applications[i].id)
-          await applicationService.bulkSetDecision(
+          const { emailsFailed } = await applicationService.bulkSetDecision(
             ids,
-            selectedCollection,
-            semesterCollectionPath(selectedSemester, 'decisions'),
             decision,
             selectedSemester,
           )
           await invalidate('app:applications')
-          alert.trigger(
-            'success',
-            `${checked.length} ${
-              checked.length > 1 ? 'applicants' : 'applicant'
-            } ${decision}.`,
-          )
+          const summary = `${checked.length} ${
+            checked.length > 1 ? 'applicants' : 'applicant'
+          } ${decision}`
+          if (emailsFailed === 0) {
+            alert.trigger('success', `${summary}.`)
+          } else {
+            alert.trigger(
+              'error',
+              `${summary}, but ${emailsFailed} could not be emailed.`,
+            )
+          }
           checked = []
         } catch (err: any) {
           console.error('Failed to update decisions:', err)

@@ -59,18 +59,15 @@ service cloud.firestore {
     match /semesters/{semesterId} {
       allow read: if isSignedIn(); // parent docs, if we ever materialize them
 
-      // Applicants create, save and submit their applications through
-      // portal's /apply form actions, which validate and write with the Admin
-      // SDK (bypassing these rules), so no applicant write is allowed here.
-      // The edit dialog saves through admin's /applications?/saveApplication
-      // action, also with the Admin SDK. Admins and reviewers still write
-      // through the client SDK for decisions (meta.decided), notes and
-      // meta.interview. TODO(server-side-forms): move those to the server
-      // too, then drop the create/update rules below.
+      // No client writes an application. Applicants create, save and submit
+      // theirs through portal's /apply form actions and book an interview
+      // through portal's /api/interview. Admins and reviewers edit one through
+      // admin's /applications?/saveApplication action, decide through
+      // /api/decision (meta.decided) and assign interviews through
+      // /api/interviewSlot (meta.interview). All of those validate and write
+      // with the Admin SDK, bypassing these rules.
       match /applications/{userId} {
         allow read: if isInstructorUser(userId) || isAdminOrReviewer();
-        allow create: if isAdminOrReviewer();
-        allow update: if isAdminOrReviewer();
         // No delete rule: an instructor's own application is removed as part
         // of account deletion (portal's /api/account), with the Admin SDK.
       }
@@ -93,9 +90,11 @@ service cloud.firestore {
         // of account deletion (portal's /api/account), with the Admin SDK.
       }
 
+      // A decision is what makes an applicant an accepted instructor. Written
+      // only by admin's /api/decision, with the Admin SDK, together with its
+      // application's meta.decided.
       match /decisions/{userId} {
-        allow read: if isInstructorUser(userId);
-        allow read, write: if isAdminOrReviewer();
+        allow read: if isInstructorUser(userId) || isAdminOrReviewer();
       }
 
       // Instructors write classes only through portal API routes, which check
@@ -113,12 +112,14 @@ service cloud.firestore {
         allow update, delete: if isAdminOrReviewer();
       }
 
-      // Admins and reviewers manage interview slots. Applicants see the open
-      // ones and book one through portal's /api/interview, which books in a
-      // transaction with the Admin SDK, so no applicant reads another's
-      // booking or writes over it.
+      // Admins and reviewers manage interview slots through admin's
+      // /api/interviewSlot, which checks that a slot is the caller's own (or
+      // the caller an admin) and keeps a booking in step with its
+      // application's meta.interview. Applicants see the open ones and book
+      // one through portal's /api/interview. Both write with the Admin SDK,
+      // so no client writes a slot and no applicant reads another's booking.
       match /instructorInterviewTimes/{interviewId} {
-        allow read, write: if isAdminOrReviewer();
+        allow read: if isAdminOrReviewer();
       }
 
       // Feedback is written only by the Admin SDK. Holding a role doesn't
@@ -184,8 +185,7 @@ service cloud.firestore {
     // only the Admin SDK, or a future feature explicitly reopening it,
     // reaches these documents now.
     match /confirmations/{userId} {
-      allow read: if isAdminOrReviewer();
-      allow write: if isAdmin();
+      allow read, write: if false;
     }
 
     //

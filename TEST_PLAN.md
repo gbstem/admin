@@ -271,7 +271,7 @@ graph TD
 - **Expected Results (Assertions)**:
   - Clicking "Save changes" triggers a write to Firestore and disables form editing upon completion.
   - Clicking "Cancel changes" restores original document values.
-  - Clicking "Accept" triggers a POST request to `/api/decision` to send the acceptance email.
+  - Clicking "Accept" triggers a POST request to `/api/decision`, which records the decision and sends the acceptance email.
   - The applicant's status updates in the database and renders the accepted icon in the table.
 
 #### Test Case 11b: Instructor Interview Guide and Evaluation Form
@@ -413,7 +413,7 @@ graph TD
   6. Modify the date or meeting link, then click **"Save"**.
   7. Click **"Edit"** again, then click **"Delete"** to remove the slot.
 - **Expected Results (Assertions)**:
-  - Creating a slot with an assigned interviewee triggers a POST request to `/api/assignInterview` to email the candidate.
+  - Creating a slot with an assigned interviewee triggers a POST request to `/api/interviewSlot`, which writes the slot, flags the application and emails the candidate.
   - Deleting the timeslot removes it from the list.
 
 ---

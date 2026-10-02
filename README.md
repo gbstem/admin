@@ -261,7 +261,7 @@ It sets the claim and, by default, revokes the account's refresh tokens — a cl
 
 ## API Routes (`+server.ts`)
 
-Everything under `src/routes/api/` is a SvelteKit [server route](https://svelte.dev/docs/kit/routing#server): a `+server.ts` file exporting a `POST` handler. These run with the **Firebase Admin SDK**, which bypasses `firestore.rules` completely — the rules protect the client SDK, and nothing protects these but the code inside them. Most of them send email, so a mistake here doesn't just read the wrong document, it mails real families and instructors.
+Everything under `src/routes/api/` is a SvelteKit [server route](https://svelte.dev/docs/kit/routing#server): a `+server.ts` file exporting a `POST` handler (and sometimes `PATCH` or `DELETE`). These run with the **Firebase Admin SDK**, which bypasses `firestore.rules` completely — the rules protect the client SDK, and nothing protects these but the code inside them. Most of them send email, so a mistake here doesn't just read the wrong document, it mails real families and instructors.
 
 Five rules, in the order they apply. `src/routes/api/decision/+server.ts` is a good example of all of them.
 

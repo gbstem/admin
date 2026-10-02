@@ -403,7 +403,7 @@ describe('registrations - no client writes at all', () => {
   })
 })
 
-describe('applications/{uid} - only admins and reviewers write, and no client deletes', () => {
+describe('applications/{uid} - read by their applicant, admins and reviewers; no client writes', () => {
   it('lets an applicant read their own application', async () => {
     const db = as(UIDS.student, 'instructor')
     await assertSucceeds(getDoc(doc(db, applications, UIDS.student)))
@@ -447,21 +447,20 @@ describe('applications/{uid} - only admins and reviewers write, and no client de
     )
   })
 
-  it('lets an admin set meta.decided', async () => {
-    // applicationService.saveNotes/submitOfficialDecision write this through
-    // the client SDK, not the Admin SDK, so it has to stay writable by rules
-    // for admin/reviewer.
+  it('refuses an admin setting meta.decided through the client SDK', async () => {
+    // /api/decision sets this with the Admin SDK, together with the decision
+    // document it flags.
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, applications, UIDS.student), {
         meta: { uid: UIDS.student, submitted: true, decided: false },
       }),
     )
   })
 
-  it('lets a reviewer set meta.decided', async () => {
+  it('refuses a reviewer setting meta.decided through the client SDK', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, applications, UIDS.student), {
         meta: { uid: UIDS.student, submitted: true, decided: false },
       }),
@@ -498,9 +497,9 @@ describe('applications/{uid} - only admins and reviewers write, and no client de
     )
   })
 
-  it('lets an admin create an application with decided: true', async () => {
+  it('refuses an admin creating an application', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, applications, UIDS.undecided), {
         personal: { firstName: 'Grace', email: 'grace@example.com' },
         meta: { uid: UIDS.undecided, submitted: false, decided: true },
@@ -508,9 +507,9 @@ describe('applications/{uid} - only admins and reviewers write, and no client de
     )
   })
 
-  it('lets a reviewer create an application with decided: true', async () => {
+  it('refuses a reviewer creating an application', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, applications, UIDS.undecided), {
         personal: { firstName: 'Grace', email: 'grace@example.com' },
         meta: { uid: UIDS.undecided, submitted: false, decided: true },
@@ -819,7 +818,7 @@ describe('mail - the trigger-email queue is server-only', () => {
   })
 })
 
-describe('instructorInterviewTimes - admins and reviewers only; applicants book through the API', () => {
+describe('instructorInterviewTimes - admins and reviewers read; every write goes through an API', () => {
   // Portal's /api/interview lists open slots and books one in a transaction.
   it('refuses an applicant or an accepted instructor reading, listing or booking a slot', async () => {
     for (const uid of [UIDS.undecided, UIDS.accepted]) {
@@ -849,18 +848,18 @@ describe('instructorInterviewTimes - admins and reviewers only; applicants book 
     }
   })
 
-  it('lets an admin update any field including meetingLink', async () => {
+  it('refuses an admin updating an interview slot through the client SDK', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, interviewTimes, 'slot-1'), {
         meetingLink: 'https://zoom.example/new-link',
       }),
     )
   })
 
-  it('lets a reviewer update any field including meetingLink', async () => {
+  it('refuses a reviewer updating an interview slot through the client SDK', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, interviewTimes, 'slot-1'), {
         meetingLink: 'https://zoom.example/new-link',
       }),
@@ -881,9 +880,9 @@ describe('instructorInterviewTimes - admins and reviewers only; applicants book 
     await assertFails(getDoc(doc(db, interviewTimes, 'slot-1')))
   })
 
-  it('lets an admin create an interview slot', async () => {
+  it('refuses an admin creating an interview slot through the client SDK', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, interviewTimes, 'slot-admin-new'), {
         date: '2026-10-02T10:00:00.000Z',
         meetingLink: 'https://zoom.example/new',
@@ -891,9 +890,9 @@ describe('instructorInterviewTimes - admins and reviewers only; applicants book 
     )
   })
 
-  it('lets a reviewer create an interview slot', async () => {
+  it('refuses a reviewer creating an interview slot through the client SDK', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, interviewTimes, 'slot-rev-new'), {
         date: '2026-10-02T10:00:00.000Z',
         meetingLink: 'https://zoom.example/new',
@@ -911,14 +910,14 @@ describe('instructorInterviewTimes - admins and reviewers only; applicants book 
     )
   })
 
-  it('lets an admin delete an interview slot', async () => {
+  it('refuses an admin deleting an interview slot through the client SDK', async () => {
     const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(deleteDoc(doc(db, interviewTimes, 'slot-1')))
+    await assertFails(deleteDoc(doc(db, interviewTimes, 'slot-1')))
   })
 
-  it('lets a reviewer delete an interview slot', async () => {
+  it('refuses a reviewer deleting an interview slot through the client SDK', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(deleteDoc(doc(db, interviewTimes, 'slot-1')))
+    await assertFails(deleteDoc(doc(db, interviewTimes, 'slot-1')))
   })
 
   it('refuses an instructor deleting an interview slot', async () => {
@@ -1031,7 +1030,7 @@ describe('semesters/{semesterId} - parent document read access', () => {
   })
 })
 
-describe('decisions - applicant read access; admin/reviewer write access', () => {
+describe('decisions - read by their applicant, admins and reviewers; no client writes', () => {
   it('lets an applicant read their own decision', async () => {
     const db = as(UIDS.accepted, 'instructor')
     await assertSucceeds(getDoc(doc(db, decisions, UIDS.accepted)))
@@ -1049,18 +1048,18 @@ describe('decisions - applicant read access; admin/reviewer write access', () =>
     )
   })
 
-  it('lets an admin read and write decisions', async () => {
+  it('lets an admin read decisions but not write them', async () => {
     const db = as(UIDS.admin, 'admin')
     await assertSucceeds(getDoc(doc(db, decisions, UIDS.accepted)))
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, decisions, UIDS.undecided), { type: 'accepted' }),
     )
   })
 
-  it('lets a reviewer read and write decisions', async () => {
+  it('lets a reviewer read decisions but not write them', async () => {
     const db = as(UIDS.reviewer, 'reviewer')
     await assertSucceeds(getDoc(doc(db, decisions, UIDS.accepted)))
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, decisions, UIDS.undecided), { type: 'interview' }),
     )
   })
@@ -1490,30 +1489,29 @@ describe('confirmations - parent/guardian confirmations', () => {
     )
   })
 
-  it('lets an admin read and write any confirmation', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-    await assertSucceeds(
-      setDoc(doc(db, `confirmations/${UIDS.student}`), {
-        confirmed: true,
-      }),
-    )
-  })
-
-  it('lets a reviewer read but not write a confirmation', async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), `confirmations/${UIDS.student}`), {
-        confirmed: true,
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)(
+    'refuses %s reading or writing a confirmation',
+    async (_, uid, role) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(context.firestore(), `confirmations/${UIDS.student}`),
+          {
+            confirmed: true,
+          },
+        )
       })
-    })
-    const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-    await assertFails(
-      setDoc(doc(db, `confirmations/${UIDS.student}`), {
-        confirmed: false,
-      }),
-    )
-  })
+      const db = as(uid, role)
+      await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
+      await assertFails(
+        setDoc(doc(db, `confirmations/${UIDS.student}`), {
+          confirmed: false,
+        }),
+      )
+    },
+  )
 
   it('refuses an unauthenticated user', async () => {
     const db = testEnv.unauthenticatedContext().firestore()

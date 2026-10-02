@@ -1,8 +1,7 @@
 import { getInterviewSlotDefaults } from '$lib/components/forms/schemas'
 import { slotRequestUid } from '$lib/data/docIds'
-import { formatDateLocal, toLocalISOString } from '$lib/utils'
+import { toLocalISOString } from '$lib/utils'
 import type {} from '../../data.d.ts'
-import type { AssignInterviewRequestBody } from '../../routes/api/assignInterview/+server'
 
 /**
  * Parses raw Firestore document data into a Data.InterviewSlot object.
@@ -81,24 +80,6 @@ export function filterEligibleInterviewees(docs: any[]): {
 
   names.sort((a, b) => a.name.localeCompare(b.name))
   return { names, options }
-}
-
-/**
- * Constructs request payload for /api/assignInterview endpoint.
- */
-export function buildAssignInterviewApiPayload(
-  slot: Data.InterviewSlot,
-): AssignInterviewRequestBody {
-  // Uids only. The server resolves both current addresses from Auth, so an
-  // address stored on the slot that has gone stale can't misdirect the mail.
-  return {
-    intervieweeUid: slot.intervieweeId,
-    firstName: slot.intervieweeFirstName || '',
-    interviewer: slot.interviewerName || '',
-    interviewerUid: slot.interviewerUid,
-    link: slot.meetingLink || '',
-    date: formatDateLocal(slot.date),
-  }
 }
 
 /**

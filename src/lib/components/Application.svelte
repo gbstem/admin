@@ -114,12 +114,7 @@
     if (frozenId === undefined) return
     loading = true
     try {
-      await applicationService.saveNotes(
-        collection,
-        frozenId,
-        interview,
-        viewedSemester(),
-      )
+      await applicationService.saveNotes(frozenId, interview, viewedSemester())
       await invalidate('app:applications')
       alert.trigger('success', 'Notes updated successfully.')
     } catch (err: any) {
@@ -140,10 +135,8 @@
     loading = true
     try {
       await applicationService.saveLikelyDecision(
-        collection,
         frozenId,
         newDecision,
-        decision ?? null,
         viewedSemester(),
       )
       await invalidate('app:applications')
@@ -174,17 +167,21 @@
     }
     loading = true
     try {
-      await applicationService.submitOfficialDecision(
-        collection,
+      const { emailSent } = await applicationService.submitOfficialDecision(
         frozenId,
         newDecision,
         interview,
-        values.personal.firstName,
-        semesterDates.instructorOrientation,
         viewedSemester(),
       )
       await invalidate('app:applications')
-      alert.trigger('success', 'Decision updated successfully.')
+      if (emailSent) {
+        alert.trigger('success', 'Decision updated successfully.')
+      } else {
+        alert.trigger(
+          'error',
+          'Decision updated, but the email to the applicant could not be sent.',
+        )
+      }
       decision = newDecision
     } catch (err: any) {
       alert.trigger('error', 'Something went wrong. Please try again.')

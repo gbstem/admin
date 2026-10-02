@@ -1,89 +1,151 @@
 import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
-import { sendEmail } from '$lib/server/email'
-import { renderEmail } from '$lib/emails/render'
-import { resolveAccountEmail } from '$lib/server/accountEmail'
-import { formatDateInGbstemTime, parseGbstemDateTime } from '$lib/utils'
+import {
+  decideInBulk,
+  decideWithScorecard,
+  saveInterviewNotes,
+  saveLikelyDecision,
+} from '$lib/server/applicationDecisions'
+import { sendDecisionEmail } from '$lib/server/decisionEmails'
+import { isDocId, requireKnownSemester } from '$lib/server/editTarget'
 import { json } from '@sveltejs/kit'
-import type { RequestHandler } from './$types'
-import semesterDatesJson from '$lib/data/semesterDates.json'
-
 import { z } from 'zod'
+import type { RequestHandler } from './$types'
 
-// `applicantUid` is the application document's id. The applicant's current
-// address is resolved from Auth; the one they typed on their application goes
-// stale the moment they change their account email, so it is not accepted.
-const decisionSchema = z.object({
-  applicantUid: z.string().min(1, 'Applicant uid is required'),
-  decision: z.enum(['rejected', 'waitlisted', 'substitute', 'accepted']),
-  name: z.string().min(1, 'Name is required'),
+const MAX_NOTES = 10000
+/** The most applicants one bulk decision may name. */
+const MAX_BULK_DECISIONS = 1000
+
+const applicationId = z.string().refine(isDocId, 'An application is required')
+const notes = z.string().max(MAX_NOTES, `Max ${MAX_NOTES} characters`)
+// A cleared number field arrives as null or ''.
+const score = z.preprocess(
+  (value) => (value === null || value === '' ? 0 : value),
+  z.coerce.number().min(0).max(5),
+)
+const likelyDecision = z
+  .enum(['likely yes', 'likely no', 'likely waitlist'])
+  .nullable()
+
+/**
+ * The interview scorecard the decision dialog edits: `Data.Interview` without
+ * its `type`, which only the `decide` action sets.
+ */
+const scorecardSchema = z.object({
+  date: z.string().max(50),
+  interviewer: z.string().max(200),
+  attendance: z.string().max(50),
+  likelyDecision,
+  notes,
+  conversation: score,
+  conversationNotes: notes,
+  lastSemesterNotes: notes,
+  mockLessonExplanations: score,
+  mockLessonEngagement: score,
+  mockLessonPace: score,
+  mockLessonOverall: score,
+  mockLessonNotes: notes,
+  techNotes: notes,
+  teachingPreferences: notes,
+  availabilityNotes: notes,
 })
 
-export type DecisionRequestBody = z.infer<typeof decisionSchema>
+const semesterId = z.string().min(1, 'A semester is required')
 
+const decisionRequestSchema = z
+  .discriminatedUnion('action', [
+    z.object({
+      action: z.literal('saveNotes'),
+      semesterId,
+      applicationId,
+      interview: scorecardSchema,
+    }),
+    z.object({
+      action: z.literal('setLikelyDecision'),
+      semesterId,
+      applicationId,
+      likelyDecision,
+    }),
+    // One applicant with the scorecard the dialog holds, or several with the
+    // decision alone. Either way each applicant is then emailed.
+    z.object({
+      action: z.literal('decide'),
+      semesterId,
+      applicationIds: z.array(applicationId).min(1).max(MAX_BULK_DECISIONS),
+      decision: z.enum([
+        'interview',
+        'accepted',
+        'substitute',
+        'waitlisted',
+        'rejected',
+      ]),
+      interview: scorecardSchema.optional(),
+    }),
+  ])
+  .refine(
+    (body) =>
+      body.action !== 'decide' ||
+      !body.interview ||
+      body.applicationIds.length === 1,
+    {
+      message: 'A scorecard goes with exactly one application',
+      path: ['interview'],
+    },
+  )
+
+export type DecisionRequestBody = z.input<typeof decisionRequestSchema>
+
+export interface DecisionResponse {
+  /**
+   * For `decide`: how many of the applicants could not be emailed. Their
+   * decisions stand.
+   */
+  emailsFailed: number
+}
+
+/**
+ * Every admin and reviewer write to an application's decision: the interview
+ * notes, the likely decision, and the official decision with its email.
+ * Reviewers are allowed, as they review applications.
+ */
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     verifyAdminOrReviewer(locals)
-    const body = decisionSchema.parse(await request.json())
+    const body = decisionRequestSchema.parse(await request.json())
+    const semester = requireKnownSemester(body.semesterId)
 
-    const intervieweeEmail = await resolveAccountEmail(
-      body.applicantUid,
-      'Applicant',
-      '/api/decision',
-    )
-    const decision = body.decision
-
-    const template = {
-      name: 'decision',
-      data: {
-        subject: 'gbSTEM Instructor Decision',
-        app: {
-          firstName: body.name,
-          name: 'Portal',
-          link: 'https://portal.gbstem.org',
-          orientation: formatDateInGbstemTime(
-            parseGbstemDateTime(
-              semesterDatesJson.instructorOrientation,
-              semesterDatesJson.instructorOrientationTime,
-            ),
-            'long',
-          ),
-          orientationLink: semesterDatesJson.instructorOrientationLink,
-        },
-      },
-    }
-
-    let htmlBody
-    switch (decision) {
-      case 'rejected':
-        htmlBody = renderEmail('rejectionEmailTemplate', template.data)
-        break
-      case 'waitlisted':
-        htmlBody = renderEmail('waitlistEmailTemplate', template.data)
-        break
-      case 'substitute':
-        htmlBody = renderEmail('subEmailTemplate', template.data)
-        break
-      case 'accepted':
-        htmlBody = renderEmail('acceptEmailTemplate', template.data)
-        break
-      default:
-        htmlBody = renderEmail('waitlistEmailTemplate', template.data)
-    }
-
-    try {
-      await sendEmail({
-        to: intervieweeEmail,
-        subject: String(template.data.subject),
-        html: htmlBody,
-      })
-    } catch (mailError) {
-      return json(
-        { error: 'Failed to send email. Please try again later.' },
-        { status: 500 },
+    if (body.action === 'saveNotes') {
+      await saveInterviewNotes(
+        semester,
+        body.applicationId,
+        body.interview as Data.Interview,
       )
+      return json({ emailsFailed: 0 } satisfies DecisionResponse)
+    }
+    if (body.action === 'setLikelyDecision') {
+      await saveLikelyDecision(
+        semester,
+        body.applicationId,
+        body.likelyDecision,
+      )
+      return json({ emailsFailed: 0 } satisfies DecisionResponse)
     }
 
-    return json({ message: 'Email sent successfully.' })
+    const decided = body.interview
+      ? [
+          await decideWithScorecard(
+            semester,
+            body.applicationIds[0],
+            body.decision,
+            body.interview as Data.Interview,
+          ),
+        ]
+      : await decideInBulk(semester, body.applicationIds, body.decision)
+    const sent = await Promise.all(
+      decided.map((applicant) => sendDecisionEmail(applicant, body.decision)),
+    )
+    return json({
+      emailsFailed: sent.filter((ok) => !ok).length,
+    } satisfies DecisionResponse)
   } catch (err) {
     throw handleApiError('/api/decision', err)
   }
