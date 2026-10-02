@@ -117,7 +117,7 @@ If you're new to this codebase, one question comes up constantly: **"I need to w
 
 Historically, a lot of this app's logic lived directly inside `.svelte` files: a component's `<script>` block would fetch data from Firestore, figure out what that data meant (e.g. "is this class full?"), and render it, all tangled together. That's fast to write, but it makes files huge (many were 500–1,000 lines), hard to read, and nearly impossible to unit test — you can't write a quick, automated Jest test for logic that's buried inside a Svelte component and calls the live database directly.
 
-To fix this, every new (or newly-touched) piece of logic gets split into one of two places, based on a simple question: **does it touch the network, or not?**
+To fix this, every new (or newly-touched) piece of logic gets split into one of three places, based on two simple questions: **does it touch the network, and does it write to the database?**
 
 ### 1. Pure logic (no network calls) → `src/lib/helpers/*.ts`
 
@@ -125,9 +125,9 @@ A **pure function** only looks at the inputs you give it and returns an output �
 
 **Why this matters:** pure functions are the cheapest, easiest thing in the entire codebase to unit test — no mocking, no setup, just "call it with some inputs, check what comes back." If you're writing an `if`/`else` chain, a date calculation, a status computation, or anything that transforms data without touching Firestore or an API, it almost certainly belongs in a `.ts` file under `src/lib/helpers/`, with a matching test file in `__tests__/` (see `application.test.ts`, `setInterviewTimesHelpers.test.ts`, etc. for examples of the pattern), not buried in a `.svelte` file's `<script>` block.
 
-### 2. Firestore reads/writes → the Data Access Layer (`src/lib/services/*.ts`)
+### 2. Firestore reads, and requests to write → the Data Access Layer (`src/lib/services/*.ts`)
 
-A **Data Access Layer (DAL)** is just a name for "the one place in the app allowed to talk directly to the database." Instead of every `.svelte` file calling Firestore functions like `getDoc`, `setDoc`, or `updateDoc` directly, those calls live in `src/lib/services/<name>Service.ts` files (`classService.ts`, `applicationService.ts`, `studentService.ts`, `interviewService.ts`, `registrationService.ts`, `tokenService.ts`, `dashboardService.ts`), each exporting an object of `async` functions named for _what_ they do (`enrollStudent`, `fetchDecisionType`) rather than _how_ they do it.
+A **Data Access Layer (DAL)** is just a name for "the one place in the app allowed to talk directly to the database." Instead of every `.svelte` file calling Firestore functions like `getDoc` or `getDocs` directly, or building a `fetch` to one of our API routes inline, those calls live in `src/lib/services/<name>Service.ts` files (`classService.ts`, `applicationService.ts`, `studentService.ts`, `interviewService.ts`, `registrationService.ts`, `tokenService.ts`, `dashboardService.ts`), each exporting an object of `async` functions named for _what_ they do (`enrollStudent`, `fetchDecisionType`) rather than _how_ they do it.
 
 A `.svelte` component then just calls something like:
 
@@ -135,7 +135,7 @@ A `.svelte` component then just calls something like:
 await studentService.enrollStudent(classId, registrationId)
 ```
 
-instead of constructing a raw Firestore call or `fetch('/api/enroll', ...)` inline, mixed in with template markup and UI state. (That one goes through an API route because the write has to update the class and the registration together, which no client may do.)
+instead of constructing a raw Firestore call or `fetch('/api/enroll', ...)` inline, mixed in with template markup and UI state. These browser-side services may _read_ Firestore directly, but they never write it: a write is a request to the server, as the next section explains.
 
 Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`, `applicationService.ts`, `registrationService.ts`, `classService.ts`, `studentService.ts`, `tokenService.ts`, `announcementService.ts`, `instructorFeedbackService.ts`, `studentFeedbackService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` and live under `__tests__/server/` — a flat `__tests__/<name>Service.test.ts` would collide with the client DAL's test of the same base name (e.g. `applicationService.ts` exists in both `src/lib/services/` and `src/lib/server/`); `subRequestService.test.ts` predates that convention and is the one exception still at the top level.
 
@@ -146,11 +146,34 @@ Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their 
 - **No copy-pasted queries.** Multiple pages often need the same data (e.g. "this student's registration record"). Without a DAL, that Firestore query gets copy-pasted into several components; when a bug is found and fixed in one copy, the others are silently left behind with the old, buggy version. With a DAL, every caller shares the same `registrationService.fetchRegistration(...)` function, so a fix in one place fixes it everywhere.
 - **Shorter, more readable components.** A `.svelte` file's `<script>` block should mostly be about _what the page does_ and _how it's laid out_ — not the mechanics of database queries.
 
+### 3. Firestore writes → the server (`src/lib/server/`, reached through a form action or an API route)
+
+**The browser never writes to Firestore.** `firestore.rules` grants a client exactly one write: a person's own `firstName` and `lastName` in `users/{uid}` (see the exception below). Everything else — applications, decisions, registrations, enrollments, classes, interview slots, signup tokens, check-ins — is written by server code with the Admin SDK, after it has checked the caller's role and validated the request. There are two ways in:
+
+- **A form posts to a form action** in the page's `+page.server.ts` (`/applications?/saveApplication`, `/registrations?/saveRegistration`, `/classes?/saveClass`, `/tokens?/createToken`). The action validates with the same Zod schema the form uses.
+- **Anything else calls an API route** under `src/routes/api/` through a function in the browser-side service (`studentService.enrollStudent` → `/api/enroll`, `tokenService.deleteTokens` → `/api/tokens`, `studentService.checkInStudent` → `/api/checkIn`).
+
+Either way the write itself lives in `src/lib/server/` (`classEnrollments.ts`, `applicationDecisions.ts`, `interviewSlots.ts`, `checkIns.ts`, or the server `<name>Service.ts`), where a Jest test can drive it.
+
+**Why not just let admins write from the browser?** After all, a rule like `allow write: if isAdmin()` does keep everyone else out. The trouble is everything such a rule _can't_ do:
+
+- **A rule checks who is writing, not what.** With write access, a browser can store any shape of document it likes: a string where a number belongs, a field nobody expected, a 1 MB essay. Our Zod schemas only ran in the browser, where a bug, a stale tab running last month's code, or a hand-typed request skips them. On the server, the schema runs every time.
+- **A rule can't keep two documents in agreement.** Enrolling a student changes the class's `students` _and_ the registration's `classes`; a decision changes the decision _and_ its application's `meta.decided`. From the browser those were separate writes, and when the second one failed the data was left contradicting itself. On the server they are one transaction.
+- **A rule can't stop a stale copy overwriting newer data.** An edit dialog used to write back the whole document as it looked when the dialog opened, silently undoing an enrollment made in the meantime. The server merges only the fields that form owns.
+- **Facts should be looked up, not taken on trust.** Who the interviewer is, what time a check-in happened, an applicant's first name in an email, a class's session statuses — the server reads these from the session, its own clock and the stored documents. A request carries ids and the person's actual choices, nothing else.
+- **Some permissions are finer than a role.** A reviewer may add an interview slot but not assign one, and may edit only their own. That is three lines of TypeScript and awkward or impossible in a rule.
+- **Server code is tested by `yarn test`; rules aren't.** Rules need the emulator and a separate suite, and a rule that is too generous fails nothing. The fewer grants there are, the less there is to get wrong — and "no client writes" is a rule a newcomer can't accidentally widen without noticing.
+
+**The one exception** is a person renaming themselves: `userService.updateUserName` writes `users/{uid}` straight from the browser. It stays because there is nothing for a server to add: the rule itself restricts the write to the caller's own document and to the keys `firstName` and `lastName`, the values are free text shown to humans, and nothing anywhere makes a decision based on them. If `users/{uid}` ever gains a field that code acts on, that field must be server-written.
+
+So when a feature needs to save something, add a form action or an API route — never a new `allow write` in `firestore.rules`.
+
 ### A rule of thumb when writing new code
 
 Before adding code to a `.svelte` file, ask:
 
-- **Does it call Firestore (`getDoc`, `setDoc`, `updateDoc`, `deleteDoc`, `addDoc`, `getDocs`, `getCountFromServer`, a `query(...)`, etc.)?** → It belongs in a `src/lib/services/*.ts` file, with a Jest test in `__tests__/` that mocks `firebase/firestore` (copy the top of an existing `*Service.test.ts` file to get the mocking pattern right).
+- **Does it read Firestore (`getDoc`, `getDocs`, `getCountFromServer`, a `query(...)`, etc.) or `fetch` one of our API routes?** → It belongs in a `src/lib/services/*.ts` file, with a Jest test in `__tests__/` that mocks `firebase/firestore` or `fetch` (copy the top of an existing `*Service.test.ts` file to get the mocking pattern right).
+- **Does it write Firestore (`setDoc`, `updateDoc`, `deleteDoc`, `addDoc`)?** → Not from the browser. It belongs in `src/lib/server/`, behind a form action or an API route (see section 3), with a Jest test under `__tests__/server/`.
 - **Is it a calculation or transformation with no side effects?** → It belongs in a `src/lib/helpers/*.ts` file, with a matching Jest test.
 - **Is it about what's rendered on screen, or wiring the two above together?** → That's the one thing that _does_ belong in the `.svelte` file itself.
 

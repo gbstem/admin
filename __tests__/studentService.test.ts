@@ -1,4 +1,3 @@
-import { retreatMealSchedule } from '$lib/data/retreatMealSchedule'
 import { studentService } from '$lib/services/studentService'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
@@ -440,44 +439,44 @@ describe('studentService (Data Access Layer)', () => {
     })
   })
   describe('checkInStudent', () => {
-    it('sets checked-in status with a default meal schedule, merging into the doc', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
-      const now = new Date('2026-10-20T12:00:00Z')
+    it('checks the student in through /api/checkIn, naming only the student', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          checkedInAt: '2026-10-20T12:00:00.000Z',
+          food: { '2026-10-20': { dinner: false } },
+        }),
+      })
 
-      await studentService.checkInStudent('s-1', now)
+      const checkIn = await studentService.checkInStudent('s-1')
 
-      expect(firestore.setDoc).toHaveBeenCalledTimes(1)
-      const [, payload, options] = (firestore.setDoc as jest.Mock).mock.calls[0]
-      expect(payload).toEqual(
-        expect.objectContaining({ checkedIn: true, checkedInAt: now }),
-      )
-      expect(options).toEqual({ merge: true })
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/checkIn')
+      expect(init.method).toBe('POST')
+      // No time and no meals: both are the server's to decide.
+      expect(JSON.parse(init.body)).toEqual({ registrationId: 's-1' })
+      expect(checkIn).toEqual({
+        checkedInAt: new Date('2026-10-20T12:00:00.000Z'),
+        food: { '2026-10-20': { dinner: false } },
+      })
     })
 
-    it('seeds food from retreatMealSchedule as an independent copy, not a shared reference', async () => {
-      ;(firestore.setDoc as jest.Mock).mockResolvedValueOnce(undefined)
+    it("throws the server's message when the check-in is refused", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'That student has no registration.' }),
+      })
 
-      await studentService.checkInStudent('s-1', new Date())
-
-      const [, payload] = (firestore.setDoc as jest.Mock).mock.calls[0]
-      expect(payload.food).toEqual(retreatMealSchedule)
-      expect(payload.food).not.toBe(retreatMealSchedule)
-    })
-
-    it('propagates errors from setDoc', async () => {
-      ;(firestore.setDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
+      await expect(studentService.checkInStudent('s-1')).rejects.toThrow(
+        'That student has no registration.',
       )
-
-      await expect(
-        studentService.checkInStudent('s-1', new Date()),
-      ).rejects.toThrow('permission-denied')
     })
   })
 
   describe('updateStudentMeal', () => {
-    it('updates the specific date/meal field', async () => {
-      ;(firestore.updateDoc as jest.Mock).mockResolvedValueOnce(undefined)
+    it('records the meal through /api/checkIn', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
 
       await studentService.updateStudentMeal(
         's-1',
@@ -486,19 +485,27 @@ describe('studentService (Data Access Layer)', () => {
         true,
       )
 
-      expect(firestore.updateDoc).toHaveBeenCalledWith(expect.anything(), {
-        'food.2026-10-20.dinner': true,
+      const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe('/api/checkIn')
+      expect(init.method).toBe('PATCH')
+      expect(JSON.parse(init.body)).toEqual({
+        registrationId: 's-1',
+        date: '2026-10-20',
+        meal: 'dinner',
+        served: true,
       })
     })
 
-    it('propagates errors from updateDoc', async () => {
-      ;(firestore.updateDoc as jest.Mock).mockRejectedValueOnce(
-        new Error('permission-denied'),
-      )
+    it("throws the server's message when the update is refused", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'That student is not checked in.' }),
+      })
 
       await expect(
         studentService.updateStudentMeal('s-1', '2026-10-20', 'dinner', true),
-      ).rejects.toThrow('permission-denied')
+      ).rejects.toThrow('That student is not checked in.')
     })
   })
 })

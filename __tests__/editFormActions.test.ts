@@ -5,6 +5,7 @@ const mockSaveApplicationEdits = jest.fn()
 const mockSaveRegistrationEdits = jest.fn()
 const mockSetBypassAgeLimits = jest.fn()
 const mockSaveClassEdits = jest.fn()
+const mockCreateToken = jest.fn()
 
 jest.mock('$lib/server/applicationService', () => ({
   applicationService: {
@@ -26,7 +27,14 @@ jest.mock('$lib/server/classService', () => ({
   },
 }))
 
+jest.mock('$lib/server/tokenService', () => ({
+  tokenService: {
+    createToken: (...args: any[]) => mockCreateToken(...args),
+  },
+}))
+
 import {
+  CREATE_TOKEN_FORM_ID,
   EDIT_APPLICATION_FORM_ID,
   EDIT_CLASS_FORM_ID,
   EDIT_REGISTRATION_FORM_ID,
@@ -34,6 +42,7 @@ import {
 import { currentSemester } from '$lib/data/collections'
 import { actions as applicationsActions } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
 import { actions as classesActions } from '../src/routes/(signedIn)/(emailVerified)/classes/+page.server'
+import { actions as tokensActions } from '../src/routes/(signedIn)/(emailVerified)/tokens/+page.server'
 import { actions as registrationsActions } from '../src/routes/(signedIn)/(emailVerified)/registrations/+page.server'
 import { stringify } from 'devalue'
 
@@ -345,5 +354,50 @@ describe('/classes?/saveClass', () => {
       status: 400,
     })
     expect(mockSaveClassEdits).not.toHaveBeenCalled()
+  })
+})
+
+describe('/tokens?/createToken', () => {
+  const create = (user: unknown, data: unknown) =>
+    (tokensActions.createToken as any)({
+      request: superformRequest(CREATE_TOKEN_FORM_ID, data),
+      locals: { user },
+    })
+  const validToken = { role: 'reviewer', consumable: true, expires: 24 }
+
+  beforeEach(() => {
+    mockCreateToken.mockReset().mockResolvedValue('tok-1')
+  })
+
+  it('creates the token for an admin and returns its id for the signup link', async () => {
+    const result = await create(admin, validToken)
+
+    expect(result.form.valid).toBe(true)
+    expect(result.tokenId).toBe('tok-1')
+    expect(mockCreateToken).toHaveBeenCalledWith(validToken)
+  })
+
+  it.each([
+    [
+      'a role tokens cannot grant',
+      { ...validToken, role: 'instructor' },
+      'role',
+    ],
+    ['an expiry past 48 hours', { ...validToken, expires: 72 }, 'expires'],
+  ])('refuses %s, creating nothing', async (_, data, field) => {
+    const result = await create(admin, data)
+
+    expect(result.status).toBe(400)
+    expect(result.data.form.errors[field]).toBeDefined()
+    expect(mockCreateToken).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a signed-out caller', null, 401],
+    // A reviewer could otherwise mint themselves an admin account.
+    ['a reviewer', reviewer, 403],
+  ])('refuses %s', async (_, user, status) => {
+    await expect(create(user, validToken)).rejects.toMatchObject({ status })
+    expect(mockCreateToken).not.toHaveBeenCalled()
   })
 })

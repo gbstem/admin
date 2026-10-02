@@ -1,6 +1,5 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { tokenService } from '$lib/services/tokenService'
   import Button from '../Button.svelte'
   import { alert } from '$lib/stores'
   import { invalidate } from '$app/navigation'
@@ -8,7 +7,11 @@
   import { writeToClipboard } from '$lib/utils'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
-  import { getCreateTokenFormDefaults, tokenSchema } from './schemas'
+  import {
+    CREATE_TOKEN_FORM_ID,
+    getCreateTokenFormDefaults,
+    tokenSchema,
+  } from './schemas'
   import FormInput from '../FormInput.svelte'
   import FormSelect from '../FormSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'
@@ -21,34 +24,38 @@
 
   const schema = tokenSchema
 
+  // Saved by `/tokens?/createToken` - see the same note in
+  // EditApplicationForm.svelte.
   const formResult = superForm(
-    defaults(getCreateTokenFormDefaults(), zod(schema as any) as any) as any,
+    defaults(getCreateTokenFormDefaults(), zod(schema as any) as any, {
+      id: CREATE_TOKEN_FORM_ID,
+    }) as any,
     {
-      SPA: true,
       validators: zod(schema as any) as any,
-      async onUpdate({ form: formVal }) {
-        if (!formVal.valid) return
-
+      dataType: 'json',
+      // `invalidate('app:tokens')` below is the only load to re-run.
+      invalidateAll: false,
+      // Also called for a form that fails validation, client or server side.
+      async onUpdate({ result }) {
+        if (result.type !== 'success') return
         try {
-          const tokenId = await tokenService.createToken(
-            formVal.data.role,
-            formVal.data.consumable,
-            formVal.data.expires,
+          await writeToClipboard(
+            `${page.url.host}/signup?token=${result.data.tokenId}`,
           )
-
-          await invalidate('app:applications')
-          try {
-            await writeToClipboard(`${page.url.host}/signup?token=${tokenId}`)
-          } catch {
-            // ignore clipboard errors
-          }
-          await invalidate('app:tokens')
-          alert.trigger('success', 'Changes were saved successfully.')
-          onExit?.()
-        } catch (err: any) {
-          console.error('Token creation error:', err)
-          alert.trigger('error', err.code || err.message, true)
+        } catch {
+          // ignore clipboard errors
         }
+        await invalidate('app:tokens')
+        alert.trigger('success', 'Changes were saved successfully.')
+        onExit?.()
+      },
+      onError({ result }) {
+        console.error('Token creation error:', result.error)
+        alert.trigger(
+          'error',
+          result.error.message || 'Could not create the token.',
+          true,
+        )
       },
     },
   )
@@ -56,7 +63,13 @@
   const { form, enhance, delayed } = formResult
 </script>
 
-<form novalidate use:enhance class="w-full">
+<form
+  novalidate
+  method="POST"
+  action="?/createToken"
+  use:enhance
+  class="w-full"
+>
   <fieldset class="space-y-4" disabled={$delayed}>
     <div class="flex w-full justify-center">
       <div class="w-full max-w-lg space-y-4 text-left">

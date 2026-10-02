@@ -84,6 +84,9 @@ export const editClassFormSchema = classSchema.superRefine((cls, ctx) => {
 /** EditClassForm's id - see `EDIT_APPLICATION_FORM_ID`. */
 export const EDIT_CLASS_FORM_ID = 'editClass'
 
+/** CreateTokenForm's id - see `EDIT_APPLICATION_FORM_ID`. */
+export const CREATE_TOKEN_FORM_ID = 'createToken'
+
 export const tokenSchema = z.object({
   role: z.enum(['reviewer', 'admin']),
   consumable: z.boolean(),

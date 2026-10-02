@@ -5,29 +5,24 @@ import {
   instructorFeedbackCollection,
   registrationsCollection,
 } from '$lib/data/collections'
-import { retreatMealSchedule } from '$lib/data/retreatMealSchedule'
 import type ClassData from '$lib/data/types/ClassData'
 import type Student from '$lib/data/types/Student'
 import type {
   EnrollRequestBody,
   EnrollResponse,
 } from '../../routes/api/enroll/+server'
+import type {
+  CheckInRequestBody,
+  CheckInResponse,
+  MealRequestBody,
+} from '../../routes/api/checkIn/+server'
 import {
   parseAttendanceRecords,
   parseStudentProfileData,
 } from '$lib/helpers/studentDetails'
 import { registrationParentUid } from '$lib/data/docIds'
 import { accountEmailService } from '$lib/services/accountEmailService'
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore'
-import { cloneDeep } from 'lodash-es'
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore'
 
 async function errorMessage(res: Response): Promise<string> {
   try {
@@ -272,23 +267,30 @@ export const studentService = {
   },
 
   /**
-   * Marks a student as checked-in in the `checkIns` collection.
+   * Checks a student in through `/api/checkIn`, and resolves to the check-in
+   * as stored: when (the server's clock) and the meals to track. A student
+   * already checked in keeps their original time and meals.
    */
-  async checkInStudent(studentId: string, now: Date): Promise<void> {
-    const checkInRef = doc(db, checkInsCollection, studentId)
-    await setDoc(
-      checkInRef,
-      {
-        checkedIn: true,
-        checkedInAt: now,
-        food: cloneDeep(retreatMealSchedule),
-      },
-      { merge: true },
-    )
+  async checkInStudent(
+    studentId: string,
+  ): Promise<{ checkedInAt: Date; food: CheckInResponse['food'] }> {
+    const res = await fetch('/api/checkIn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registrationId: studentId,
+      } satisfies CheckInRequestBody),
+    })
+    if (!res.ok) {
+      throw new Error(await errorMessage(res))
+    }
+    const { checkedInAt, food }: CheckInResponse = await res.json()
+    return { checkedInAt: new Date(checkedInAt), food }
   },
 
   /**
-   * Updates meal preferences in the `checkIns` collection.
+   * Records, through `/api/checkIn`, whether a checked-in student has been
+   * served a meal.
    */
   async updateStudentMeal(
     studentId: string,
@@ -296,9 +298,18 @@ export const studentService = {
     meal: string,
     newState: boolean,
   ): Promise<void> {
-    const checkInRef = doc(db, checkInsCollection, studentId)
-    await updateDoc(checkInRef, {
-      [`food.${date}.${meal}`]: newState,
+    const res = await fetch('/api/checkIn', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registrationId: studentId,
+        date,
+        meal,
+        served: newState,
+      } satisfies MealRequestBody),
     })
+    if (!res.ok) {
+      throw new Error(await errorMessage(res))
+    }
   },
 }
