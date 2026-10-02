@@ -8,6 +8,14 @@ service cloud.firestore {
     //
     // admin.gbstem.org and portal.gbstem.org data
     //
+    // The rules below grant reads. The only client write they grant is a
+    // person's own name in users/{uid}; every other write is made by a server
+    // route or form action with the Admin SDK, which bypasses these rules
+    // after validating the request itself. A rule can check who is writing
+    // but not what, nor keep two documents in agreement - so when a feature
+    // needs to save something, add a route, not an `allow write` here. See
+    // admin's README, "Code Organization", section 3.
+    //
 
     // A person's name, and nothing else. Their role is the Auth custom claim
     // (hasRRole below) and has no copy here: this document used to carry one,
@@ -47,8 +55,12 @@ service cloud.firestore {
     //
     // ACCOUNT CREATION TOKENS
     //
+    // A token's id is the secret in an admin/reviewer signup link. Admins
+    // list, create and delete tokens through admin's /tokens page (its load,
+    // its ?/createToken action and /api/tokens), and signup redeems one, all
+    // with the Admin SDK - so no client reads or writes a token.
     match /tokens/{token} {
-      allow read, write: if isAdmin();
+      allow read, write: if false;
     }
 
     //
@@ -154,10 +166,10 @@ service cloud.firestore {
     //
     // Keyed `${uid}-${requestedDate}`. Applicants file a request through
     // portal's /api/slotRequest, which writes it with the Admin SDK and
-    // notifies admins; listing and managing them is admin/reviewer work
-    // (admin's interviewService.fetchSlotRequests).
+    // notifies admins. Admins and reviewers list them (admin's
+    // interviewService.fetchSlotRequests); no client writes one.
     match /interviewTimeRequests/{requestId} {
-      allow read, write: if isAdminOrReviewer();
+      allow read: if isAdminOrReviewer();
     }
 
     //
@@ -171,9 +183,10 @@ service cloud.firestore {
     // the class document rather than from the caller; finding and claiming
     // open requests through /api/substitute; holding the session and filing
     // its feedback through /api/substituteSession and /api/substituteFeedback.
+    // Admin only reads them, for its sub requests log, so no client writes
+    // one.
     match /subRequests/{subRequestId} {
       allow read: if isAdminOrReviewer() || isSubRequestParty(resource.data);
-      allow write: if isAdmin();
     }
 
     //
@@ -191,12 +204,13 @@ service cloud.firestore {
     //
     // REAL-TIME PROGRAM CHECK-INS AND MEAL CHECKOUTS
     //
-    // Staff check students in and record meals from admin's StudentDetails
-    // (studentService). Portal never reads or writes this collection - the
-    // parent-facing check-in it once had is long gone - so parents have no
-    // access, not even to their own children's records.
+    // Staff check students in and record meals from admin's StudentDetails,
+    // which reads a record directly and writes it through admin's
+    // /api/checkIn, with the Admin SDK. Portal never reads or writes this
+    // collection - the parent-facing check-in it once had is long gone - so
+    // parents have no access, not even to their own children's records.
     match /checkIns/{userId} {
-      allow read, write: if isAdminOrReviewer();
+      allow read: if isAdminOrReviewer();
     }
 
     //

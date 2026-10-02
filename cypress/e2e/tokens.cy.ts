@@ -1,5 +1,3 @@
-import { prepareDocForCompare } from '../support/utils'
-
 describe('Section K: Registration Signup Tokens', () => {
   beforeEach(() => {
     // Ignore transient Firebase emulator connection exceptions
@@ -103,12 +101,6 @@ describe('Section K: Registration Signup Tokens', () => {
   })
 })
 
-/**
- * `expires` is a Firestore timestamp, which `getFirestoreDoc` returns as a raw
- * wrapper rather than a date. It is checked separately.
- */
-const TOKEN_TIMESTAMP_FIELDS = ['expires']
-
 describe('Section H: Signup Token Field Coverage', () => {
   beforeEach(() => {
     Cypress.on('uncaught:exception', (err) => {
@@ -177,33 +169,24 @@ describe('Section H: Signup Token Field Coverage', () => {
         return (match as RegExpExecArray)[1]
       })
       .then((tokenId: string) => {
-        cy.getFirebaseAuthToken().then((authToken: string) => {
-          cy.getFirestoreDoc(authToken, 'tokens', tokenId).then((data: any) => {
-            expect(data, 'token document').to.not.equal(null)
-            expect(
-              prepareDocForCompare(data, { omit: TOKEN_TIMESTAMP_FIELDS }),
-            ).to.deep.equal({
-              role: 'reviewer',
-              consumable: true,
-              // Not rendered by the form at all, and the thing that makes a
-              // one-time token work once someone signs up with it.
-              consumers: [],
-            })
-            // Six hours out, not the form's default of 24 - the hours field is
-            // the one input whose effect is invisible in the table.
-            // `getFirestoreDoc`'s value converter has no `timestampValue`
-            // branch, so a Firestore timestamp comes back as the raw REST
-            // wrapper - an ISO string under `timestampValue` - rather than a
-            // date. That is also why `expires` is omitted from the deep-equal
-            // above and checked here instead.
-            expect(data.expires, 'expiry wrapper').to.have.property(
-              'timestampValue',
-            )
-            const expiresAt = new Date(data.expires.timestampValue).getTime()
-            const sixHours = 6 * 60 * 60 * 1000
-            expect(expiresAt).to.be.greaterThan(createdAt + sixHours - 120000)
-            expect(expiresAt).to.be.lessThan(createdAt + sixHours + 120000)
+        // Read with the Admin SDK: firestore.rules lets no client, not even
+        // an admin's, read a token.
+        cy.task('readFirestoreDoc', `tokens/${tokenId}`).then((data: any) => {
+          expect(data, 'token document').to.not.equal(null)
+          const { expires, ...rest } = data
+          expect(rest).to.deep.equal({
+            role: 'reviewer',
+            consumable: true,
+            // Not rendered by the form at all, and the thing that makes a
+            // one-time token work once someone signs up with it.
+            consumers: [],
           })
+          // Six hours out, not the form's default of 24 - the hours field is
+          // the one input whose effect is invisible in the table.
+          const expiresAt = expires._seconds * 1000
+          const sixHours = 6 * 60 * 60 * 1000
+          expect(expiresAt).to.be.greaterThan(createdAt + sixHours - 120000)
+          expect(expiresAt).to.be.lessThan(createdAt + sixHours + 120000)
         })
       })
   })

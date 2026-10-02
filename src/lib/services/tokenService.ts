@@ -1,43 +1,37 @@
-import { db } from '$lib/client/firebase'
-import { addHours } from 'date-fns'
-import { addDoc, collection, deleteDoc, doc } from 'firebase/firestore'
+import type { DeleteTokensRequestBody } from '../../routes/api/tokens/+server'
 
-const tokensCollection = 'tokens'
+/** A server error's message, or the status text when the body isn't JSON. */
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    return (await res.json()).message ?? res.statusText
+  } catch {
+    return res.statusText
+  }
+}
 
 /**
- * Service providing Data Access Layer for signup Tokens.
+ * Service providing Data Access Layer for signup Tokens. Creating one is
+ * CreateTokenForm's `/tokens?/createToken` form action.
  */
 export const tokenService = {
-  /**
-   * Creates a new signup token and returns its document id.
-   */
-  async createToken(
-    role: string,
-    consumable: boolean,
-    expiresHours: number,
-  ): Promise<string> {
-    const snapshot = await addDoc(collection(db, tokensCollection), {
-      role,
-      consumable,
-      expires: addHours(new Date(), expiresHours),
-      consumers: [],
-    } as Data.Token<'pojo'>)
-    return snapshot.id
-  },
-
   /**
    * Deletes a single token.
    */
   async deleteToken(tokenId: string): Promise<void> {
-    await deleteDoc(doc(db, tokensCollection, tokenId))
+    await tokenService.deleteTokens([tokenId])
   },
 
   /**
-   * Deletes multiple tokens in parallel.
+   * Deletes tokens through `/api/tokens`: all of them, or none.
    */
   async deleteTokens(tokenIds: string[]): Promise<void> {
-    await Promise.all(
-      tokenIds.map((tokenId) => deleteDoc(doc(db, tokensCollection, tokenId))),
-    )
+    const res = await fetch('/api/tokens', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tokenIds } satisfies DeleteTokensRequestBody),
+    })
+    if (!res.ok) {
+      throw new Error(await errorMessage(res))
+    }
   },
 }

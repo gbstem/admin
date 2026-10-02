@@ -507,7 +507,8 @@ graph TD
   6. Click the **"Delete"** link on the token row.
   7. Verify the token is removed.
 - **Expected Results (Assertions)**:
-  - Creating a token closes the modal and creates the document.
+  - Creating a token posts to the `/tokens?/createToken` form action, closes the modal and creates the document.
+  - Deleting a token sends a DELETE request to `/api/tokens`, and the document is gone from Firestore.
   - Bulk actions work: Checking multiple rows shows a red `"Delete X tokens"` button which deletes the selected tokens.
 
 ---
@@ -553,7 +554,7 @@ graph TD
   9. Verify the button changes to show: `lunch: already eaten` and switches color.
   10. Click it again to toggle it back to `available`.
 - **Expected Results (Assertions)**:
-  - The check-in details and food checkout actions sync instantly with the Firestore database.
+  - Checking in sends a POST request to `/api/checkIn` and a meal button a PATCH; the `checkIns` document holds the result, with the check-in time set by the server.
 
 ---
 

@@ -988,13 +988,21 @@ describe('classFeedback and instructorFeedback - written only by the Admin SDK',
   })
 })
 
-describe('tokens - account creation tokens are admin-only', () => {
-  it('lets an admin read and write tokens', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(
-      setDoc(doc(db, 'tokens/tok-1'), { role: 'instructor' }),
-    )
-    await assertSucceeds(getDoc(doc(db, 'tokens/tok-1')))
+describe('tokens - account creation tokens are server-only', () => {
+  // The tokens page lists, creates and deletes them with the Admin SDK.
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)('refuses %s reading or writing tokens', async (_, uid, role) => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'tokens/tok-1'), { role: 'admin' })
+    })
+    const db = as(uid, role)
+    await assertFails(getDoc(doc(db, 'tokens/tok-1')))
+    await assertFails(getDocs(collection(db, 'tokens')))
+    await assertFails(setDoc(doc(db, 'tokens/tok-2'), { role: 'admin' }))
+    await assertFails(updateDoc(doc(db, 'tokens/tok-1'), { role: 'admin' }))
+    await assertFails(deleteDoc(doc(db, 'tokens/tok-1')))
   })
 
   it('refuses an instructor reading or writing tokens', async () => {
@@ -1123,7 +1131,7 @@ describe('instructorClasses - server-only class mapping', () => {
   })
 })
 
-describe('interviewTimeRequests - admins/reviewers only; applicants file through the API', () => {
+describe('interviewTimeRequests - admins/reviewers read; applicants file through the API', () => {
   // Keyed `${uid}-${requestedDate}` - see portal's /api/slotRequest.
   const requestId = (uid: string) => `${uid}-2026-10-05T14:00`
   const request = (uid: string) => ({
@@ -1207,35 +1215,39 @@ describe('interviewTimeRequests - admins/reviewers only; applicants file through
     await assertFails(deleteDoc(ref))
   })
 
-  it('lets an admin read, update and delete requests', async () => {
-    await seedRequest(UIDS.undecided)
-    const db = as(UIDS.admin, 'admin')
-    const ref = doc(
-      db,
-      interviewTimeRequestsCollection,
-      requestId(UIDS.undecided),
-    )
-    await assertSucceeds(getDoc(ref))
-    await assertSucceeds(
-      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
-    )
-    await assertSucceeds(deleteDoc(ref))
-  })
-
-  it('lets a reviewer read, update and delete requests', async () => {
-    await seedRequest(UIDS.undecided)
-    const db = as(UIDS.reviewer, 'reviewer')
-    const ref = doc(
-      db,
-      interviewTimeRequestsCollection,
-      requestId(UIDS.undecided),
-    )
-    await assertSucceeds(getDoc(ref))
-    await assertSucceeds(
-      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
-    )
-    await assertSucceeds(deleteDoc(ref))
-  })
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)(
+    'lets %s read requests, but not write one',
+    async (_, uid, role) => {
+      await seedRequest(UIDS.undecided)
+      const db = as(uid, role)
+      const ref = doc(
+        db,
+        interviewTimeRequestsCollection,
+        requestId(UIDS.undecided),
+      )
+      await assertSucceeds(getDoc(ref))
+      await assertSucceeds(
+        getDocs(collection(db, interviewTimeRequestsCollection)),
+      )
+      await assertFails(
+        updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
+      )
+      await assertFails(deleteDoc(ref))
+      await assertFails(
+        setDoc(
+          doc(
+            db,
+            interviewTimeRequestsCollection,
+            requestId(UIDS.interviewing),
+          ),
+          request(UIDS.interviewing),
+        ),
+      )
+    },
+  )
 
   it("refuses a student reading another user's request", async () => {
     await seedRequest(UIDS.undecided)
@@ -1260,7 +1272,7 @@ describe('interviewTimeRequests - admins/reviewers only; applicants file through
   })
 })
 
-describe("subRequests - a request's own people read it; every instructor write goes through the API", () => {
+describe("subRequests - a request's own people read it; every write goes through the API", () => {
   // Keyed `${classId}---${classNumber}`, like portal's subRequestDocId.
   const REQUEST_ID = `${UIDS.accepted}-1---2`
 
@@ -1435,24 +1447,26 @@ describe("subRequests - a request's own people read it; every instructor write g
     )
   })
 
-  it('lets a reviewer read any request, and only an admin manage one', async () => {
-    await seed()
-    const reviewer = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(getDoc(doc(reviewer, 'subRequests', REQUEST_ID)))
-    await assertSucceeds(getDocs(collection(reviewer, 'subRequests')))
-    await assertFails(
-      updateDoc(doc(reviewer, 'subRequests', REQUEST_ID), { notes: 'x' }),
-    )
-    await assertFails(deleteDoc(doc(reviewer, 'subRequests', REQUEST_ID)))
-
-    const admin = as(UIDS.admin, 'admin')
-    await assertSucceeds(
-      updateDoc(doc(admin, 'subRequests', REQUEST_ID), {
-        subRequestStatus: 'NoSubstituteNeeded',
-      }),
-    )
-    await assertSucceeds(deleteDoc(doc(admin, 'subRequests', REQUEST_ID)))
-  })
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)(
+    'lets %s read any request, but not write one',
+    async (_, uid, role) => {
+      await seed()
+      const db = as(uid, role)
+      const ref = doc(db, 'subRequests', REQUEST_ID)
+      await assertSucceeds(getDoc(ref))
+      await assertSucceeds(getDocs(collection(db, 'subRequests')))
+      await assertFails(
+        updateDoc(ref, { subRequestStatus: 'NoSubstituteNeeded' }),
+      )
+      await assertFails(deleteDoc(ref))
+      await assertFails(
+        setDoc(doc(db, 'subRequests', 'class-9---1'), subRequest()),
+      )
+    },
+  )
 
   it('refuses a student or an unauthenticated user', async () => {
     await seed()
@@ -1559,25 +1573,29 @@ describe('checkIns - real-time program check-ins and meal checkouts', () => {
     )
   })
 
-  it('lets an admin read and write any checkIn', async () => {
-    const db = as(UIDS.admin, 'admin')
-    await assertSucceeds(getDoc(doc(db, `checkIns/${UIDS.student}`)))
-    await assertSucceeds(
-      setDoc(doc(db, `checkIns/${UIDS.student}`), {
-        checkedIn: true,
-      }),
-    )
-  })
-
-  it('lets a reviewer read and write any checkIn', async () => {
-    const db = as(UIDS.reviewer, 'reviewer')
-    await assertSucceeds(getDoc(doc(db, `checkIns/${UIDS.student}`)))
-    await assertSucceeds(
-      setDoc(doc(db, `checkIns/${UIDS.student}`), {
-        checkedIn: true,
-      }),
-    )
-  })
+  // Checking in and recording meals go through admin's /api/checkIn.
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)(
+    'lets %s read any checkIn, but not write one',
+    async (_, uid, role) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), `checkIns/${UIDS.student}`), {
+          checkedIn: true,
+          food: { '2026-10-17': { lunch: false } },
+        })
+      })
+      const db = as(uid, role)
+      const ref = doc(db, `checkIns/${UIDS.student}`)
+      await assertSucceeds(getDoc(ref))
+      await assertFails(updateDoc(ref, { 'food.2026-10-17.lunch': true }))
+      await assertFails(deleteDoc(ref))
+      await assertFails(
+        setDoc(doc(db, `checkIns/${UIDS.otherStudent}`), { checkedIn: true }),
+      )
+    },
+  )
 
   it('refuses an unauthenticated user', async () => {
     const db = testEnv.unauthenticatedContext().firestore()

@@ -1,5 +1,12 @@
-import { error } from '@sveltejs/kit'
-import type { PageServerLoad } from './$types'
+import {
+  CREATE_TOKEN_FORM_ID,
+  tokenSchema,
+} from '$lib/components/forms/schemas'
+import { verifyAdmin } from '$lib/server/apiHelpers'
+import { error, fail } from '@sveltejs/kit'
+import { superValidate } from 'sveltekit-superforms'
+import { zod } from 'sveltekit-superforms/adapters'
+import type { Actions, PageServerLoad } from './$types'
 import { tokenService } from '$lib/server/tokenService'
 
 import { parsePagination } from '$lib/utils'
@@ -30,3 +37,19 @@ export const load = (async ({ depends, locals, url }) => {
     throw error(400, 'You do not have permission to view this page.')
   }
 }) satisfies PageServerLoad
+
+export const actions: Actions = {
+  /**
+   * CreateTokenForm's save. Admins only: a token grants whoever holds it an
+   * admin or reviewer account. Returns the new token's id for the signup
+   * link.
+   */
+  createToken: async ({ request, locals }) => {
+    verifyAdmin(locals)
+    const form = await superValidate(request, zod(tokenSchema), {
+      id: CREATE_TOKEN_FORM_ID,
+    })
+    if (!form.valid) return fail(400, { form })
+    return { form, tokenId: await tokenService.createToken(form.data) }
+  },
+}
