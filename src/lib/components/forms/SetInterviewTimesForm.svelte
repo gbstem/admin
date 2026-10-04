@@ -636,57 +636,69 @@
               </div>
             {/if}
 
-            {#if (interview.interviewSlotStatus === 'available' || interview.interviewSlotStatus === 'pending') && (isMyInterview(interview) || page.data.user?.role === 'admin')}
-              <div>
-                <Button
-                  color="blue"
-                  class="my-4 px-2 py-1"
-                  onclick={() => openSlotForEdit(interview)}>Edit</Button
-                >
+            {@const canEdit =
+              (interview.interviewSlotStatus === 'available' ||
+                interview.interviewSlotStatus === 'pending') &&
+              (isMyInterview(interview) || page.data.user?.role === 'admin')}
+            {@const canMarkMissed =
+              canMarkSlotMissed(interview) &&
+              canUserModifySlot(
+                interview,
+                currentUser?.object?.uid,
+                page.data.user?.role,
+              )}
+            {#if canEdit || canMarkMissed}
+              <div class="my-4 flex flex-wrap gap-2">
+                {#if canEdit}
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    onclick={() => openSlotForEdit(interview)}>Edit</Button
+                  >
+                {/if}
+                {#if canMarkMissed && markingMissed !== interview.id}
+                  <Button
+                    color="gray"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => (markingMissed = interview.id)}
+                    >Mark missed</Button
+                  >
+                {/if}
               </div>
             {/if}
 
-            {#if canMarkSlotMissed(interview) && canUserModifySlot(interview, currentUser?.object?.uid, page.data.user?.role)}
-              {#if markingMissed === interview.id}
-                <!-- Either side may have missed it; the applicant can be
-                     scheduled again whichever it was. -->
-                <div class="my-4 rounded-lg bg-yellow-50 p-3">
-                  <p>
-                    Who missed this interview? {interview.intervieweeFirstName}
-                    will be able to schedule again either way.
-                  </p>
-                  <div class="mt-2 flex flex-wrap gap-2">
-                    <Button
-                      color="blue"
-                      class="px-2 py-1"
-                      type="button"
-                      onclick={() => markMissed(interview, 'interviewer')}
-                      >The interviewer couldn't make it</Button
-                    >
-                    <Button
-                      color="blue"
-                      class="px-2 py-1"
-                      type="button"
-                      onclick={() => markMissed(interview, 'interviewee')}
-                      >The applicant didn't attend</Button
-                    >
-                    <Button
-                      color="gray"
-                      class="px-2 py-1"
-                      type="button"
-                      onclick={() => (markingMissed = '')}>Cancel</Button
-                    >
-                  </div>
+            {#if canMarkMissed && markingMissed === interview.id}
+              <!-- Either side may have missed it; the applicant can be
+                   scheduled again whichever it was. -->
+              <div class="mb-4 rounded-lg bg-yellow-50 p-3">
+                <p>
+                  Who missed this interview? {interview.intervieweeFirstName}
+                  will be able to schedule again either way.
+                </p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => markMissed(interview, 'interviewer')}
+                    >The interviewer couldn't make it</Button
+                  >
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => markMissed(interview, 'interviewee')}
+                    >The applicant didn't attend</Button
+                  >
+                  <Button
+                    color="gray"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => (markingMissed = '')}>Cancel</Button
+                  >
                 </div>
-              {:else}
-                <Button
-                  color="gray"
-                  class="my-4 px-2 py-1"
-                  type="button"
-                  onclick={() => (markingMissed = interview.id)}
-                  >Mark missed</Button
-                >
-              {/if}
+              </div>
             {/if}
           </Card>
         {/if}
