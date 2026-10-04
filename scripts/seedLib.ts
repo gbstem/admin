@@ -361,13 +361,14 @@ export async function seedEmulator(): Promise<void> {
     instructorFirstName: 'Demo',
     instructorLastName: 'Instructor',
     meetingLink: 'https://zoom.us/j/123456789',
+    // The second session is dated from the seed run, not the semester's
+    // dates, so it is still to come whenever the suite runs - portal's sub
+    // request and feedback tests need a future session. Dated from
+    // classesStart, it went into the past partway through the semester.
     meetingTimes: [
       admin.firestore.Timestamp.fromDate(new Date()),
       admin.firestore.Timestamp.fromDate(
-        new Date(
-          new Date(semesterDates.classesStart).getTime() +
-            7 * 24 * 60 * 60 * 1000,
-        ),
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       ),
     ],
     completedClassDates: [],
@@ -394,10 +395,7 @@ export async function seedEmulator(): Promise<void> {
     meetingTimes: [
       admin.firestore.Timestamp.fromDate(new Date()),
       admin.firestore.Timestamp.fromDate(
-        new Date(
-          new Date(semesterDates.classesStart).getTime() +
-            8 * 24 * 60 * 60 * 1000,
-        ),
+        new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
       ),
     ],
     completedClassDates: [],
@@ -1283,10 +1281,7 @@ export async function seedEmulator(): Promise<void> {
       meetingTimes = [
         admin.firestore.Timestamp.fromDate(new Date()),
         admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date(semesterDates.classesStart).getTime() +
-              7 * 24 * 60 * 60 * 1000,
-          ),
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ),
       ]
       classStatuses = ['ClassNotHeld', 'ClassInFuture']
@@ -1294,10 +1289,7 @@ export async function seedEmulator(): Promise<void> {
       meetingTimes = [
         admin.firestore.Timestamp.fromDate(new Date()),
         admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date(semesterDates.classesStart).getTime() +
-              7 * 24 * 60 * 60 * 1000,
-          ),
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ),
       ]
       classStatuses = ['EverythingComplete', 'ClassInFuture']
