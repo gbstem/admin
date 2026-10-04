@@ -50,6 +50,7 @@ import {
 import {
   createInterviewSlot,
   deleteInterviewSlot,
+  markInterviewSlotMissed,
   sendInterviewAssignedEmail,
   updateInterviewSlot,
 } from '$lib/server/interviewSlots'
@@ -137,6 +138,7 @@ describe('createInterviewSlot', () => {
     ['is missing', undefined, 404],
     ['already has an interview', application({ interview: true }), 409],
     ['was never submitted', application({ submitted: false }), 409],
+    ['is decided', application({ decisionType: 'rejected' }), 409],
   ])(
     'refuses to assign when the application %s, writing nothing',
     async (_, stored, status) => {
@@ -149,6 +151,15 @@ describe('createInterviewSlot', () => {
       expect(mockTransaction.update).not.toHaveBeenCalled()
     },
   )
+
+  // `interview` invites the applicant to schedule; it decides nothing.
+  it('assigns an applicant invited to interview', async () => {
+    docs[APP] = application({ decided: true, decisionType: 'interview' })
+
+    await createInterviewSlot(admin, { date: DATE, meetingLink: LINK }, 'app-1')
+
+    expect(docs[APP].meta.interview).toBe(true)
+  })
 
   // Same time, same interviewer, same id: replacing it would drop the booking
   // and leave the applicant flagged with no slot.
@@ -223,6 +234,18 @@ describe('updateInterviewSlot', () => {
       updateInterviewSlot(admin, 'nope', { date: NEW_DATE, meetingLink: LINK }),
     ).rejects.toMatchObject({ status: 404 })
   })
+
+  it('refuses (409) a missed slot, which stays as the record', async () => {
+    docs[SLOT].interviewSlotStatus = 'missed'
+
+    await expect(
+      updateInterviewSlot(admin, SLOT_ID, {
+        date: NEW_DATE,
+        meetingLink: LINK,
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(mockTransaction.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('deleteInterviewSlot', () => {
@@ -249,6 +272,22 @@ describe('deleteInterviewSlot', () => {
     expect(mockTransaction.update).not.toHaveBeenCalled()
   })
 
+  // Marking it missed already cleared the flag, and the applicant may hold a
+  // new booking by now.
+  it("deletes a missed slot leaving its applicant's meta.interview alone", async () => {
+    docs[SLOT] = {
+      interviewerUid: 'rev-1',
+      intervieweeId: 'applicant-uid',
+      interviewSlotStatus: 'missed',
+    }
+    docs[BOOKED_APP] = application({ interview: true })
+
+    await deleteInterviewSlot(reviewer, SLOT_ID)
+
+    expect(docs[SLOT]).toBeUndefined()
+    expect(docs[BOOKED_APP].meta.interview).toBe(true)
+  })
+
   it('deletes an open slot without reading any application', async () => {
     docs[SLOT] = { interviewerUid: 'rev-1', intervieweeId: '' }
 
@@ -273,6 +312,76 @@ describe('deleteInterviewSlot', () => {
   })
 })
 
+describe('markInterviewSlotMissed', () => {
+  const BOOKED_APP = `${applicationsCollection}/applicant-uid`
+  const AFTER = new Date(DATE.getTime() + 60 * 60 * 1000)
+  const booked = (overrides: Record<string, unknown> = {}) => ({
+    interviewerUid: 'rev-1',
+    intervieweeId: 'applicant-uid',
+    interviewSlotStatus: 'pending',
+    date: DATE,
+    ...overrides,
+  })
+
+  it.each([
+    ['its interviewer', reviewer, 'interviewer'],
+    ['an admin', admin, 'interviewee'],
+  ] as const)(
+    'lets %s record who missed it, freeing the applicant in the same transaction',
+    async (_, caller, missedBy) => {
+      docs[SLOT] = booked()
+      docs[BOOKED_APP] = application({ interview: true })
+
+      await markInterviewSlotMissed(caller, SLOT_ID, missedBy, AFTER)
+
+      // The booking stays on the slot as the record of what was missed.
+      expect(docs[SLOT]).toMatchObject({
+        intervieweeId: 'applicant-uid',
+        interviewSlotStatus: 'missed',
+        missedBy,
+      })
+      expect(docs[BOOKED_APP].meta.interview).toBe(false)
+    },
+  )
+
+  it('marks the slot even when its application is gone', async () => {
+    docs[SLOT] = booked()
+
+    await markInterviewSlotMissed(reviewer, SLOT_ID, 'interviewee', AFTER)
+
+    expect(docs[SLOT].interviewSlotStatus).toBe('missed')
+    expect(docs[BOOKED_APP]).toBeUndefined()
+  })
+
+  it.each([
+    ['gone', undefined, 404],
+    [
+      'open',
+      booked({ intervieweeId: '', interviewSlotStatus: 'available' }),
+      409,
+    ],
+    ['already missed', booked({ interviewSlotStatus: 'missed' }), 409],
+    ['still to come', booked({ date: new Date(AFTER.getTime() + 1) }), 409],
+  ])('refuses a slot that is %s, writing nothing', async (_, slot, status) => {
+    if (slot) docs[SLOT] = slot
+    docs[BOOKED_APP] = application({ interview: true })
+
+    await expect(
+      markInterviewSlotMissed(admin, SLOT_ID, 'interviewee', AFTER),
+    ).rejects.toMatchObject({ status })
+    expect(mockTransaction.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses (403) another reviewer's slot", async () => {
+    docs[SLOT] = booked()
+
+    await expect(
+      markInterviewSlotMissed(otherReviewer, SLOT_ID, 'interviewer', AFTER),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockTransaction.update).not.toHaveBeenCalled()
+  })
+})
+
 describe('sendInterviewAssignedEmail', () => {
   const slot = {
     id: SLOT_ID,
@@ -283,7 +392,7 @@ describe('sendInterviewAssignedEmail', () => {
     intervieweeId: 'applicant-uid',
     intervieweeFirstName: 'Ada',
     intervieweeLastName: 'Lovelace',
-    interviewSlotStatus: 'pending',
+    interviewSlotStatus: 'pending' as const,
   }
 
   it('mails the applicant, copying the interviewer, with the time in gbSTEM time', async () => {

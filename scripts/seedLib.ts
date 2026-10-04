@@ -1016,6 +1016,8 @@ export async function seedEmulator(): Promise<void> {
       interview: true,
       submitted: true,
       decided: true,
+      // Copied from the decision below, as /api/decision does.
+      decisionType: 'accepted',
     },
     timestamps: {
       created: admin.firestore.FieldValue.serverTimestamp(),
@@ -1060,6 +1062,7 @@ export async function seedEmulator(): Promise<void> {
       interview: true,
       submitted: true,
       decided: true,
+      decisionType: 'rejected',
     },
   }
   validateApplication(appInstructorRejected, 'instructor-rejected-uid')
@@ -1085,9 +1088,12 @@ export async function seedEmulator(): Promise<void> {
     },
     meta: {
       uid: 'instructor-interview-uid',
-      interview: true,
+      // Invited to interview and not yet booked: no slot names them, which
+      // is what lets portal's Test Case 8e request a time and book one.
+      interview: false,
       submitted: true,
       decided: true,
+      decisionType: 'interview',
     },
   }
   validateApplication(appInstructorInterview, 'instructor-interview-uid')
@@ -1119,6 +1125,7 @@ export async function seedEmulator(): Promise<void> {
       interview: true,
       submitted: true,
       decided: true,
+      decisionType: 'accepted',
     },
   }
   validateApplication(appInstructorCohost, 'instructor-cohost-uid')
@@ -1156,6 +1163,7 @@ export async function seedEmulator(): Promise<void> {
       interview: true,
       submitted: true,
       decided: true,
+      decisionType: 'substitute',
     },
   }
   validateApplication(appInstructorSubstitute, 'instructor-substitute-uid')
@@ -1191,6 +1199,7 @@ export async function seedEmulator(): Promise<void> {
     )
     const inPerson = i % 5 === 0 // 6 inPerson
     const isDecided = i % 6 === 0 // 5 decided
+    const decision = i % 12 === 0 ? 'accepted' : 'waitlisted'
 
     const createdDate = new Date(Date.now() - (30 - i) * 60 * 60 * 1000)
 
@@ -1233,6 +1242,7 @@ export async function seedEmulator(): Promise<void> {
         interview: true,
         submitted: submitted,
         decided: isDecided,
+        decisionType: isDecided ? decision : null,
       },
       timestamps: {
         created: admin.firestore.Timestamp.fromDate(createdDate),
@@ -1248,7 +1258,7 @@ export async function seedEmulator(): Promise<void> {
         .collection(decisionsCollection)
         .doc(id)
         .set({
-          type: i % 12 === 0 ? 'accepted' : 'waitlisted',
+          type: decision,
           likelyDecision: i % 12 === 0 ? 'likely yes' : 'likely waitlist',
           course: courses[i % courses.length],
           time: 'Monday/Wednesday 16:00',

@@ -64,6 +64,13 @@ const flagged = (id: string) => ({
   data: { 'meta.decided': true },
 })
 
+// An official decision also copies its type onto the application.
+const decidedAs = (id: string, decision: Data.Decision) => ({
+  op: 'update',
+  path: APP(id),
+  data: { 'meta.decided': true, 'meta.decisionType': decision },
+})
+
 beforeEach(() => {
   jest.clearAllMocks()
   writes.length = 0
@@ -149,13 +156,13 @@ describe('decideWithScorecard', () => {
         // No merge: the scorecard is the whole document.
         options: undefined,
       },
-      flagged('a1'),
+      decidedAs('a1', 'accepted'),
     ])
   })
 })
 
 describe('decideInBulk', () => {
-  it('merges the type alone into each decision, leaving scorecards, and flags each application', async () => {
+  it('merges the type alone into each decision, leaving scorecards, and copies it to each application', async () => {
     docs[APP('a1')] = application('Ada')
     docs[APP('a2')] = application('Grace')
 
@@ -174,8 +181,8 @@ describe('decideInBulk', () => {
       })),
     )
     expect(writes.filter((w) => w.op === 'update')).toEqual([
-      flagged('a1'),
-      flagged('a2'),
+      decidedAs('a1', 'rejected'),
+      decidedAs('a2', 'rejected'),
     ])
     expect(mockRunTransaction).toHaveBeenCalledTimes(1)
   })

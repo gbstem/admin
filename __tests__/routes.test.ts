@@ -1471,18 +1471,16 @@ describe('api/resolveEmails', () => {
       })
     })
 
-    // Requests written before the `uid` field existed carry it only in their
-    // `${uid}-${date}` id, which is where parseSlotRequestDoc reads it too.
-    it('reads the uid out of a legacy request id', async () => {
+    // The uid comes from the request's own field, never parsed out of its id.
+    it('refuses a request with no uid field', async () => {
       mockSlotRequests({ 'applicant-uid-2026-09-30': {} })
       mockRequest.json.mockResolvedValue(requestLookup())
-      mockAdminAuth.getUsers.mockResolvedValueOnce({
-        users: [{ uid: 'applicant-uid', email: 'applicant@example.com' }],
+
+      await expect(post()).rejects.toMatchObject({
+        status: 403,
+        message: EMAIL_LOOKUP_REFUSED,
       })
-
-      const res: any = await post()
-
-      expect(res.body.emails['applicant-uid']).toBe('applicant@example.com')
+      expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
     })
 
     it('refuses a uid that filed none of the named requests', async () => {

@@ -4,7 +4,7 @@ import {
   resolveSemester,
   semesterCollectionPath,
 } from '$lib/data/collections'
-import { registrationParentUid, slotRequestUid } from '$lib/data/docIds'
+import { registrationParentUid } from '$lib/data/docIds'
 import type ClassData from '$lib/data/types/ClassData'
 import { adminDb } from '$lib/server/firebase'
 import { error } from '@sveltejs/kit'
@@ -129,9 +129,7 @@ const policies: { [I in Intent]: IntentPolicy<I> } = {
   },
   slotRequestApplicants: {
     roles: ['admin', 'reviewer'],
-    // The applicant who filed each request: the document's own `uid` field,
-    // or on requests written before that field existed, the uid its id was
-    // built from - the same two places parseSlotRequestDoc reads.
+    // The applicant who filed each request, from its `uid` field.
     async resolvableUids(_caller, { requestIds }) {
       const snaps = await adminDb.getAll(
         ...requestIds.map((id) =>
@@ -139,10 +137,7 @@ const policies: { [I in Intent]: IntentPolicy<I> } = {
         ),
       )
       return snaps
-        .map((snap) => {
-          if (!snap.exists) return ''
-          return snap.data()?.uid || slotRequestUid(snap.id) || ''
-        })
+        .map((snap) => (snap.exists ? snap.data()?.uid || '' : ''))
         .filter(Boolean)
     },
   },

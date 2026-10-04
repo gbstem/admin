@@ -6,6 +6,7 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),
   query: jest.fn(() => ({})),
+  where: jest.fn((...args) => args),
   getDocs: jest.fn(),
 }))
 
@@ -59,7 +60,7 @@ describe('interviewService (Data Access Layer)', () => {
   })
 
   describe('fetchEligibleInterviewees', () => {
-    it('queries applications and filters to eligible interviewees', async () => {
+    it('reads unscheduled applications and keeps those needing an interview', async () => {
       const mockDocs = [
         {
           id: 'app-1',
@@ -71,8 +72,12 @@ describe('interviewService (Data Access Layer)', () => {
         {
           id: 'app-2',
           data: () => ({
-            meta: { interview: true, submitted: true },
-            personal: { firstName: 'Already', lastName: 'Scheduled' },
+            meta: {
+              interview: false,
+              submitted: true,
+              decisionType: 'rejected',
+            },
+            personal: { firstName: 'Already', lastName: 'Decided' },
           }),
         },
       ]
@@ -81,9 +86,19 @@ describe('interviewService (Data Access Layer)', () => {
       })
 
       const result = await interviewService.fetchEligibleInterviewees()
-      expect(result.names).toEqual([{ name: 'Timmy Tester' }])
-      expect(result.options).toHaveLength(1)
-      expect((result.options[0] as any).docId).toBe('app-1')
+      expect(firestore.where).toHaveBeenCalledWith(
+        'meta.interview',
+        '==',
+        false,
+      )
+      expect(result).toEqual([
+        {
+          applicationId: 'app-1',
+          uid: 'app-1',
+          firstName: 'Timmy',
+          lastName: 'Tester',
+        },
+      ])
     })
   })
 
@@ -196,6 +211,24 @@ describe('interviewService (Data Access Layer)', () => {
       await interviewService.deleteInterviewSlot({ id: 'slot-1' })
 
       expect(sent()).toEqual({ method: 'DELETE', body: { slotId: 'slot-1' } })
+    })
+
+    it('markInterviewSlotMissed names the slot and who missed it', async () => {
+      respond({})
+
+      await interviewService.markInterviewSlotMissed(
+        { id: 'slot-1' },
+        'interviewer',
+      )
+
+      expect(sent()).toEqual({
+        method: 'PATCH',
+        body: {
+          action: 'markMissed',
+          slotId: 'slot-1',
+          missedBy: 'interviewer',
+        },
+      })
     })
 
     it("throws the route's refusal", async () => {

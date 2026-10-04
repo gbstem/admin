@@ -32,6 +32,7 @@ import { page } from '$app/state'
 import { user as mockUserStore } from '$lib/client/firebase'
 import SetInterviewTimesForm from '$lib/components/forms/SetInterviewTimesForm.svelte'
 import { interviewService } from '$lib/services/interviewService'
+import { toLocalISOString } from '$lib/utils'
 
 const authUser = {
   object: {
@@ -106,12 +107,14 @@ describe('SetInterviewTimesForm Component', () => {
     jest.spyOn(interviewService, 'fetchSlotRequests').mockResolvedValue([])
     jest
       .spyOn(interviewService, 'fetchEligibleInterviewees')
-      .mockResolvedValue({ names: [], options: [] })
+      .mockResolvedValue([])
     jest
       .spyOn(interviewService, 'createOrAssignInterviewSlot')
       .mockResolvedValue({ id: 'new-slot', emailSent: true })
     jest.spyOn(interviewService, 'deleteInterviewSlot').mockResolvedValue()
     jest.spyOn(interviewService, 'updateInterviewSlot').mockResolvedValue()
+    jest.spyOn(interviewService, 'markInterviewSlotMissed').mockResolvedValue()
+    jest.spyOn(interviewService, 'fetchSlotRequestEmails').mockResolvedValue({})
   })
 
   afterEach(() => {
@@ -328,5 +331,224 @@ describe('SetInterviewTimesForm Component', () => {
     expect(within(container).queryByRole('link')).toBeNull()
 
     unmount(app)
+  })
+
+  describe('interview time requests', () => {
+    const ada = {
+      applicationId: 'ada',
+      uid: 'ada',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+    }
+    const inDays = (days: number) =>
+      new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+    const request = (uid: string, id: string, date: Date) => ({
+      id,
+      uid,
+      date,
+      firstName: uid,
+      lastName: '',
+    })
+
+    it("lists an eligible applicant's requests together, and no one else's", async () => {
+      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
+        request('ada', 'ada-1', inDays(1)),
+        request('ada', 'ada-2', inDays(2)),
+        // Scheduled or decided: not among the eligible interviewees.
+        request('bob', 'bob-1', inDays(1)),
+      ])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      const app = await mountAuthenticated()
+
+      await waitFor(() => {
+        expect(within(container).getByText('Ada Lovelace')).toBeInTheDocument()
+      })
+      expect(within(container).getAllByText('Schedule this')).toHaveLength(2)
+      expect(within(container).queryByText('bob')).toBeNull()
+
+      unmount(app)
+    })
+
+    it('fills the Add A Time Slot card from a request', async () => {
+      const date = inDays(1)
+      date.setSeconds(0, 0)
+      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
+        request('ada', 'ada-1', date),
+      ])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      const app = await mountAuthenticated()
+
+      await waitFor(() => {
+        expect(within(container).getByText('Schedule this')).toBeInTheDocument()
+      })
+      fireEvent.click(within(container).getByText('Schedule this'))
+      flushSync()
+
+      await waitFor(() => {
+        expect(
+          within(container).getByLabelText('Assign Interviewee', {
+            exact: false,
+          }),
+        ).toHaveValue('Ada Lovelace')
+      })
+      expect(
+        within(container).getByLabelText('Set Date (your local time)', {
+          exact: false,
+        }),
+      ).toHaveValue(toLocalISOString(date))
+
+      unmount(app)
+    })
+
+    it('tells two applicants with the same name apart in the picker', async () => {
+      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
+        request('ada-2', 'ada-2-1', inDays(1)),
+      ])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([
+        ada,
+        { ...ada, applicationId: 'ada-2', uid: 'ada-2' },
+      ])
+      const app = await mountAuthenticated()
+
+      await waitFor(() => {
+        expect(within(container).getByText('Schedule this')).toBeInTheDocument()
+      })
+      fireEvent.click(within(container).getByText('Schedule this'))
+      flushSync()
+
+      await waitFor(() => {
+        expect(
+          within(container).getByLabelText('Assign Interviewee', {
+            exact: false,
+          }),
+        ).toHaveValue('Ada Lovelace (ada-2)')
+      })
+
+      unmount(app)
+    })
+
+    it('offers Schedule this to admins only', async () => {
+      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
+        request('ada', 'ada-1', inDays(1)),
+      ])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      const app = await mountAuthenticated(reviewerAuthUser)
+
+      await waitFor(() => {
+        expect(within(container).getByText('Ada Lovelace')).toBeInTheDocument()
+      })
+      expect(within(container).queryByText('Schedule this')).toBeNull()
+
+      unmount(app)
+    })
+  })
+
+  describe('marking an interview missed', () => {
+    const pastBookedSlot: Data.InterviewSlot = {
+      ...ownSlot,
+      id: 'slot-past',
+      date: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      intervieweeId: 'ada',
+      intervieweeFirstName: 'Ada',
+      intervieweeLastName: 'Lovelace',
+      interviewSlotStatus: 'pending',
+      meetingLink: 'https://meet.google.com/slot-past',
+    }
+
+    async function showPastSlots() {
+      fireEvent.click(
+        within(container).getByLabelText('Only show future interview slots'),
+      )
+      flushSync()
+      await waitFor(() => {
+        expect(
+          within(container).getByText(pastBookedSlot.meetingLink),
+        ).toBeInTheDocument()
+      })
+    }
+
+    it.each([
+      ["The interviewer couldn't make it", 'interviewer'],
+      ["The applicant didn't attend", 'interviewee'],
+    ])(
+      'records who missed it ("%s") and reloads who needs an interview',
+      async (choice, missedBy) => {
+        ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+          pastBookedSlot,
+        ])
+        const app = await mountAuthenticated()
+        await showPastSlots()
+        const loadsBefore = (
+          interviewService.fetchEligibleInterviewees as jest.Mock
+        ).mock.calls.length
+
+        fireEvent.click(within(container).getByText('Mark missed'))
+        flushSync()
+        fireEvent.click(within(container).getByText(choice))
+        flushSync()
+
+        await waitFor(() => {
+          expect(interviewService.markInterviewSlotMissed).toHaveBeenCalledWith(
+            pastBookedSlot,
+            missedBy,
+          )
+        })
+        await waitFor(() => {
+          expect(
+            (interviewService.fetchEligibleInterviewees as jest.Mock).mock.calls
+              .length,
+          ).toBeGreaterThan(loadsBefore)
+        })
+
+        unmount(app)
+      },
+    )
+
+    it("isn't offered on a booked slot still to come", async () => {
+      ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+        {
+          ...pastBookedSlot,
+          date: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        },
+      ])
+      const app = await mountAuthenticated()
+
+      await waitFor(() => {
+        expect(
+          within(container).getByText(pastBookedSlot.meetingLink),
+        ).toBeInTheDocument()
+      })
+      expect(within(container).queryByText('Mark missed')).toBeNull()
+
+      unmount(app)
+    })
+
+    it('shows a missed slot as missed, by whom, with nothing left to do', async () => {
+      ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+        {
+          ...pastBookedSlot,
+          interviewSlotStatus: 'missed',
+          missedBy: 'interviewer',
+        },
+      ])
+      const app = await mountAuthenticated()
+      await showPastSlots()
+
+      expect(
+        within(container).getByText('missed (by the interviewer)'),
+      ).toBeInTheDocument()
+      expect(within(container).queryByText('Mark missed')).toBeNull()
+      expect(within(container).queryByText('Edit')).toBeNull()
+
+      unmount(app)
+    })
   })
 })

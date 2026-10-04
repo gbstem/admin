@@ -75,6 +75,15 @@ declare global {
       MessageStream: 'outbound'
     }
 
+    /**
+     * `available` is open for booking; `pending` names an interviewee;
+     * `missed` names one whose interview didn't happen - see `missedBy`.
+     */
+    type InterviewSlotStatus = 'available' | 'pending' | 'missed'
+
+    /** Which side of a missed interview didn't make it. */
+    type InterviewMissedBy = 'interviewer' | 'interviewee'
+
     type InterviewSlot = {
       date: string
       id: string
@@ -85,7 +94,9 @@ declare global {
       // The interviewer's account. Their current address is resolved from it
       // when the slot needs one; no address is stored on the slot.
       interviewerUid: string
-      interviewSlotStatus: string
+      interviewSlotStatus: InterviewSlotStatus
+      // Set only on a `missed` slot.
+      missedBy?: InterviewMissedBy
       meetingLink: string
     }
 
@@ -224,14 +235,28 @@ declare global {
       meta: {
         uid: string
         /**
-         * Whether an interview slot currently names this applicant - true
-         * only while `Data.InterviewSlot.intervieweeId` is theirs. Set
-         * alongside the slot write (see interviewService), never as a
-         * standalone intent/pipeline flag.
+         * Whether an interview slot currently holds this applicant's
+         * interview - true while a slot names them in `intervieweeId` and
+         * isn't `missed`, whether that interview is still to come or has
+         * been held. Set alongside the slot write (see
+         * server/interviewSlots.ts), never as a standalone intent/pipeline
+         * flag.
          */
         interview: boolean
         submitted: boolean
+        /**
+         * Whether a decision document exists for this application. Notes or
+         * a likely decision alone create one, so this does not mean the
+         * applicant has been decided - `decisionType` says that.
+         */
         decided: boolean
+        /**
+         * The official decision's type, copied from the decision document in
+         * the same transaction that records it (server/applicationDecisions),
+         * so scheduling can tell a decided applicant from the application
+         * alone. Absent or null until there is one. See isFinalDecision.
+         */
+        decisionType?: Decision | null
       }
       timestamps: {
         created: T extends 'client'

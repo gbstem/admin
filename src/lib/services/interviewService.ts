@@ -10,15 +10,17 @@ import type {
   CreateSlotRequestBody,
   CreateSlotResponse,
   DeleteSlotRequestBody,
+  MarkMissedRequestBody,
   UpdateSlotRequestBody,
 } from '../../routes/api/interviewSlot/+server'
 import {
   filterEligibleInterviewees,
+  type EligibleInterviewee,
   parseInterviewSlotDoc,
   parseSlotRequestDoc,
   sortSlotRequestsByDate,
 } from '$lib/helpers/setInterviewTimes'
-import { collection, getDocs, query } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 
 /** Sends one slot write to `/api/interviewSlot`, throwing its refusal. */
 async function slotRequest(method: string, body: unknown): Promise<Response> {
@@ -54,9 +56,6 @@ export const interviewService = {
   },
 
   /**
-   * Fetches all slot requests from Firestore sorted by date.
-   */
-  /**
    * The current addresses of the applicants who filed `requests`, keyed by
    * request id. A request whose applicant account is gone is absent, and the
    * list shows no address - requests store none.
@@ -74,6 +73,7 @@ export const interviewService = {
     )
   },
 
+  /** Fetches this semester's slot requests, sorted by date. */
   async fetchSlotRequests(): Promise<Data.SlotRequest[]> {
     const slotRequests: Data.SlotRequest[] = []
     const q = query(collection(db, interviewTimeRequestsCollection))
@@ -88,13 +88,14 @@ export const interviewService = {
   },
 
   /**
-   * Fetches all applicant options eligible for interviews.
+   * The applicants who still need an interview (see needsInterview), sorted
+   * by name. Only applications not already interviewing are read.
    */
-  async fetchEligibleInterviewees(): Promise<{
-    names: { name: string }[]
-    options: Data.Application<'client'>[]
-  }> {
-    const q = query(collection(db, applicationsCollection))
+  async fetchEligibleInterviewees(): Promise<EligibleInterviewee[]> {
+    const q = query(
+      collection(db, applicationsCollection),
+      where('meta.interview', '==', false),
+    )
     const querySnapshot = await getDocs(q)
     return filterEligibleInterviewees(querySnapshot.docs)
   },
@@ -127,6 +128,21 @@ export const interviewService = {
       date: new Date(interview.date).toISOString(),
       meetingLink: interview.meetingLink,
     } satisfies UpdateSlotRequestBody)
+  },
+
+  /**
+   * Records that a booked slot's interview didn't happen, whichever side
+   * missed it. The server frees the applicant to be scheduled again.
+   */
+  async markInterviewSlotMissed(
+    slot: Pick<Data.InterviewSlot, 'id'>,
+    missedBy: Data.InterviewMissedBy,
+  ): Promise<void> {
+    await slotRequest('PATCH', {
+      action: 'markMissed',
+      slotId: slot.id,
+      missedBy,
+    } satisfies MarkMissedRequestBody)
   },
 
   /**

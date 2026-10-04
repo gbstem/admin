@@ -71,9 +71,9 @@ export function toApplicationFormValues(v: Data.Application<'client'>) {
 /**
  * Fields inside the application document that this form must never write.
  *
- * `meta` is the whole of it - `meta.decided`/`meta.interview`/`meta.submitted`
- * are owned by the decision actions and by the applicant's own submit in the
- * portal. `applicationEditedFields` omits it wholesale rather than field by
+ * `meta` is the whole of it - `meta.decided`/`meta.decisionType`/
+ * `meta.interview`/`meta.submitted` are owned by the decision actions, the
+ * interview slot writes and the applicant's own submit in the portal. `applicationEditedFields` omits it wholesale rather than field by
  * field, so this list stays empty unless a *nested* admin-owned field appears
  * inside one of the five groups below.
  */

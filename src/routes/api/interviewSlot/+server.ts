@@ -8,6 +8,7 @@ import { isDocId } from '$lib/server/editTarget'
 import {
   createInterviewSlot,
   deleteInterviewSlot,
+  markInterviewSlotMissed,
   sendInterviewAssignedEmail,
   updateInterviewSlot,
 } from '$lib/server/interviewSlots'
@@ -36,10 +37,18 @@ const updateSchema = z.object({
   meetingLink,
 })
 
+// Either side may have missed it; the slot records which.
+const markMissedSchema = z.object({
+  action: z.literal('markMissed'),
+  slotId: docId('A timeslot is required'),
+  missedBy: z.enum(['interviewer', 'interviewee']),
+})
+
 const deleteSchema = z.object({ slotId: docId('A timeslot is required') })
 
 export type CreateSlotRequestBody = z.infer<typeof createSchema>
 export type UpdateSlotRequestBody = z.infer<typeof updateSchema>
+export type MarkMissedRequestBody = z.infer<typeof markMissedSchema>
 export type DeleteSlotRequestBody = z.infer<typeof deleteSchema>
 
 export interface CreateSlotResponse {
@@ -72,13 +81,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   }
 }
 
-/** Changes a slot's date and link: the caller's own slot, or any for an admin. */
+/**
+ * Changes a slot's date and link, or with `action: 'markMissed'` records that
+ * its interview didn't happen: the caller's own slot, or any for an admin.
+ */
 export const PATCH: RequestHandler = async ({ request, locals }) => {
   try {
     const caller = verifyAdminOrReviewer(locals)
-    const { slotId, date, meetingLink } = updateSchema.parse(
-      await request.json(),
-    )
+    const body = await request.json()
+    if (body?.action === 'markMissed') {
+      const { slotId, missedBy } = markMissedSchema.parse(body)
+      await markInterviewSlotMissed(caller, slotId, missedBy)
+      return json({ message: 'Marked missed.' })
+    }
+    const { slotId, date, meetingLink } = updateSchema.parse(body)
     await updateInterviewSlot(caller, slotId, {
       date: new Date(date),
       meetingLink,

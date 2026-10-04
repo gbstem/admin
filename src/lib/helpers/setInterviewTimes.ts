@@ -1,7 +1,45 @@
 import { getInterviewSlotDefaults } from '$lib/components/forms/schemas'
-import { slotRequestUid } from '$lib/data/docIds'
 import { toLocalISOString } from '$lib/utils'
 import type {} from '../../data.d.ts'
+
+type ApplicationMeta = Partial<Data.Application<'pojo'>['meta']>
+
+/**
+ * Whether `decision` settles an application: any official decision except
+ * `interview`, which only invites the applicant to schedule one.
+ */
+export function isFinalDecision(
+  decision: Data.Decision | null | undefined,
+): boolean {
+  return Boolean(decision) && decision !== 'interview'
+}
+
+/** Why an applicant can't be given an interview right now. */
+export type InterviewIneligibility = 'unsubmitted' | 'scheduled' | 'decided'
+
+/**
+ * Why the applicant behind `meta` can't be scheduled, or null when they need
+ * an interview: submitted, with no interview held or booked (a missed one
+ * doesn't count - see `meta.interview`), and not yet decided.
+ *
+ * The one rule behind the eligible-interviewee picker, the time-request list,
+ * and every server write that books an interview - admin's
+ * createInterviewSlot here, and portal's /api/interview and /api/slotRequest,
+ * which keep their own copy of this rule.
+ */
+export function interviewIneligibility(
+  meta: ApplicationMeta | undefined,
+): InterviewIneligibility | null {
+  if (!meta?.submitted) return 'unsubmitted'
+  if (meta.interview) return 'scheduled'
+  if (isFinalDecision(meta.decisionType)) return 'decided'
+  return null
+}
+
+/** True when the applicant behind `meta` can be given an interview. */
+export function needsInterview(meta: ApplicationMeta | undefined): boolean {
+  return interviewIneligibility(meta) === null
+}
 
 /**
  * Parses raw Firestore document data into a Data.InterviewSlot object.
@@ -35,9 +73,7 @@ export function parseSlotRequestDoc(
   return {
     date: new Date(timestampSeconds * 1000),
     id,
-    // Requests written before the `uid` field existed only record the
-    // applicant in their id.
-    uid: data.uid || slotRequestUid(id) || '',
+    uid: data.uid ?? '',
     firstName: data.firstName ?? '',
     lastName: data.lastName ?? '',
   }
@@ -52,34 +88,89 @@ export function sortSlotRequestsByDate(
   return [...requests].sort((a, b) => a.date.getTime() - b.date.getTime())
 }
 
+/** An applicant who can be given an interview, as the picker offers them. */
+export interface EligibleInterviewee {
+  applicationId: string
+  /** The applicant's account; the application's id on every current one. */
+  uid: string
+  firstName: string
+  lastName: string
+}
+
+/** The picker's label for `interviewee`. */
+export function intervieweeLabel(interviewee: EligibleInterviewee): string {
+  return `${interviewee.firstName} ${interviewee.lastName}`.trim()
+}
+
 /**
- * Filters and extracts submitted applicant options and names who have not yet been interviewed.
+ * The applicants among `docs` (application snapshots) who need an interview -
+ * see needsInterview - sorted by name.
  */
-export function filterEligibleInterviewees(docs: any[]): {
-  names: { name: string }[]
-  options: Data.Application<'client'>[]
-} {
-  const names: { name: string }[] = []
-  const options: Data.Application<'client'>[] = []
+export function filterEligibleInterviewees(
+  docs: { id: string; data: () => any }[],
+): EligibleInterviewee[] {
+  return docs
+    .map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }))
+    .filter(({ data }) => needsInterview(data?.meta))
+    .map(({ id, data }) => ({
+      applicationId: id,
+      uid: data.meta.uid || id,
+      firstName: data.personal?.firstName ?? '',
+      lastName: data.personal?.lastName ?? '',
+    }))
+    .sort((a, b) => intervieweeLabel(a).localeCompare(intervieweeLabel(b)))
+}
 
-  docs.forEach((docSnap) => {
-    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap
-    const docId = docSnap.id ?? data.id ?? ''
-    if (
-      data &&
-      data.meta &&
-      data.meta.interview === false &&
-      data.meta.submitted === true
-    ) {
-      const fullName =
-        `${data.personal?.firstName ?? ''} ${data.personal?.lastName ?? ''}`.trim()
-      names.push({ name: fullName })
-      options.push({ ...data, docId } as any)
-    }
-  })
+/** How long a request stays listed after its time has passed. */
+const PAST_REQUEST_DAYS = 30
 
-  names.sort((a, b) => a.name.localeCompare(b.name))
-  return { names, options }
+/** One applicant's open time requests, as the request list shows them. */
+export interface SlotRequestGroup {
+  interviewee: EligibleInterviewee
+  /** Soonest first. */
+  requests: Data.SlotRequest[]
+}
+
+/**
+ * The time requests to list, grouped by the applicant who filed them: only
+ * applicants who still need an interview (`eligible`), and only requests
+ * upcoming or under 30 days past. Requests are never edited when an
+ * applicant is scheduled, unscheduled or decided - whether they show is
+ * worked out here, so they reappear when a booking is cancelled or missed.
+ *
+ * Groups are ordered by their soonest request.
+ */
+export function groupSlotRequests(
+  requests: Data.SlotRequest[],
+  eligible: EligibleInterviewee[],
+  now: Date = new Date(),
+): SlotRequestGroup[] {
+  const byUid = new Map(eligible.map((e) => [e.uid, e]))
+  const cutoff = now.getTime() - PAST_REQUEST_DAYS * 24 * 60 * 60 * 1000
+  const groups = new Map<string, SlotRequestGroup>()
+  for (const request of sortSlotRequestsByDate(requests)) {
+    const interviewee = byUid.get(request.uid)
+    if (!interviewee || request.date.getTime() <= cutoff) continue
+    const group = groups.get(request.uid) ?? { interviewee, requests: [] }
+    group.requests.push(request)
+    groups.set(request.uid, group)
+  }
+  return [...groups.values()]
+}
+
+/** True when `slot` is booked, its time has come, and it can be marked missed. */
+export function canMarkSlotMissed(
+  slot: Pick<
+    Data.InterviewSlot,
+    'date' | 'interviewSlotStatus' | 'intervieweeId'
+  >,
+  now: Date = new Date(),
+): boolean {
+  return (
+    slot.interviewSlotStatus === 'pending' &&
+    Boolean(slot.intervieweeId) &&
+    new Date(slot.date) <= now
+  )
 }
 
 /**
