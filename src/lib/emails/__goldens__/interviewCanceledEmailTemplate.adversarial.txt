@@ -1,15 +1,16 @@
 title: 
-heading: Interview Confirmation
-text: Interview Confirmation
+heading: Interview Canceled
+text: Interview Canceled
 text: Hi </p><script>alert('xss')</script><p x=",
-text: Your interview has been scheduled! Your interviewer is </p><script>alert('xss')</script><p x=", and your interview will be taking place on </p><script>alert('xss')</script><p x=". The meeting link is javascript:alert('xss')" onmouseover="alert('xss')" x=".
+text: Your interview with </p><script>alert('xss')</script><p x=" on </p><script>alert('xss')</script><p x=" has been canceled.
+text: Please go back to the gbSTEM portal to book a new interview time, unless you get another email from us saying otherwise, such as a confirmation that a new interview has been booked for you.
 text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
 text: With love 🤍,The gbSTEM Team
-text: Check Application Status
+text: Book an Interview
 text: Main | </p><script>alert('xss')</script><p x="
 text: gbSTEM © 2026
 link: contact@gbstem.org -> mailto:contact@gbstem.org
-link: Check Application Status -> https://portal.gbstem.org/dashboard
+link: Book an Interview -> https://portal.gbstem.org/interview
 link: Main -> https://gbstem.org
 link: </p><script>alert('xss')</script><p x=" -> 
 image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

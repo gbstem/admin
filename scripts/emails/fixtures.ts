@@ -65,6 +65,30 @@ export const TEMPLATE_FIELDS: Record<string, string[]> = {
     'app.name',
     'app.studentName',
   ],
+  interviewCanceledEmailTemplate: [
+    'app.link',
+    'app.name',
+    'interview.date',
+    'interview.interviewee',
+    'interview.name',
+  ],
+  interviewMissedEmailTemplate: [
+    'app.link',
+    'app.name',
+    'interview.date',
+    'interview.interviewee',
+    'interview.interviewerMissed',
+    'interview.name',
+  ],
+  interviewRescheduledEmailTemplate: [
+    'app.link',
+    'app.name',
+    'interview.date',
+    'interview.interviewee',
+    'interview.link',
+    'interview.name',
+    'interview.previousDate',
+  ],
   interviewScheduledEmailTemplate: [
     'app.link',
     'app.name',
@@ -155,6 +179,43 @@ const typical: Record<string, TemplateData> = {
         instructorEmail: 'grace@gbstem.org',
         course: 'Intro to Python',
         class1Time: 'Saturdays at 10:00 AM',
+      },
+    },
+  },
+  interviewCanceledEmailTemplate: {
+    data: {
+      app: { name: 'Portal', link: 'https://portal.gbstem.org' },
+      interview: {
+        interviewee: 'Ada',
+        name: 'Grace Hopper',
+        date: 'Monday, March 2nd at 6:30 PM EST',
+      },
+    },
+  },
+  // The adversarial and edge cases fill `interviewerMissed` with a string, so
+  // they render the interviewer branch; this one renders the applicant's.
+  interviewMissedEmailTemplate: {
+    data: {
+      app: { name: 'Portal', link: 'https://portal.gbstem.org' },
+      interview: {
+        interviewee: 'Ada',
+        name: 'Grace Hopper',
+        date: 'Monday, March 2nd at 6:30 PM EST',
+        interviewerMissed: false,
+      },
+    },
+  },
+  // As with the missed email, `typical` renders the moved-time branch and
+  // `missing` the link-only one.
+  interviewRescheduledEmailTemplate: {
+    data: {
+      app: { name: 'Portal', link: 'https://portal.gbstem.org' },
+      interview: {
+        interviewee: 'Ada',
+        name: 'Grace Hopper',
+        previousDate: 'Monday, March 2nd at 6:30 PM EST',
+        date: 'Tuesday, March 3rd at 7:00 PM EST',
+        link: 'https://mit.zoom.us/j/95024505441',
       },
     },
   },

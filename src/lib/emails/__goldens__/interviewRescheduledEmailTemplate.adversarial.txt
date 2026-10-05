@@ -1,8 +1,8 @@
 title: 
-heading: Interview Confirmation
-text: Interview Confirmation
+heading: Interview Updated
+text: Interview Updated
 text: Hi </p><script>alert('xss')</script><p x=",
-text: Your interview has been scheduled! Your interviewer is </p><script>alert('xss')</script><p x=", and your interview will be taking place on </p><script>alert('xss')</script><p x=". The meeting link is javascript:alert('xss')" onmouseover="alert('xss')" x=".
+text: Your interview with </p><script>alert('xss')</script><p x=" has been moved from </p><script>alert('xss')</script><p x=" to </p><script>alert('xss')</script><p x=". The meeting link is javascript:alert('xss')" onmouseover="alert('xss')" x=".
 text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
 text: With love 🤍,The gbSTEM Team
 text: Check Application Status

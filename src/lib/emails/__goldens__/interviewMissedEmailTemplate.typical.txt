@@ -1,15 +1,16 @@
 title: 
-heading: Interview Confirmation
-text: Interview Confirmation
+heading: Missed Interview
+text: Missed Interview
 text: Hi Ada,
-text: Your interview has been scheduled! Your interviewer is Grace Hopper, and your interview will be taking place on Monday, March 2nd at 6:30 PM EST. The meeting link is https://mit.zoom.us/j/95024505441.
+text: We didn't see you at your interview with Grace Hopper on Monday, March 2nd at 6:30 PM EST.
+text: Please go back to the gbSTEM portal to book a new interview time, unless you get another email from us saying otherwise, such as a confirmation that a new interview has been booked for you.
 text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
 text: With love 🤍,The gbSTEM Team
-text: Check Application Status
+text: Book an Interview
 text: Main | Portal
 text: gbSTEM © 2026
 link: contact@gbstem.org -> mailto:contact@gbstem.org
-link: Check Application Status -> https://portal.gbstem.org/dashboard
+link: Book an Interview -> https://portal.gbstem.org/interview
 link: Main -> https://gbstem.org
 link: Portal -> https://portal.gbstem.org
 image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

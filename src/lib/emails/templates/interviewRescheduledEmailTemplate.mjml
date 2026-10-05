@@ -20,7 +20,7 @@
               font-size: 34px;
             "
           >
-            Interview Confirmation
+            Interview Updated
           </h1>
         </mj-text>
         <mj-text
@@ -31,9 +31,12 @@
         >
           <p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
           <p style="margin: 20px 0">
-            Your interview has been scheduled! Your interviewer is
-            {{ interview.name }}, and your interview will be taking place on
-            {{ interview.date }}. The meeting link is {{ interview.link }}.
+            {{#if interview.previousDate}}Your interview with
+            {{ interview.name }} has been moved from
+            {{ interview.previousDate }} to {{ interview.date }}. The meeting
+            link is {{ interview.link }}.{{else}}Your interview with
+            {{ interview.name }} on {{ interview.date }} has a new meeting link:
+            {{ interview.link }}.{{/if}}
           </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can

@@ -10,6 +10,9 @@ import {
   deleteInterviewSlot,
   markInterviewSlotMissed,
   sendInterviewAssignedEmail,
+  sendInterviewCanceledEmail,
+  sendInterviewMissedEmail,
+  sendInterviewRescheduledEmail,
   updateInterviewSlot,
 } from '$lib/server/interviewSlots'
 import { json } from '@sveltejs/kit'
@@ -57,6 +60,27 @@ export interface CreateSlotResponse {
   emailSent: boolean
 }
 
+export interface ChangeSlotResponse {
+  message: string
+  /**
+   * Whether the applicant's email about the change went out; absent when the
+   * change emailed nobody - an open slot, or an edit that kept the time and
+   * link.
+   */
+  emailSent?: boolean
+}
+
+/** A change's response, emailing its applicant when `booked` is set. */
+async function changed<T>(
+  message: string,
+  booked: T | null,
+  send: (booked: T) => Promise<boolean>,
+): Promise<Response> {
+  const body: ChangeSlotResponse = { message }
+  if (booked) body.emailSent = await send(booked)
+  return json(body)
+}
+
 /**
  * Adds the caller's own interview slot. Admins and reviewers may add open
  * slots; assigning one to an applicant, which emails them, is admin-only.
@@ -84,6 +108,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 /**
  * Changes a slot's date and link, or with `action: 'markMissed'` records that
  * its interview didn't happen: the caller's own slot, or any for an admin.
+ * Either way a booked slot's applicant is emailed about it.
  */
 export const PATCH: RequestHandler = async ({ request, locals }) => {
   try {
@@ -91,27 +116,30 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
     const body = await request.json()
     if (body?.action === 'markMissed') {
       const { slotId, missedBy } = markMissedSchema.parse(body)
-      await markInterviewSlotMissed(caller, slotId, missedBy)
-      return json({ message: 'Marked missed.' })
+      const missed = await markInterviewSlotMissed(caller, slotId, missedBy)
+      return changed('Marked missed.', missed, sendInterviewMissedEmail)
     }
     const { slotId, date, meetingLink } = updateSchema.parse(body)
-    await updateInterviewSlot(caller, slotId, {
+    const rescheduled = await updateInterviewSlot(caller, slotId, {
       date: new Date(date),
       meetingLink,
     })
-    return json({ message: 'Updated.' })
+    return changed('Updated.', rescheduled, sendInterviewRescheduledEmail)
   } catch (err) {
     throw handleApiError('/api/interviewSlot', err)
   }
 }
 
-/** Deletes a slot: the caller's own, or any for an admin. */
+/**
+ * Deletes a slot: the caller's own, or any for an admin. A booked slot's
+ * applicant is emailed to book again.
+ */
 export const DELETE: RequestHandler = async ({ request, locals }) => {
   try {
     const caller = verifyAdminOrReviewer(locals)
     const { slotId } = deleteSchema.parse(await request.json())
-    await deleteInterviewSlot(caller, slotId)
-    return json({ message: 'Deleted.' })
+    const canceled = await deleteInterviewSlot(caller, slotId)
+    return changed('Deleted.', canceled, sendInterviewCanceledEmail)
   } catch (err) {
     throw handleApiError('/api/interviewSlot', err)
   }

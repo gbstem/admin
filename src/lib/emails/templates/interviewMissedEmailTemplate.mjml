@@ -20,7 +20,7 @@
               font-size: 34px;
             "
           >
-            Interview Confirmation
+            Missed Interview
           </h1>
         </mj-text>
         <mj-text
@@ -31,9 +31,16 @@
         >
           <p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
           <p style="margin: 20px 0">
-            Your interview has been scheduled! Your interviewer is
-            {{ interview.name }}, and your interview will be taking place on
-            {{ interview.date }}. The meeting link is {{ interview.link }}.
+            {{#if interview.interviewerMissed}}Your interviewer,
+            {{ interview.name }}, was unable to attend your interview on
+            {{ interview.date }}. We're sorry about that!{{else}}We didn't see
+            you at your interview with {{ interview.name }} on
+            {{ interview.date }}.{{/if}}
+          </p>
+          <p style="margin: 20px 0">
+            Please go back to the gbSTEM portal to book a new interview time,
+            unless you get another email from us saying otherwise, such as a
+            confirmation that a new interview has been booked for you.
           </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can
@@ -49,7 +56,7 @@
           <p>With love 🤍,<br />The gbSTEM Team</p>
         </mj-text>
         <mj-button
-          href="https://portal.gbstem.org/dashboard"
+          href="https://portal.gbstem.org/interview"
           background-color="darkblue"
           color="#ffffff"
           font-size="14px"
@@ -60,7 +67,7 @@
           padding="10px 25px"
           padding-top="20px"
           ><b style="font-weight: 700"
-            ><b style="font-weight: 700">Check Application Status</b></b
+            ><b style="font-weight: 700">Book an Interview</b></b
           ></mj-button
         >
       </mj-column>

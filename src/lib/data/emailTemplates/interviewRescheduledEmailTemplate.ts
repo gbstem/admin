@@ -1,7 +1,7 @@
 // GENERATED FILE - DO NOT EDIT.
-// Source: src/lib/emails/templates/interviewScheduledEmailTemplate.mjml
+// Source: src/lib/emails/templates/interviewRescheduledEmailTemplate.mjml
 // Regenerate with `yarn email:build`. See src/lib/emails/README.md.
-export const interviewScheduledEmailTemplate = `<!doctype html>
+export const interviewRescheduledEmailTemplate = `<!doctype html>
 <html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
   <head>
     <title></title>
@@ -229,7 +229,7 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
               font-size: 34px;
             "
           >
-            Interview Confirmation
+            Interview Updated
           </h1></div>
     
                 </td>
@@ -244,9 +244,12 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
          style="font-family:Open Sans, Helvetica, Arial, sans-serif;font-size:16px;line-height:22px;text-align:left;color:#000000;"
       ><p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
           <p style="margin: 20px 0">
-            Your interview has been scheduled! Your interviewer is
-            {{ interview.name }}, and your interview will be taking place on
-            {{ interview.date }}. The meeting link is {{ interview.link }}.
+            {{#if interview.previousDate}}Your interview with
+            {{ interview.name }} has been moved from
+            {{ interview.previousDate }} to {{ interview.date }}. The meeting
+            link is {{ interview.link }}.{{else}}Your interview with
+            {{ interview.name }} on {{ interview.date }} has a new meeting link:
+            {{ interview.link }}.{{/if}}
           </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can

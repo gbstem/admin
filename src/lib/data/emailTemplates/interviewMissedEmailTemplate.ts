@@ -1,7 +1,7 @@
 // GENERATED FILE - DO NOT EDIT.
-// Source: src/lib/emails/templates/interviewScheduledEmailTemplate.mjml
+// Source: src/lib/emails/templates/interviewMissedEmailTemplate.mjml
 // Regenerate with `yarn email:build`. See src/lib/emails/README.md.
-export const interviewScheduledEmailTemplate = `<!doctype html>
+export const interviewMissedEmailTemplate = `<!doctype html>
 <html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
   <head>
     <title></title>
@@ -229,7 +229,7 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
               font-size: 34px;
             "
           >
-            Interview Confirmation
+            Missed Interview
           </h1></div>
     
                 </td>
@@ -244,9 +244,16 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
          style="font-family:Open Sans, Helvetica, Arial, sans-serif;font-size:16px;line-height:22px;text-align:left;color:#000000;"
       ><p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
           <p style="margin: 20px 0">
-            Your interview has been scheduled! Your interviewer is
-            {{ interview.name }}, and your interview will be taking place on
-            {{ interview.date }}. The meeting link is {{ interview.link }}.
+            {{#if interview.interviewerMissed}}Your interviewer,
+            {{ interview.name }}, was unable to attend your interview on
+            {{ interview.date }}. We're sorry about that!{{else}}We didn't see
+            you at your interview with {{ interview.name }} on
+            {{ interview.date }}.{{/if}}
+          </p>
+          <p style="margin: 20px 0">
+            Please go back to the gbSTEM portal to book a new interview time,
+            unless you get another email from us saying otherwise, such as a
+            confirmation that a new interview has been booked for you.
           </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can
@@ -278,10 +285,10 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
                align="center" bgcolor="darkblue" role="presentation" style="border:none;border-radius:100px;cursor:auto;mso-padding-alt:15px 25px 15px 25px;background:darkblue;" valign="middle"
             >
               <a
-                 href="https://portal.gbstem.org/dashboard" style="display:inline-block;background:darkblue;color:#ffffff;font-family:Open Sans, Helvetica, Arial, sans-serif;font-size:14px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:15px 25px 15px 25px;mso-padding-alt:0px;border-radius:100px;" target="_blank"
+                 href="https://portal.gbstem.org/interview" style="display:inline-block;background:darkblue;color:#ffffff;font-family:Open Sans, Helvetica, Arial, sans-serif;font-size:14px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:15px 25px 15px 25px;mso-padding-alt:0px;border-radius:100px;" target="_blank"
               >
                 <b style="font-weight: 700"
-            ><b style="font-weight: 700">Check Application Status</b></b
+            ><b style="font-weight: 700">Book an Interview</b></b
           >
               </a>
             </td>
