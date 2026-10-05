@@ -20,11 +20,14 @@ jest.mock('$lib/data/retreatMealSchedule', () => ({
   },
 }))
 
-import { registrationsCollection } from '$lib/data/collections'
+import {
+  checkInsCollection,
+  registrationsCollection,
+} from '$lib/data/collections'
 import { checkInStudent, setMealServed } from '$lib/server/checkIns'
 
 const now = new Date('2026-10-17T13:00:00Z')
-const CHECK_IN = { path: 'checkIns/reg-1' }
+const CHECK_IN = { path: `${checkInsCollection}/reg-1` }
 
 /** What the transaction reads, by document path. */
 function stored(docs: Record<string, Record<string, unknown> | undefined>) {

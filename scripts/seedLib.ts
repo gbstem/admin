@@ -15,6 +15,7 @@ import {
 import semesterDates from '../src/lib/data/semesterDates.json'
 import {
   applicationsCollection,
+  checkInsCollection,
   classesCollection,
   classFeedbackCollection,
   currentSemester,
@@ -201,12 +202,10 @@ export async function seedEmulator(): Promise<void> {
     instructorFeedbackCollection,
     'announcements',
     'tokens',
-    'confirmations',
-    'checkIns',
+    checkInsCollection,
     'users',
     'instructorClasses',
     interviewTimeRequestsCollection,
-    'mail',
     'semesterDates',
   ]
   for (const collectionName of collectionsToClear) {

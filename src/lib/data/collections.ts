@@ -25,10 +25,8 @@ export const applicationsCollection = semesterCollectionPath(
   suffix,
   'applications',
 )
-// Retreat check-in records, keyed by registration document id. Not
-// semester-scoped: a check-in belongs to a one-off in-person event, not a term.
-// (Formerly `hhids`, an opaque name whose meaning was lost.)
-export const checkInsCollection = 'checkIns'
+// Retreat check-in records, keyed by registration document id.
+export const checkInsCollection = semesterCollectionPath(suffix, 'checkIns')
 export const classFeedbackCollection = semesterCollectionPath(
   suffix,
   'classFeedback',
