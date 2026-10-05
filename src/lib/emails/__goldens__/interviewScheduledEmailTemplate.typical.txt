@@ -2,6 +2,7 @@ title:
 heading: Interview Confirmation
 text: Interview Confirmation
 text: Hi Ada,
+text: Your interview has been scheduled! Your interviewer is Grace Hopper, and your interview will be taking place on Monday, March 2nd at 6:30 PM EST. The meeting link is https://mit.zoom.us/j/95024505441.
 text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
 text: With love 🤍,The gbSTEM Team
 text: Check Application Status

@@ -242,12 +242,12 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
                   
       <div
          style="font-family:Open Sans, Helvetica, Arial, sans-serif;font-size:16px;line-height:22px;text-align:left;color:#000000;"
-      ><p style="margin: 20px 0"></p>
-          <p style="margin: 0 0">Hi {{ interview.interviewee }},</p>
-          Your interview has been scheduled! Your interviewer is
-          {{ interview.name }}, and your interview will be taking place on
-          {{ interview.date }}. The meeting link is {{ interview.link }}.
-          <p></p>
+      ><p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
+          <p style="margin: 20px 0">
+            Your interview has been scheduled! Your interviewer is
+            {{ interview.name }}, and your interview will be taking place on
+            {{ interview.date }}. The meeting link is {{ interview.link }}.
+          </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can
             reach us at

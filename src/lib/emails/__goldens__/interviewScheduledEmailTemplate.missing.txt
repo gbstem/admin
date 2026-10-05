@@ -2,6 +2,7 @@ title:
 heading: Interview Confirmation
 text: Interview Confirmation
 text: Hi ,
+text: Your interview has been scheduled! Your interviewer is , and your interview will be taking place on . The meeting link is .
 text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
 text: With love 🤍,The gbSTEM Team
 text: Check Application Status
