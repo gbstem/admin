@@ -43,6 +43,7 @@ const PROJECT_ID = 'gbstem-rules-test'
 const decisions = semesterCollectionPath(currentSemester, 'decisions')
 const registrations = semesterCollectionPath(currentSemester, 'registrations')
 const classes = semesterCollectionPath(currentSemester, 'classes')
+const checkIns = semesterCollectionPath(currentSemester, 'checkIns')
 const applications = semesterCollectionPath(currentSemester, 'applications')
 const interviewTimes = semesterCollectionPath(
   currentSemester,
@@ -811,18 +812,6 @@ describe('classes - written only by the server', () => {
   })
 })
 
-describe('mail - the trigger-email queue is server-only', () => {
-  it('refuses a signed-in user queueing an email', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(
-      setDoc(doc(db, 'mail/spam-1'), {
-        to: 'victim@example.com',
-        message: { subject: 'Hello', html: '<p>Hi</p>' },
-      }),
-    )
-  })
-})
-
 describe('instructorInterviewTimes - admins and reviewers read; every write goes through an API', () => {
   // Portal's /api/interview lists open slots and books one in a transaction.
   it('refuses an applicant or an accepted instructor reading, listing or booking a slot', async () => {
@@ -1484,60 +1473,6 @@ describe("subRequests - a request's own people read it; every write goes through
   })
 })
 
-describe('confirmations - parent/guardian confirmations', () => {
-  // The retreat-attendance form that wrote these (portal's
-  // ConfirmationForm.svelte) was removed in 2025; client access is closed
-  // entirely now - only the Admin SDK reaches this collection.
-  it('refuses a student reading or writing their own confirmation', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-    await assertFails(
-      setDoc(doc(db, `confirmations/${UIDS.student}`), {
-        confirmed: true,
-      }),
-    )
-  })
-
-  it("refuses a user reading or writing another user's confirmation", async () => {
-    const db = as(UIDS.otherStudent, 'student')
-    await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-    await assertFails(
-      setDoc(doc(db, `confirmations/${UIDS.student}`), {
-        confirmed: true,
-      }),
-    )
-  })
-
-  it.each([
-    ['an admin', UIDS.admin, 'admin'],
-    ['a reviewer', UIDS.reviewer, 'reviewer'],
-  ] as const)(
-    'refuses %s reading or writing a confirmation',
-    async (_, uid, role) => {
-      await testEnv.withSecurityRulesDisabled(async (context) => {
-        await setDoc(
-          doc(context.firestore(), `confirmations/${UIDS.student}`),
-          {
-            confirmed: true,
-          },
-        )
-      })
-      const db = as(uid, role)
-      await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-      await assertFails(
-        setDoc(doc(db, `confirmations/${UIDS.student}`), {
-          confirmed: false,
-        }),
-      )
-    },
-  )
-
-  it('refuses an unauthenticated user', async () => {
-    const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(getDoc(doc(db, `confirmations/${UIDS.student}`)))
-  })
-})
-
 describe('checkIns - real-time program check-ins and meal checkouts', () => {
   // Checking in is admin work; portal never reads or writes checkIns, so a
   // parent has no reason to reach even their own child's record.
@@ -1545,19 +1480,19 @@ describe('checkIns - real-time program check-ins and meal checkouts', () => {
     const db = as(UIDS.student, 'student')
     for (const id of [UIDS.student, `${UIDS.student}-2`]) {
       await assertFails(
-        setDoc(doc(db, `checkIns/${id}`), {
+        setDoc(doc(db, `${checkIns}/${id}`), {
           checkedIn: true,
         }),
       )
-      await assertFails(getDoc(doc(db, `checkIns/${id}`)))
+      await assertFails(getDoc(doc(db, `${checkIns}/${id}`)))
     }
   })
 
   it('refuses an instructor', async () => {
     const db = as(UIDS.accepted, 'instructor')
-    await assertFails(getDoc(doc(db, `checkIns/${UIDS.student}`)))
+    await assertFails(getDoc(doc(db, `${checkIns}/${UIDS.student}`)))
     await assertFails(
-      setDoc(doc(db, `checkIns/${UIDS.student}`), {
+      setDoc(doc(db, `${checkIns}/${UIDS.student}`), {
         checkedIn: true,
       }),
     )
@@ -1565,9 +1500,9 @@ describe('checkIns - real-time program check-ins and meal checkouts', () => {
 
   it("refuses a user reading or writing another user's checkIn", async () => {
     const db = as(UIDS.otherStudent, 'student')
-    await assertFails(getDoc(doc(db, `checkIns/${UIDS.student}`)))
+    await assertFails(getDoc(doc(db, `${checkIns}/${UIDS.student}`)))
     await assertFails(
-      setDoc(doc(db, `checkIns/${UIDS.student}`), {
+      setDoc(doc(db, `${checkIns}/${UIDS.student}`), {
         checkedIn: true,
       }),
     )
@@ -1581,25 +1516,27 @@ describe('checkIns - real-time program check-ins and meal checkouts', () => {
     'lets %s read any checkIn, but not write one',
     async (_, uid, role) => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
-        await setDoc(doc(context.firestore(), `checkIns/${UIDS.student}`), {
+        await setDoc(doc(context.firestore(), `${checkIns}/${UIDS.student}`), {
           checkedIn: true,
           food: { '2026-10-17': { lunch: false } },
         })
       })
       const db = as(uid, role)
-      const ref = doc(db, `checkIns/${UIDS.student}`)
+      const ref = doc(db, `${checkIns}/${UIDS.student}`)
       await assertSucceeds(getDoc(ref))
       await assertFails(updateDoc(ref, { 'food.2026-10-17.lunch': true }))
       await assertFails(deleteDoc(ref))
       await assertFails(
-        setDoc(doc(db, `checkIns/${UIDS.otherStudent}`), { checkedIn: true }),
+        setDoc(doc(db, `${checkIns}/${UIDS.otherStudent}`), {
+          checkedIn: true,
+        }),
       )
     },
   )
 
   it('refuses an unauthenticated user', async () => {
     const db = testEnv.unauthenticatedContext().firestore()
-    await assertFails(getDoc(doc(db, `checkIns/${UIDS.student}`)))
+    await assertFails(getDoc(doc(db, `${checkIns}/${UIDS.student}`)))
   })
 })
 

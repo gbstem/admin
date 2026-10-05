@@ -42,16 +42,6 @@ service cloud.firestore {
       allow delete: if isUser(userId) || isAdmin();
     }
 
-    // The Firestore "Trigger Email" extension's queue. Nothing in the admin or
-    // portal codebases reads or writes this collection - all mail goes through
-    // SendGrid in $lib/server/email.ts - so an open create was a way for any
-    // signed-in account to send mail from a gbSTEM address to any recipient.
-    // The Admin SDK bypasses rules, so a server-side sender would still work
-    // if one is ever added.
-    match /mail/{mailId} {
-      allow read, write: if false;
-    }
-
     //
     // ACCOUNT CREATION TOKENS
     //
@@ -156,10 +146,25 @@ service cloud.firestore {
       match /instructorFeedback/{feedbackId} {
         allow read: if isAdmin();
       }
+
+      // Real-time program check-ins and meal checkouts, keyed by
+      // registration id. Staff check students in and record meals from
+      // admin's StudentDetails, which reads a record directly and writes it
+      // through admin's /api/checkIn, with the Admin SDK. Portal never reads
+      // or writes this collection, so parents have no access, not even to
+      // their own children's records.
+      match /checkIns/{registrationId} {
+        allow read: if isAdminOrReviewer();
+      }
     }
 
     //
     // INSTRUCTOR TO CLASS MAPPING
+    //
+    // TODO: move under semesters/{semesterId}. The classIds are bare ids,
+    // resolved against the current semester's classes, and class ids repeat
+    // every semester (`${uid}-${n}`), so last semester's mapping points at
+    // this semester's class of the same id. See README's Firestore Schema.
     //
     // Keyed by instructor uid: each document is `{ classIds: [...] }`, the
     // classes shared with that instructor. Server-only: portal's
@@ -171,6 +176,11 @@ service cloud.firestore {
 
     //
     // SUBSTITUTE INSTRUCTORS REQUESTS
+    //
+    // TODO: move under semesters/{semesterId}. The id embeds a class id,
+    // which repeats every semester, so requests from different semesters can
+    // collide; admin's log filters by date to approximate the scope. See
+    // README's Firestore Schema.
     //
     // Keyed `${classId}---${classNumber}`. The people a request belongs to
     // read it directly: whoever filed it, the class's instructor of record,
@@ -184,30 +194,6 @@ service cloud.firestore {
     // one.
     match /subRequests/{subRequestId} {
       allow read: if isAdminOrReviewer() || isSubRequestParty(resource.data);
-    }
-
-    //
-    // PARENT / GUARDIAN CONFIRMATIONS
-    //
-    // The retreat-attendance form that wrote these (portal's
-    // ConfirmationForm.svelte) was removed in 2025; nothing client-side
-    // writes or reads this collection any more. Client access is closed -
-    // only the Admin SDK, or a future feature explicitly reopening it,
-    // reaches these documents now.
-    match /confirmations/{userId} {
-      allow read, write: if false;
-    }
-
-    //
-    // REAL-TIME PROGRAM CHECK-INS AND MEAL CHECKOUTS
-    //
-    // Staff check students in and record meals from admin's StudentDetails,
-    // which reads a record directly and writes it through admin's
-    // /api/checkIn, with the Admin SDK. Portal never reads or writes this
-    // collection - the parent-facing check-in it once had is long gone - so
-    // parents have no access, not even to their own children's records.
-    match /checkIns/{userId} {
-      allow read: if isAdminOrReviewer();
     }
 
     //

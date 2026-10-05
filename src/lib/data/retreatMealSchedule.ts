@@ -1,9 +1,9 @@
 /**
  * The meal schedule seeded onto a student's `checkIns` record when they check
  * in at gbSTEM's in-person retreat, keyed by ISO date (YYYY-MM-DD) to the
- * meals served that day. `checkIns` isn't semester-scoped (see the Firestore
- * Schema section of the README), so this lives here as a small standalone
- * config rather than alongside `semesterDates.json`.
+ * meals served that day. Only admin reads it, so it lives here as a small
+ * standalone config rather than in `semesterDates.json`, which portal and the
+ * website copy.
  *
  * Left empty by default - no retreat is currently scheduled, so check-in seeds
  * an empty meal schedule and the check-in page simply shows no meals to
