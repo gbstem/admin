@@ -185,10 +185,10 @@ Most collections are scoped under a semester document: `semesters/{semesterId}/{
 
 [`src/lib/data/collections.ts`](src/lib/data/collections.ts) derives every one of these paths from a single `suffix` constant (the current semester ID, e.g. `'Spring26'`) via a `semesterCollectionPath(semesterId, name)` helper. The exported constant names (`applicationsCollection`, `registrationsCollection`, etc.) stay the same regardless, so call sites throughout the app never construct paths manually.
 
-A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `instructorClasses`, `users`, `tokens`, `announcements`.
+A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `users`, `tokens`, `announcements`.
 
 > [!NOTE]
-> TODO: move `subRequests` and `instructorClasses` under the semester too, migrating their existing documents. Both are keyed by class ids, which repeat every semester (`${uid}-${n}`), so sub requests can collide across semesters and an instructor's mapping points at whichever current class has last semester's id.
+> TODO: move `subRequests` under the semester too, migrating its existing documents. Its ids embed a class id, which repeats every semester (`${uid}-${n}`), so sub requests can collide across semesters.
 
 The current semester's key dates (`classesStart`, `registrationsDue`, etc.) aren't in Firestore at all — every read site only ever needs the _current_ semester's dates, never a past one, so they're static data in [`semesterDates.json`](src/lib/data/semesterDates.json), re-exported as `semesterDates` from `collections.ts`. `__tests__/collections.test.ts` validates every field is a well-formed `MM/DD/YY` date whose year matches `currentSemester`. The portal and website repos each keep a verbatim copy of this same file (see [Adding a New Semester](#adding-a-new-semester) for the paths and the copy step).
 
@@ -259,7 +259,7 @@ It is granted at signup, before any interview — so it says nothing about wheth
 
 **Every instructor write goes through a portal API route.** A rule can check a role and compare a uid, but it can't check acceptance cheaply, tell whether a class or session is really the caller's, or work out derived fields such as a class's session statuses — so each instructor write is a portal API route that checks with the Admin SDK and writes with it:
 
-- `/api/classDetails` saves a class, checking ownership and every added co-instructor, and keeps the server-only `instructorClasses` mapping in step in the same transaction
+- `/api/classDetails` saves a class, checking ownership and every added co-instructor
 - `/api/classSchedule` reschedules a class's sessions or records one being held, computing `classStatuses`/`feedbackCompleted` itself
 - `/api/subRequest` files, edits and cancels a sub request, taking the class's instructors from the class document; a `subRequests` document is otherwise readable only by the people it belongs to — whoever filed it, the class's instructor of record, and its substitute
 - `/api/substitute` lists the sessions needing cover and claims one in a transaction
