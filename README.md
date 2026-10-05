@@ -365,7 +365,7 @@ Each downstream repo checks its own copies, and the website additionally checks 
 4. Create a PR for each repo you changed and merge each to `main` for the Vercel auto-deployment to update the live apps. Merge curriculum's first if you added a course, so the pages exist before portal starts linking to them.
 5. Load the deployed public site's [home page](https://www.gbstem.org/) and [FAQ](https://www.gbstem.org/faq) and confirm the registration/application copy, links, and dates match the new semester. If you added or retired a course, open its track page there too and check the progression reads the way you intended — the website's test proves the course is linked from somewhere on that page, not that the prose around it still makes sense. Those sections switch between "open" and "closed" wording purely from the dates in the JSON, so a wrong date there is visible to families and prospective instructors immediately.
 
-6. Once the new `suffix` is deployed, archive the semester that just ended's sub requests — dry run first, and keep both logs. **Never delete the `subRequests` collection to make room for the new semester:** a substitute's community-service hours are counted from these documents, in every semester, so deleting them takes back hours people already earned.
+6. Once the new `suffix` is deployed, archive the semester that just ended's sub requests — dry run first, and keep both logs:
 
    ```bash
    npx tsx scripts/archive-past-sub-requests.ts --production --dry-run | tee ../backfill-logs/archive-past-sub-requests-dry.log
