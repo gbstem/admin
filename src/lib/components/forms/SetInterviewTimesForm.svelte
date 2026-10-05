@@ -3,14 +3,18 @@
   import { user } from '$lib/client/firebase'
   import CheckboxInput from '$lib/components/CheckboxInput.svelte'
   import {
+    canMarkSlotMissed,
     canUserModifySlot,
+    groupSlotRequests,
+    intervieweeLabel,
     isOwnInterviewSlot,
     resetInterviewSlotToAdd,
     toInterviewSlotFormValues,
+    type EligibleInterviewee,
   } from '$lib/helpers/setInterviewTimes'
   import { interviewService } from '$lib/services/interviewService'
   import { alert } from '$lib/stores'
-  import { cn, formatDate, formatDateLocal } from '$lib/utils'
+  import { cn, formatDate, formatDateLocal, toLocalISOString } from '$lib/utils'
   import { onMount } from 'svelte'
   import { defaults, superForm } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
@@ -31,8 +35,8 @@
   let { class: className = '' }: Props = $props()
 
   let editSlot = $state('')
-  let intervieweeNames: { name: string }[] = $state([])
-  let intervieweeOptions: Data.Application<'client'>[] = $state([])
+  let interviewees: EligibleInterviewee[] = $state([])
+  // The picker's text: an applicant's label once one is chosen.
   let interviewee: string = $state('')
   let onlyIncludeMyInterviews = $state(true)
   let onlyShowFutureSlots = $state(true)
@@ -158,32 +162,52 @@
     return interviewService.fetchEligibleInterviewees()
   }
 
-  let selectedIntervieweeDocId = $state('')
-  $effect(() => {
-    if (interviewee) {
-      const selectedInterviewee = intervieweeOptions.find(
-        (option) =>
-          `${option.personal.firstName} ${option.personal.lastName}` ===
-          interviewee,
+  // The picker offers labels, so each applicant needs a distinct one: two
+  // applicants with the same name are told apart by their application id.
+  let intervieweesByLabel = $derived.by(() => {
+    const counts = new Map<string, number>()
+    for (const e of interviewees) {
+      counts.set(
+        intervieweeLabel(e),
+        (counts.get(intervieweeLabel(e)) ?? 0) + 1,
       )
-      if (selectedInterviewee) {
-        const {
-          personal: { firstName, lastName },
-          meta: { uid },
-        } = selectedInterviewee
-        selectedIntervieweeDocId = (selectedInterviewee as any).docId || ''
-        // Into the form store, not `interviewSlotToAdd`: these are schema
-        // fields, so they have to be what validation and the write see.
-        addFormData.update((current: any) => ({
-          ...current,
-          intervieweeId: uid,
-          intervieweeFirstName: firstName,
-          intervieweeLastName: lastName,
-          interviewSlotStatus: 'pending',
-        }))
-      }
     }
+    return new Map(
+      interviewees.map((e) => {
+        const name = intervieweeLabel(e)
+        const label =
+          (counts.get(name) ?? 0) > 1 ? `${name} (${e.applicationId})` : name
+        return [label, e] as const
+      }),
+    )
   })
+  let intervieweeOptions = $derived(
+    [...intervieweesByLabel.keys()].map((name) => ({ name })),
+  )
+  let selectedInterviewee = $derived(intervieweesByLabel.get(interviewee))
+
+  function labelOf(target: EligibleInterviewee): string {
+    for (const [label, e] of intervieweesByLabel) {
+      if (e.applicationId === target.applicationId) return label
+    }
+    return ''
+  }
+
+  let requestGroups = $derived(
+    groupSlotRequests(interviewSlotRequests, interviewees),
+  )
+
+  /** Fills the Add-a-Slot card from one of an applicant's time requests. */
+  function scheduleRequest(
+    target: EligibleInterviewee,
+    request: Data.SlotRequest,
+  ) {
+    interviewee = labelOf(target)
+    addFormData.update((current: any) => ({
+      ...current,
+      date: toLocalISOString(request.date),
+    }))
+  }
 
   onMount(() => {
     return user.subscribe(async (user) => {
@@ -193,9 +217,7 @@
           await refetchSlots()
           interviewSlotRequests = await getTimeRequests()
           void loadSlotRequestEmails()
-          const intervieweeInfo = await getInterviewees()
-          intervieweeNames = intervieweeInfo.names
-          intervieweeOptions = intervieweeInfo.options
+          interviewees = await getInterviewees()
           addFormData.update((current: any) => ({
             ...current,
             interviewerName: currentUser?.object.displayName ?? '',
@@ -217,9 +239,10 @@
   }
 
   const addTime = async (formData: any) => {
-    if (formData.intervieweeId != '') {
+    const assignee = selectedInterviewee
+    if (assignee) {
       const confirmation = confirm(
-        `Are you sure you want to assign ${formData.intervieweeFirstName} ${formData.intervieweeLastName} as the interviewee for this slot? An email will be sent to the interviewee confirming the interview has been scheduled.`,
+        `Are you sure you want to assign ${intervieweeLabel(assignee)} as the interviewee for this slot? An email will be sent to the interviewee confirming the interview has been scheduled.`,
       )
       if (!confirmation) {
         return
@@ -227,16 +250,28 @@
     }
 
     try {
-      const assigning = formData.intervieweeId != ''
       const { id, emailSent } =
         await interviewService.createOrAssignInterviewSlot(
           formData,
-          assigning ? selectedIntervieweeDocId : undefined,
+          assignee?.applicationId,
         )
       allInterviewSlots = [
         ...allInterviewSlots,
-        { ...interviewSlotToAdd, ...formData, id },
+        {
+          ...interviewSlotToAdd,
+          ...formData,
+          id,
+          ...(assignee
+            ? {
+                intervieweeId: assignee.uid,
+                intervieweeFirstName: assignee.firstName,
+                intervieweeLastName: assignee.lastName,
+                interviewSlotStatus: 'pending',
+              }
+            : {}),
+        },
       ]
+      const assigning = Boolean(assignee)
       if (!assigning) {
         alert.trigger('success', 'Timeslot added successfully.')
       } else if (emailSent) {
@@ -258,7 +293,17 @@
     )
     addFormData.set(toInterviewSlotFormValues(interviewSlotToAdd))
     interviewee = ''
-    await refetchSlots()
+    await Promise.all([refetchSlots(), refetchInterviewees()])
+  }
+
+  // Assigning, deleting or marking a booked slot missed changes who still
+  // needs an interview, and so which time requests list.
+  async function refetchInterviewees() {
+    try {
+      interviewees = await getInterviewees()
+    } catch (err) {
+      console.error('Failed to reload interviewees:', err)
+    }
   }
 
   function handleClear() {
@@ -325,11 +370,42 @@
         (slot) => slot.id !== interview.id,
       )
       alert.trigger('success', 'Timeslot successfully deleted.')
-      await refetchSlots()
+      await Promise.all([refetchSlots(), refetchInterviewees()])
     } catch (err: any) {
       console.error('Delete timeslot error:', err)
       alert.trigger('error', `Failed to delete timeslot: ${err.message}`)
     }
+  }
+
+  // The slot whose Mark missed choice is open, if any.
+  let markingMissed = $state('')
+
+  /**
+   * Records that `interview` didn't happen - the interviewer or the
+   * applicant may have missed it - which lets its applicant be scheduled
+   * again.
+   */
+  async function markMissed(
+    interview: Data.InterviewSlot,
+    missedBy: Data.InterviewMissedBy,
+  ) {
+    markingMissed = ''
+    try {
+      await interviewService.markInterviewSlotMissed(interview, missedBy)
+      alert.trigger(
+        'success',
+        `Marked missed. ${interview.intervieweeFirstName} can now be scheduled again.`,
+      )
+      await Promise.all([refetchSlots(), refetchInterviewees()])
+    } catch (err: any) {
+      console.error('Mark missed error:', err)
+      alert.trigger('error', `Failed to mark missed: ${err.message}`)
+    }
+  }
+
+  const missedByLabel: Record<Data.InterviewMissedBy, string> = {
+    interviewer: 'interviewer',
+    interviewee: 'applicant',
   }
 </script>
 
@@ -356,26 +432,38 @@
       <div class="right-2 items-center">
         <Card class="mb-4">
           <h2 class="font-bold">Interview Time Requests</h2>
-          {#each interviewSlotRequests as request (request.id)}
-            {#if intervieweeOptions.find((option) => option.meta.uid === request.uid)?.meta.interview === false}
-              {#if request.date > new Date()}
+          <!-- Only applicants who still need an interview: once one is
+               scheduled or decided their requests drop out, and they come
+               back if that interview is deleted or marked missed. -->
+          {#each requestGroups as group (group.interviewee.uid)}
+            <div class="mt-2 rounded-lg border border-gray-200 p-4">
+              <p>
+                <b>{intervieweeLabel(group.interviewee)}</b>
+                <span class="ml-2"
+                  >{slotRequestEmails[group.requests[0].id] ?? ''}</span
+                >
+              </p>
+              {#each group.requests as request (request.id)}
                 <div
-                  class="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-blue-100 p-4 sm:grid-cols-3 sm:items-center sm:gap-4"
+                  class={cn(
+                    'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg p-2',
+                    request.date > new Date() ? 'bg-blue-100' : 'bg-red-100',
+                  )}
                 >
                   <p>{formatDateLocal(request.date)}</p>
-                  <p>{request.firstName} {request.lastName}</p>
-                  <p>{slotRequestEmails[request.id] ?? ''}</p>
+                  {#if page.data.user?.role === 'admin'}
+                    <Button
+                      color="blue"
+                      class="px-2 py-1"
+                      type="button"
+                      onclick={() =>
+                        scheduleRequest(group.interviewee, request)}
+                      >Schedule this</Button
+                    >
+                  {/if}
                 </div>
-              {:else if request.date > new Date(new Date().setDate(new Date().getDate() - 30))}
-                <div
-                  class="mt-2 grid grid-cols-1 gap-1 rounded-lg bg-red-100 p-4 sm:grid-cols-3 sm:items-center sm:gap-4"
-                >
-                  <p>{formatDateLocal(request.date)}</p>
-                  <p>{request.firstName} {request.lastName}</p>
-                  <p>{slotRequestEmails[request.id] ?? ''}</p>
-                </div>
-              {/if}
-            {/if}
+              {/each}
+            </div>
           {/each}
         </Card>
         <form novalidate use:addEnhance class="w-full">
@@ -400,7 +488,7 @@
               <Select
                 bind:value={interviewee}
                 label="Assign Interviewee (ONLY USE when fulfilling that person's interview time request)"
-                options={intervieweeNames}
+                options={intervieweeOptions}
               />
               <Button
                 color="red"
@@ -531,7 +619,13 @@
             <!-- interview status -->
             <div>
               <b>Interview Status:</b>
-              {interview.interviewSlotStatus}
+              {#if interview.interviewSlotStatus === 'missed'}
+                missed{interview.missedBy
+                  ? ` (by the ${missedByLabel[interview.missedBy]})`
+                  : ''}
+              {:else}
+                {interview.interviewSlotStatus}
+              {/if}
             </div>
 
             {#if interview.intervieweeId !== ''}
@@ -542,13 +636,68 @@
               </div>
             {/if}
 
-            {#if (interview.interviewSlotStatus === 'available' || interview.interviewSlotStatus === 'pending') && (isMyInterview(interview) || page.data.user?.role === 'admin')}
-              <div>
-                <Button
-                  color="blue"
-                  class="my-4 px-2 py-1"
-                  onclick={() => openSlotForEdit(interview)}>Edit</Button
-                >
+            {@const canEdit =
+              (interview.interviewSlotStatus === 'available' ||
+                interview.interviewSlotStatus === 'pending') &&
+              (isMyInterview(interview) || page.data.user?.role === 'admin')}
+            {@const canMarkMissed =
+              canMarkSlotMissed(interview) &&
+              canUserModifySlot(
+                interview,
+                currentUser?.object?.uid,
+                page.data.user?.role,
+              )}
+            {#if canEdit || canMarkMissed}
+              <div class="my-4 flex flex-wrap gap-2">
+                {#if canEdit}
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    onclick={() => openSlotForEdit(interview)}>Edit</Button
+                  >
+                {/if}
+                {#if canMarkMissed && markingMissed !== interview.id}
+                  <Button
+                    color="gray"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => (markingMissed = interview.id)}
+                    >Mark missed</Button
+                  >
+                {/if}
+              </div>
+            {/if}
+
+            {#if canMarkMissed && markingMissed === interview.id}
+              <!-- Either side may have missed it; the applicant can be
+                   scheduled again whichever it was. -->
+              <div class="mb-4 rounded-lg bg-yellow-50 p-3">
+                <p>
+                  Who missed this interview? {interview.intervieweeFirstName}
+                  will be able to schedule again either way.
+                </p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => markMissed(interview, 'interviewer')}
+                    >The interviewer couldn't make it</Button
+                  >
+                  <Button
+                    color="blue"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => markMissed(interview, 'interviewee')}
+                    >The applicant didn't attend</Button
+                  >
+                  <Button
+                    color="gray"
+                    class="px-2 py-1"
+                    type="button"
+                    onclick={() => (markingMissed = '')}>Cancel</Button
+                  >
+                </div>
               </div>
             {/if}
           </Card>

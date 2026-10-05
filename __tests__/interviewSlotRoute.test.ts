@@ -1,12 +1,15 @@
 const mockCreateInterviewSlot = jest.fn()
 const mockUpdateInterviewSlot = jest.fn()
 const mockDeleteInterviewSlot = jest.fn()
+const mockMarkInterviewSlotMissed = jest.fn()
 const mockSendInterviewAssignedEmail = jest.fn()
 
 jest.mock('$lib/server/interviewSlots', () => ({
   createInterviewSlot: (...args: any[]) => mockCreateInterviewSlot(...args),
   updateInterviewSlot: (...args: any[]) => mockUpdateInterviewSlot(...args),
   deleteInterviewSlot: (...args: any[]) => mockDeleteInterviewSlot(...args),
+  markInterviewSlotMissed: (...args: any[]) =>
+    mockMarkInterviewSlotMissed(...args),
   sendInterviewAssignedEmail: (...args: any[]) =>
     mockSendInterviewAssignedEmail(...args),
 }))
@@ -140,6 +143,42 @@ describe('PATCH /api/interviewSlot', () => {
       }),
     ).rejects.toMatchObject({ status: 400 })
     expect(mockUpdateInterviewSlot).not.toHaveBeenCalled()
+  })
+
+  it.each(['interviewer', 'interviewee'])(
+    'marks a slot missed by the %s, for the caller to be checked against',
+    async (missedBy) => {
+      const res = await call(PATCH, reviewer, {
+        action: 'markMissed',
+        slotId: 'slot-1',
+        missedBy,
+      })
+
+      expect(mockMarkInterviewSlotMissed).toHaveBeenCalledWith(
+        reviewer,
+        'slot-1',
+        missedBy,
+      )
+      expect(mockUpdateInterviewSlot).not.toHaveBeenCalled()
+      expect(res.body).toEqual({ message: 'Marked missed.' })
+    },
+  )
+
+  it.each([
+    ['no missedBy', { action: 'markMissed', slotId: 'slot-1' }],
+    [
+      'an unknown missedBy',
+      { action: 'markMissed', slotId: 'slot-1', missedBy: 'both' },
+    ],
+    [
+      'a path-like slot id',
+      { action: 'markMissed', slotId: 'a/b', missedBy: 'interviewer' },
+    ],
+  ])('refuses marking missed with %s', async (_, body) => {
+    await expect(call(PATCH, admin, body)).rejects.toMatchObject({
+      status: 400,
+    })
+    expect(mockMarkInterviewSlotMissed).not.toHaveBeenCalled()
   })
 })
 

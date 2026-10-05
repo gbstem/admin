@@ -158,46 +158,189 @@ describe('Section H: Interview Timeslots Configuration', () => {
   })
 
   it('Test Case 16a: Interview Time Requests - Each Request Shows Its Requester', () => {
-    // The seed has no time requests, so this one is written the way portal's
+    // The seed has no time requests, so these are written the way portal's
     // "request a time" does. The list only shows requests from applicants
     // still waiting for an interview. Test Case 16 books David Miller and
     // then frees him again (and checks it), but this test can run without it
     // on a retry, so he is put back explicitly.
-    const requestDate = '2030-01-15T10:00'
-    const requestId = slotRequestDocId('app-david', requestDate)
-    cy.task('mergeFirestoreDoc', {
-      docPath: `${applicationsCollection}/app-david`,
-      data: { meta: { interview: false } },
+    const requestDates = ['2030-01-15T10:00', '2030-01-16T11:00']
+    const requestIds = requestDates.map((date) =>
+      slotRequestDocId('app-david', date),
+    )
+    setDavidMeta({ interview: false, decisionType: null })
+    requestDates.forEach((date, i) => {
+      cy.task('setInterviewTimeRequest', {
+        id: requestIds[i],
+        uid: 'app-david',
+        firstName: 'David',
+        lastName: 'Miller',
+        date,
+      })
+    })
+    cy.reload()
+    cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
+
+    // One group per applicant, headed by their name and address. The request
+    // stores no address: the one shown is what Auth holds for its uid,
+    // fetched through /api/resolveEmails.
+    requestsCard()
+      .contains('b', 'David Miller', { timeout: 10000 })
+      .parent()
+      .should('contain.text', 'applicant1@gmail.com')
+    cy.wait('@resolveEmails')
+      .its('response.body.emails')
+      .should('deep.equal', { 'app-david': 'applicant1@gmail.com' })
+    requestsCard().find('b:contains("David Miller")').should('have.length', 1)
+    requestsCard()
+      .find('button:contains("Schedule this")')
+      .should('have.length', 2)
+
+    // "Schedule this" fills the card with that request's time and applicant.
+    requestsCard().find('button:contains("Schedule this")').first().click()
+    cy.contains('h2', 'Add A Time Slot')
+      .parent()
+      .within(() => {
+        cy.get('input[name="set-date-your-local-time"]').should(
+          'have.value',
+          requestDates[0],
+        )
+        cy.get('input[name^="assign-interviewee"]').should(
+          'have.value',
+          'David Miller',
+        )
+        cy.setFieldValue('input[name="interview-meeting-link"]', REQUEST_LINK)
+      })
+    cy.captureConfirms().as('confirms')
+    cy.contains('button', 'Confirm Timeslot').click({ force: true })
+    cy.waitForNotification('Interviewee assigned and email sent.')
+
+    // Booked: every one of his requests leaves the list, none was deleted.
+    expectInterviewFlag('app-david', true)
+    requestsCard().should('not.contain.text', 'David Miller')
+    requestIds.forEach((id) => {
+      cy.task(
+        'checkFirestoreDocExists',
+        `${interviewTimeRequestsCollection}/${id}`,
+      ).should('eq', true)
+    })
+
+    // Deleting the interview brings them back for someone else to take.
+    cy.contains('a', REQUEST_LINK)
+      .parent()
+      .parent()
+      .within(() => {
+        cy.contains('button', 'Edit').click({ force: true })
+      })
+    cy.contains('Edit Interview Meeting Link')
+      .parent()
+      .parent()
+      .within(() => {
+        cy.contains('button', 'Delete').click({ force: true })
+      })
+    cy.waitForNotification('Timeslot successfully deleted.')
+    expectInterviewFlag('app-david', false)
+    requestsCard().contains('b', 'David Miller').should('exist')
+
+    // A final decision hides them; an invitation to interview doesn't.
+    setDavidMeta({ decisionType: 'rejected' })
+    cy.reload()
+    cy.contains('h2', 'Add A Time Slot').should('exist')
+    requestsCard().should('not.contain.text', 'David Miller')
+    setDavidMeta({ decisionType: 'interview' })
+    cy.reload()
+    requestsCard().contains('b', 'David Miller').should('exist')
+
+    setDavidMeta({ decisionType: null })
+    requestIds.forEach((id) =>
+      cy.task('deleteFirestoreDoc', `${interviewTimeRequestsCollection}/${id}`),
+    )
+  })
+
+  it('Test Case 16g: Marking A Booked Interview Missed Frees The Applicant', () => {
+    const slotId = 'missed-slot-16g'
+    const missedLink = 'https://zoom.us/j/4444444444'
+    const requestId = slotRequestDocId('app-david', '2030-02-01T10:00')
+    setDavidMeta({ interview: true, decisionType: null })
+    getDemoAdminUid().then((uid: string) => {
+      cy.setInterviewSlot({
+        collectionPath: interviewTimesCollection,
+        id: slotId,
+        // An hour ago: its time has come, so it can be marked missed.
+        date: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        interviewerName: 'Demo Admin',
+        interviewerUid: uid,
+        meetingLink: missedLink,
+        semester: currentSemester,
+        intervieweeId: 'app-david',
+      })
     })
     cy.task('setInterviewTimeRequest', {
       id: requestId,
       uid: 'app-david',
       firstName: 'David',
       lastName: 'Miller',
-      date: requestDate,
+      date: '2030-02-01T10:00',
     })
     cy.reload()
 
-    // Each request is a row of date, name and address, found by the name. The
-    // request stores no address: the one shown is what Auth holds for its
-    // uid, fetched through /api/resolveEmails.
-    cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
-    cy.contains('h2', 'Interview Time Requests')
-      .parent()
-      .contains('div', 'David Miller', { timeout: 10000 })
-      .find('p')
-      .last()
-      .should('have.text', 'applicant1@gmail.com')
-    cy.wait('@resolveEmails')
-      .its('response.body.emails')
-      .should('deep.equal', { 'app-david': 'applicant1@gmail.com' })
+    // Booked, so his request isn't listed yet.
+    cy.contains('h2', 'Add A Time Slot').should('exist')
+    requestsCard().should('not.contain.text', 'David Miller')
 
+    cy.get('input[name="only-show-future-interview-slots"]').click({
+      force: true,
+    })
+    cy.contains('a', missedLink)
+      .parent()
+      .parent()
+      .within(() => {
+        cy.contains('button', 'Mark missed').click({ force: true })
+        cy.contains('button', "The interviewer couldn't make it").click({
+          force: true,
+        })
+      })
+    cy.waitForNotification('Marked missed.')
+
+    // The slot stays as the record, naming him and who missed it; his
+    // application is free to be scheduled again.
+    cy.task('readFirestoreDoc', `${interviewTimesCollection}/${slotId}`).then(
+      (slot: any) => {
+        expect(slot.interviewSlotStatus).to.equal('missed')
+        expect(slot.missedBy).to.equal('interviewer')
+        expect(slot.intervieweeId).to.equal('app-david')
+      },
+    )
+    expectInterviewFlag('app-david', false)
+    requestsCard().contains('b', 'David Miller').should('exist')
+    cy.contains('a', missedLink)
+      .parent()
+      .parent()
+      .should('contain.text', 'missed (by the interviewer)')
+      .and('not.contain.text', 'Mark missed')
+
+    cy.task('deleteFirestoreDoc', `${interviewTimesCollection}/${slotId}`)
     cy.task(
       'deleteFirestoreDoc',
       `${interviewTimeRequestsCollection}/${requestId}`,
     )
   })
 })
+
+/** The "Interview Time Requests" card. */
+function requestsCard(): Cypress.Chainable<JQuery<HTMLElement>> {
+  return cy.contains('h2', 'Interview Time Requests').parent()
+}
+
+/** Merges `meta` into David Miller's application, as the API routes would. */
+function setDavidMeta(meta: Record<string, unknown>) {
+  cy.task('mergeFirestoreDoc', {
+    docPath: `${applicationsCollection}/app-david`,
+    data: { meta },
+  })
+}
+
+/** The meeting link Test Case 16a books David Miller's request with. */
+const REQUEST_LINK = 'https://zoom.us/j/7777777777'
 
 /**
  * `interviewSlotDocId` builds the document id from the slot's local time and

@@ -45,11 +45,13 @@ describe('collections.ts', () => {
     expect(registrationsCollection).toBe(
       `semesters/${currentSemester}/registrations`,
     )
+    expect(interviewTimeRequestsCollection).toBe(
+      `semesters/${currentSemester}/interviewTimeRequests`,
+    )
   })
 
   it('leaves non-semesterized collections unchanged', () => {
     expect(subRequestsCollection).toBe('subRequests')
-    expect(interviewTimeRequestsCollection).toBe('interviewTimeRequests')
   })
 
   // semesterDates.json is hand-edited each semester rollover (no more Firestore document -

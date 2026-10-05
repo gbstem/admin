@@ -134,6 +134,14 @@ service cloud.firestore {
         allow read: if isAdminOrReviewer();
       }
 
+      // Keyed `${uid}-${requestedDate}`. Applicants file a request through
+      // portal's /api/slotRequest, which writes it with the Admin SDK and
+      // notifies admins. Admins and reviewers list them (admin's
+      // interviewService.fetchSlotRequests); no client writes one.
+      match /interviewTimeRequests/{requestId} {
+        allow read: if isAdminOrReviewer();
+      }
+
       // Feedback is written only by the Admin SDK. Holding a role doesn't
       // authorize writing about a particular class or student, and a rule
       // can't check either, so filing goes through portal routes that do:
@@ -159,17 +167,6 @@ service cloud.firestore {
     // otherInstructorUids through the Admin SDK, which bypasses these rules.
     match /instructorClasses/{userId} {
       allow read, write: if false;
-    }
-
-    //
-    // INTERVIEW TIME REQUESTS
-    //
-    // Keyed `${uid}-${requestedDate}`. Applicants file a request through
-    // portal's /api/slotRequest, which writes it with the Admin SDK and
-    // notifies admins. Admins and reviewers list them (admin's
-    // interviewService.fetchSlotRequests); no client writes one.
-    match /interviewTimeRequests/{requestId} {
-      allow read: if isAdminOrReviewer();
     }
 
     //

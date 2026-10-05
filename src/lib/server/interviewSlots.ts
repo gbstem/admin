@@ -5,12 +5,17 @@ import {
 } from '$lib/data/collections'
 import { interviewSlotDocId } from '$lib/data/docIds'
 import { renderEmail } from '$lib/emails/render'
-import { canUserModifySlot } from '$lib/helpers/setInterviewTimes'
+import {
+  canUserModifySlot,
+  interviewIneligibility,
+  type InterviewIneligibility,
+} from '$lib/helpers/setInterviewTimes'
 import { resolveAccountEmail } from '$lib/server/accountEmail'
 import { sendEmail } from '$lib/server/email'
 import { adminDb } from '$lib/server/firebase'
 import { accountName } from '$lib/server/userProfile'
 import { GBSTEM_TIME_ZONE, formatDateLocal } from '$lib/utils'
+import { toDate } from '$lib/shared/timestamps'
 import { error } from '@sveltejs/kit'
 
 /**
@@ -43,6 +48,12 @@ const slotRef = (slotId: string) =>
 const applicationRef = (applicationId: string) =>
   adminDb.doc(`${applicationsCollection}/${applicationId}`)
 
+const ineligibleMessages: Record<InterviewIneligibility, string> = {
+  unsubmitted: 'That applicant has not submitted their application.',
+  scheduled: 'That applicant already has an interview.',
+  decided: 'That applicant already has a decision.',
+}
+
 function requireCanModify(
   slot: Pick<Data.InterviewSlot, 'interviewerUid'>,
   caller: SlotCaller,
@@ -62,8 +73,9 @@ function requireCanModify(
  * The slot's id is its time plus the caller's uid, so adding the same time
  * again replaces the caller's slot; that is refused (409) once the slot is
  * booked, as it would drop the booking. Assigning is refused when the
- * application is missing (404), unsubmitted or already has an interview
- * (409). Nobody on the slot is named by the request: the interviewer is the
+ * application is missing (404), or when its applicant doesn't need an
+ * interview (409): unsubmitted, already interviewing, or already decided -
+ * see interviewIneligibility. Nobody on the slot is named by the request: the interviewer is the
  * caller, under the name on their own profile (400 if they have none), and
  * the interviewee's uid and name come from the application.
  */
@@ -92,11 +104,9 @@ export async function createInterviewSlot(
         throw error(404, 'That application no longer exists.')
       }
       const application = appSnap.data() as Data.Application<'server'>
-      if (!application.meta?.submitted || application.meta?.interview) {
-        throw error(
-          409,
-          'That applicant already has an interview, or has not submitted their application.',
-        )
+      const ineligible = interviewIneligibility(application.meta)
+      if (ineligible) {
+        throw error(409, ineligibleMessages[ineligible])
       }
       interviewee = {
         id: application.meta.uid || appRef.id,
@@ -127,7 +137,8 @@ export async function createInterviewSlot(
 /**
  * Changes a slot's date and meeting link, the two fields the edit card
  * offers, leaving any booking on it alone. Refused for a slot that is gone
- * (404) or belongs to someone else, unless the caller is an admin (403).
+ * (404) or belongs to someone else, unless the caller is an admin (403), and
+ * for a missed one (409), which stays as the record of what was booked.
  */
 export async function updateInterviewSlot(
   caller: SlotCaller,
@@ -140,7 +151,11 @@ export async function updateInterviewSlot(
     if (!snap.exists) {
       throw error(404, 'That timeslot no longer exists.')
     }
-    requireCanModify(snap.data() as Data.InterviewSlot, caller)
+    const slot = snap.data() as Data.InterviewSlot
+    requireCanModify(slot, caller)
+    if (slot.interviewSlotStatus === 'missed') {
+      throw error(409, 'A missed interview can no longer be edited.')
+    }
     transaction.update(ref, withSemester({ date, meetingLink }))
   })
 }
@@ -149,7 +164,9 @@ export async function updateInterviewSlot(
  * Deletes a slot, clearing its applicant's `meta.interview` flag when it was
  * booked - otherwise the flag stays `true` with no slot behind it, which
  * hides the applicant from the eligible-interviewee list and the time-request
- * queue with no way to reschedule them.
+ * queue with no way to reschedule them. A `missed` slot already cleared the
+ * flag, and its applicant may have been booked again since, so deleting one
+ * leaves the flag alone.
  *
  * The applicant's application may itself be gone (account deletion), so it is
  * read first and only updated if it exists: the slot stays deletable either
@@ -165,12 +182,59 @@ export async function deleteInterviewSlot(
     if (!snap.exists) return
     const slot = snap.data() as Data.InterviewSlot
     requireCanModify(slot, caller)
-    const appRef = slot.intervieweeId
-      ? applicationRef(slot.intervieweeId)
-      : null
+    const appRef =
+      slot.intervieweeId && slot.interviewSlotStatus !== 'missed'
+        ? applicationRef(slot.intervieweeId)
+        : null
     const appSnap = appRef ? await transaction.get(appRef) : null
     transaction.delete(ref)
     if (appRef && appSnap?.exists) {
+      transaction.update(appRef, { 'meta.interview': false })
+    }
+  })
+}
+
+/**
+ * Records that a booked slot's interview didn't happen, whichever side missed
+ * it, and frees its applicant to be scheduled again: the slot becomes
+ * `missed`, keeping its interviewee as the record of what was booked, and
+ * the application's `meta.interview` is cleared in the same transaction. The
+ * applicant's open time requests then list again and portal offers them the
+ * booking form.
+ *
+ * `missedBy` only records which side it was - the effect is the same.
+ * Allowed for the slot's interviewer or an admin (403 otherwise). Refused for
+ * a slot that is gone (404), not booked, or still to come (409).
+ */
+export async function markInterviewSlotMissed(
+  caller: SlotCaller,
+  slotId: string,
+  missedBy: Data.InterviewMissedBy,
+  now: Date = new Date(),
+): Promise<void> {
+  const ref = slotRef(slotId)
+  await adminDb.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref)
+    if (!snap.exists) {
+      throw error(404, 'That timeslot no longer exists.')
+    }
+    const slot = snap.data() as Omit<Data.InterviewSlot, 'date'> & {
+      date: unknown
+    }
+    requireCanModify(slot, caller)
+    if (slot.interviewSlotStatus !== 'pending' || !slot.intervieweeId) {
+      throw error(409, 'Only a booked interview can be marked missed.')
+    }
+    if (toDate(slot.date) > now) {
+      throw error(
+        409,
+        'That interview has not started yet. Delete it to cancel it instead.',
+      )
+    }
+    const appRef = applicationRef(slot.intervieweeId)
+    const appSnap = await transaction.get(appRef)
+    transaction.update(ref, { interviewSlotStatus: 'missed', missedBy })
+    if (appSnap.exists) {
       transaction.update(appRef, { 'meta.interview': false })
     }
   })

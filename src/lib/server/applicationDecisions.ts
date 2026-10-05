@@ -17,7 +17,9 @@ import type { Transaction } from 'firebase-admin/firestore'
  * A decision document is keyed by its application's id, and the application's
  * `meta.decided` flag is what tells the admin UI that document exists. Every
  * write here sets both in one transaction, so a decision is never left
- * without its flag or the flag without a decision.
+ * without its flag or the flag without a decision. An official decision also
+ * copies its type to `meta.decisionType`, which interview scheduling reads (see
+ * interviewIneligibility).
  */
 
 type LikelyDecision = Data.Interview['likelyDecision']
@@ -144,7 +146,10 @@ export async function decideWithScorecard(
         semesterId,
       ),
     )
-    transaction.update(applicationRef, { 'meta.decided': true })
+    transaction.update(applicationRef, {
+      'meta.decided': true,
+      'meta.decisionType': decision,
+    })
     return decidedApplicant(applicationId, application)
   })
 }
@@ -165,7 +170,7 @@ export async function decideInBulk(
   applicationIds: string[],
   decision: Data.Decision,
 ): Promise<DecidedApplicant[]> {
-  // Two writes per application: its decision and its `meta.decided`.
+  // Two writes per application: its decision and its application's meta.
   const perTransaction = MAX_TRANSACTION_WRITES / 2
   const decided: DecidedApplicant[] = []
   for (let start = 0; start < applicationIds.length; start += perTransaction) {
@@ -186,7 +191,10 @@ export async function decideInBulk(
               withSemester({ type: decision }, semesterId),
               { merge: true },
             )
-            transaction.update(applicationRef, { 'meta.decided': true })
+            transaction.update(applicationRef, {
+              'meta.decided': true,
+              'meta.decisionType': decision,
+            })
             return decidedApplicant(id, application)
           },
         )

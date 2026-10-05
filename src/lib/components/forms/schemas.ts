@@ -310,7 +310,7 @@ export const interviewSlotSchema = z.object({
   intervieweeLastName: z.string().optional().default(''),
   intervieweeId: z.string().optional().default(''),
   interviewSlotStatus: z
-    .enum(['available', 'pending', 'confirmed', 'completed', 'canceled'])
+    .enum(['available', 'pending', 'missed'])
     .default('available'),
 })
 

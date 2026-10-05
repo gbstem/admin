@@ -181,11 +181,11 @@ Whenever you add or change a service or helper function, add or update its test 
 
 ## Firestore Schema
 
-Most collections are scoped under a semester document: `semesters/{semesterId}/{collectionType}/{docId}` (e.g. `semesters/Spring26/applications/{uid}`). The semester-scoped types are `applications`, `classFeedback`, `classes`, `decisions`, `instructorFeedback`, `instructorInterviewTimes`, and `registrations`.
+Most collections are scoped under a semester document: `semesters/{semesterId}/{collectionType}/{docId}` (e.g. `semesters/Spring26/applications/{uid}`). The semester-scoped types are `applications`, `classFeedback`, `classes`, `decisions`, `instructorFeedback`, `instructorInterviewTimes`, `interviewTimeRequests`, and `registrations`.
 
 [`src/lib/data/collections.ts`](src/lib/data/collections.ts) derives every one of these paths from a single `suffix` constant (the current semester ID, e.g. `'Spring26'`) via a `semesterCollectionPath(semesterId, name)` helper. The exported constant names (`applicationsCollection`, `registrationsCollection`, etc.) stay the same regardless, so call sites throughout the app never construct paths manually.
 
-A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `interviewTimeRequests`, `instructorClasses`, `confirmations`, `checkIns`, `users`, `tokens`, `mail`, `announcements`.
+A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `instructorClasses`, `confirmations`, `checkIns`, `users`, `tokens`, `mail`, `announcements`.
 
 The current semester's key dates (`classesStart`, `registrationsDue`, etc.) aren't in Firestore at all — every read site only ever needs the _current_ semester's dates, never a past one, so they're static data in [`semesterDates.json`](src/lib/data/semesterDates.json), re-exported as `semesterDates` from `collections.ts`. `__tests__/collections.test.ts` validates every field is a well-formed `MM/DD/YY` date whose year matches `currentSemester`. The portal and website repos each keep a verbatim copy of this same file (see [Adding a New Semester](#adding-a-new-semester) for the paths and the copy step).
 
@@ -226,6 +226,15 @@ firebase deploy --only firestore:indexes --project gbstem-core
 Deploy indexes **before** the code that queries them: a query whose index doesn't exist yet fails outright until the index finishes building. If the CLI offers to delete indexes that production has but this file doesn't, decline unless you've confirmed nothing uses them — they may have been created in the console.
 
 Admins can browse a past semester's data via the `?semester=<id>` URL param on the Applications and Registrations pages (see `CollectionFilter.svelte`), validated against [`collectionsList.json`](src/lib/data/collectionsList.json) before being used to build a Firestore path.
+
+### Interview scheduling state
+
+Whether an instructor applicant can be given an interview is worked out from their application's `meta` alone, by `interviewIneligibility` in [`src/lib/helpers/setInterviewTimes.ts`](src/lib/helpers/setInterviewTimes.ts) (portal's `helpers/interviewForm.ts` keeps an identical copy). They need one while `meta.submitted` is true, `meta.interview` is false, and `meta.decisionType` is empty or `interview` (an invitation to interview, not a decision). The same rule picks who admins can assign, whose time requests the /interviews list shows, and what portal's `/api/interview` and `/api/slotRequest` accept.
+
+- `meta.interview` is true while a slot names the applicant and isn't `missed`, whether that interview is still to come or has been held. Every slot write sets it in the same transaction: assigning or booking sets it, and deleting a booked slot or marking it missed clears it.
+- `meta.decisionType` is a copy of the official decision's `type`, written by `/api/decision` with the decision. `meta.decided` only says a decision document exists, which notes or a likely decision alone create.
+- A slot marked `missed` keeps its interviewee as the record, with `missedBy` saying whether the interviewer or the applicant missed it. Either way the applicant can be scheduled again.
+- Time requests are never edited when someone is scheduled, unscheduled or decided. Their visibility is computed from the rule above, so they come back when a booking is cancelled or missed.
 
 ## Roles and Authorization
 
