@@ -115,7 +115,11 @@ describe('Section H: Interview Timeslots Configuration', () => {
         )
         cy.contains('button', 'Save').click({ force: true })
       })
-    cy.waitForNotification('Timeslot updated successfully.')
+    cy.waitForNotification(
+      'Timeslot updated successfully. The applicant was emailed.',
+    )
+    // He holds the slot, so he hears about the new link.
+    cy.verifyEmailSent('applicant1@gmail.com', 'has been updated')
 
     // Verify updated details
     cy.contains('a', 'https://zoom.us/j/8888888888').should('exist')
@@ -136,7 +140,10 @@ describe('Section H: Interview Timeslots Configuration', () => {
       .within(() => {
         cy.contains('button', 'Delete').click({ force: true })
       })
-    cy.waitForNotification('Timeslot successfully deleted.')
+    cy.waitForNotification(
+      'Timeslot successfully deleted. The applicant was emailed.',
+    )
+    cy.verifyEmailSent('applicant1@gmail.com', 'has been canceled')
 
     // Verify it is removed from list
     cy.contains('a', 'https://zoom.us/j/8888888888').should('not.exist')
@@ -300,6 +307,7 @@ describe('Section H: Interview Timeslots Configuration', () => {
         })
       })
     cy.waitForNotification('Marked missed.')
+    cy.verifyEmailSent('applicant1@gmail.com', 'was missed')
 
     // The slot stays as the record, naming him and who missed it; his
     // application is free to be scheduled again.

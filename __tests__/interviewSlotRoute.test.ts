@@ -3,6 +3,9 @@ const mockUpdateInterviewSlot = jest.fn()
 const mockDeleteInterviewSlot = jest.fn()
 const mockMarkInterviewSlotMissed = jest.fn()
 const mockSendInterviewAssignedEmail = jest.fn()
+const mockSendInterviewRescheduledEmail = jest.fn()
+const mockSendInterviewCanceledEmail = jest.fn()
+const mockSendInterviewMissedEmail = jest.fn()
 
 jest.mock('$lib/server/interviewSlots', () => ({
   createInterviewSlot: (...args: any[]) => mockCreateInterviewSlot(...args),
@@ -12,6 +15,12 @@ jest.mock('$lib/server/interviewSlots', () => ({
     mockMarkInterviewSlotMissed(...args),
   sendInterviewAssignedEmail: (...args: any[]) =>
     mockSendInterviewAssignedEmail(...args),
+  sendInterviewRescheduledEmail: (...args: any[]) =>
+    mockSendInterviewRescheduledEmail(...args),
+  sendInterviewCanceledEmail: (...args: any[]) =>
+    mockSendInterviewCanceledEmail(...args),
+  sendInterviewMissedEmail: (...args: any[]) =>
+    mockSendInterviewMissedEmail(...args),
 }))
 
 import { DELETE, PATCH, POST } from '../src/routes/api/interviewSlot/+server'
@@ -28,6 +37,13 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockCreateInterviewSlot.mockResolvedValue({ id: 'slot-1' })
   mockSendInterviewAssignedEmail.mockResolvedValue(true)
+  // An open slot, by default: the change emails nobody.
+  mockUpdateInterviewSlot.mockResolvedValue(null)
+  mockDeleteInterviewSlot.mockResolvedValue(null)
+  mockMarkInterviewSlotMissed.mockResolvedValue(null)
+  mockSendInterviewRescheduledEmail.mockResolvedValue(true)
+  mockSendInterviewCanceledEmail.mockResolvedValue(true)
+  mockSendInterviewMissedEmail.mockResolvedValue(true)
   jest.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -196,4 +212,71 @@ describe('DELETE /api/interviewSlot', () => {
     await expect(call(DELETE, user, body)).rejects.toMatchObject({ status })
     expect(mockDeleteInterviewSlot).not.toHaveBeenCalled()
   })
+})
+
+describe('/api/interviewSlot emails for a booked slot', () => {
+  const booked = { id: 'slot-1', intervieweeId: 'applicant-uid' }
+  const update = { slotId: 'slot-1', date: DATE, meetingLink: LINK }
+  const markMissed = {
+    action: 'markMissed',
+    slotId: 'slot-1',
+    missedBy: 'interviewer',
+  }
+
+  it.each([
+    [
+      'an edit',
+      PATCH,
+      update,
+      mockUpdateInterviewSlot,
+      mockSendInterviewRescheduledEmail,
+      'Updated.',
+    ],
+    [
+      'a missed mark',
+      PATCH,
+      markMissed,
+      mockMarkInterviewSlotMissed,
+      mockSendInterviewMissedEmail,
+      'Marked missed.',
+    ],
+    [
+      'a delete',
+      DELETE,
+      { slotId: 'slot-1' },
+      mockDeleteInterviewSlot,
+      mockSendInterviewCanceledEmail,
+      'Deleted.',
+    ],
+  ])(
+    'emails the applicant about %s, reporting whether it went out',
+    async (_, handler, body, write, send, message) => {
+      write.mockResolvedValue(booked)
+
+      const res = await call(handler, reviewer, body)
+
+      expect(send).toHaveBeenCalledWith(booked)
+      expect(res.body).toEqual({ message, emailSent: true })
+
+      send.mockResolvedValue(false)
+      const failed = await call(handler, reviewer, body)
+      expect(failed.body).toEqual({ message, emailSent: false })
+    },
+  )
+
+  it.each([
+    ['an edit', PATCH, update, 'Updated.'],
+    ['a missed mark', PATCH, markMissed, 'Marked missed.'],
+    ['a delete', DELETE, { slotId: 'slot-1' }, 'Deleted.'],
+  ])(
+    'emails nobody about %s that has no applicant to tell',
+    async (_, handler, body, message) => {
+      const res = await call(handler, reviewer, body)
+
+      expect(res.body).toEqual({ message })
+      expect(mockSendInterviewRescheduledEmail).not.toHaveBeenCalled()
+      expect(mockSendInterviewMissedEmail).not.toHaveBeenCalled()
+      expect(mockSendInterviewCanceledEmail).not.toHaveBeenCalled()
+    },
+  )
 })

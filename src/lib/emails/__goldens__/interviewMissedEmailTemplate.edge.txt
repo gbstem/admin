@@ -1,0 +1,16 @@
+title: 
+heading: Missed Interview
+text: Missed Interview
+text: Hi Zoë Ñuñez 田中 🎓 <3 & "quoted" Bartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery III,
+text: Your interviewer, Zoë Ñuñez 田中 🎓 <3 & "quoted" Bartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery III, was unable to attend your interview on Zoë Ñuñez 田中 🎓 <3 & "quoted" Bartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery III. We're sorry about that!
+text: Please go back to the gbSTEM portal to book a new interview time, unless you get another email from us saying otherwise, such as a confirmation that a new interview has been booked for you.
+text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
+text: With love 🤍,The gbSTEM Team
+text: Book an Interview
+text: Main | Zoë Ñuñez 田中 🎓 <3 & "quoted" Bartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery III
+text: gbSTEM © 2026
+link: contact@gbstem.org -> mailto:contact@gbstem.org
+link: Book an Interview -> https://portal.gbstem.org/interview
+link: Main -> https://gbstem.org
+link: Zoë Ñuñez 田中 🎓 <3 & "quoted" Bartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery IIIBartholomew-Wentworth Fitzgerald-Montgomery III -> https://portal.gbstem.org/dashboard?tab=classes&id=7#top
+image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

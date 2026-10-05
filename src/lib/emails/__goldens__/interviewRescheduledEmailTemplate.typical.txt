@@ -1,0 +1,15 @@
+title: 
+heading: Interview Updated
+text: Interview Updated
+text: Hi Ada,
+text: Your interview with Grace Hopper has been moved from Monday, March 2nd at 6:30 PM EST to Tuesday, March 3rd at 7:00 PM EST. The meeting link is https://mit.zoom.us/j/95024505441.
+text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
+text: With love 🤍,The gbSTEM Team
+text: Check Application Status
+text: Main | Portal
+text: gbSTEM © 2026
+link: contact@gbstem.org -> mailto:contact@gbstem.org
+link: Check Application Status -> https://portal.gbstem.org/dashboard
+link: Main -> https://gbstem.org
+link: Portal -> https://portal.gbstem.org
+image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

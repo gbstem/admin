@@ -7,6 +7,7 @@ import {
   interviewTimesCollection,
 } from '$lib/data/collections'
 import type {
+  ChangeSlotResponse,
   CreateSlotRequestBody,
   CreateSlotResponse,
   DeleteSlotRequestBody,
@@ -120,40 +121,48 @@ export const interviewService = {
 
   /**
    * Changes a slot's date and meeting link, the two fields the edit card
-   * offers. A booking on the slot is left alone.
+   * offers. A booking on the slot is left alone, and its applicant emailed
+   * the change - see `emailSent`.
    */
-  async updateInterviewSlot(interview: Data.InterviewSlot): Promise<void> {
-    await slotRequest('PATCH', {
+  async updateInterviewSlot(
+    interview: Data.InterviewSlot,
+  ): Promise<ChangeSlotResponse> {
+    const res = await slotRequest('PATCH', {
       slotId: interview.id,
       date: new Date(interview.date).toISOString(),
       meetingLink: interview.meetingLink,
     } satisfies UpdateSlotRequestBody)
+    return res.json()
   },
 
   /**
    * Records that a booked slot's interview didn't happen, whichever side
-   * missed it. The server frees the applicant to be scheduled again.
+   * missed it. The server frees the applicant to be scheduled again and
+   * emails them to book again - see `emailSent`.
    */
   async markInterviewSlotMissed(
     slot: Pick<Data.InterviewSlot, 'id'>,
     missedBy: Data.InterviewMissedBy,
-  ): Promise<void> {
-    await slotRequest('PATCH', {
+  ): Promise<ChangeSlotResponse> {
+    const res = await slotRequest('PATCH', {
       action: 'markMissed',
       slotId: slot.id,
       missedBy,
     } satisfies MarkMissedRequestBody)
+    return res.json()
   },
 
   /**
    * Deletes a slot. If it was booked, the server also clears that
-   * applicant's `meta.interview` flag so they can be scheduled again.
+   * applicant's `meta.interview` flag so they can be scheduled again, and
+   * emails them to book again - see `emailSent`.
    */
   async deleteInterviewSlot(
     slot: Pick<Data.InterviewSlot, 'id'>,
-  ): Promise<void> {
-    await slotRequest('DELETE', {
+  ): Promise<ChangeSlotResponse> {
+    const res = await slotRequest('DELETE', {
       slotId: slot.id,
     } satisfies DeleteSlotRequestBody)
+    return res.json()
   },
 }

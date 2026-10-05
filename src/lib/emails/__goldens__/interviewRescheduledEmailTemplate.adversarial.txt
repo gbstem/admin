@@ -1,0 +1,15 @@
+title: 
+heading: Interview Updated
+text: Interview Updated
+text: Hi </p><script>alert('xss')</script><p x=",
+text: Your interview with </p><script>alert('xss')</script><p x=" has been moved from </p><script>alert('xss')</script><p x=" to </p><script>alert('xss')</script><p x=". The meeting link is javascript:alert('xss')" onmouseover="alert('xss')" x=".
+text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
+text: With love 🤍,The gbSTEM Team
+text: Check Application Status
+text: Main | </p><script>alert('xss')</script><p x="
+text: gbSTEM © 2026
+link: contact@gbstem.org -> mailto:contact@gbstem.org
+link: Check Application Status -> https://portal.gbstem.org/dashboard
+link: Main -> https://gbstem.org
+link: </p><script>alert('xss')</script><p x=" -> 
+image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

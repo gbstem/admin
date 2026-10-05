@@ -52,6 +52,9 @@ import {
   deleteInterviewSlot,
   markInterviewSlotMissed,
   sendInterviewAssignedEmail,
+  sendInterviewCanceledEmail,
+  sendInterviewMissedEmail,
+  sendInterviewRescheduledEmail,
   updateInterviewSlot,
 } from '$lib/server/interviewSlots'
 
@@ -219,6 +222,45 @@ describe('updateInterviewSlot', () => {
     },
   )
 
+  it('resolves to the booked slot and its previous time when the time moves', async () => {
+    const rescheduled = await updateInterviewSlot(reviewer, SLOT_ID, {
+      date: NEW_DATE,
+      meetingLink: LINK,
+    })
+
+    expect(rescheduled).toEqual({
+      slot: expect.objectContaining({
+        id: SLOT_ID,
+        intervieweeId: 'applicant-uid',
+        date: NEW_DATE,
+        meetingLink: LINK,
+      }),
+      previousDate: DATE,
+    })
+  })
+
+  it('resolves to the booked slot with no previous time when only the link changes', async () => {
+    const rescheduled = await updateInterviewSlot(reviewer, SLOT_ID, {
+      date: new Date(DATE),
+      meetingLink: 'https://mit.zoom.us/j/2',
+    })
+
+    expect(rescheduled).toEqual({
+      slot: expect.objectContaining({ meetingLink: 'https://mit.zoom.us/j/2' }),
+    })
+  })
+
+  it.each([
+    ['an edit that changes nothing', 'applicant-uid', DATE],
+    ['an open slot', '', NEW_DATE],
+  ])('resolves to null for %s', async (_, intervieweeId, date) => {
+    docs[SLOT].intervieweeId = intervieweeId
+
+    await expect(
+      updateInterviewSlot(reviewer, SLOT_ID, { date, meetingLink: LINK }),
+    ).resolves.toBeNull()
+  })
+
   it("refuses (403) another reviewer's slot", async () => {
     await expect(
       updateInterviewSlot(otherReviewer, SLOT_ID, {
@@ -255,10 +297,15 @@ describe('deleteInterviewSlot', () => {
     docs[SLOT] = { interviewerUid: 'rev-1', intervieweeId: 'applicant-uid' }
     docs[BOOKED_APP] = application({ interview: true })
 
-    await deleteInterviewSlot(reviewer, SLOT_ID)
+    const canceled = await deleteInterviewSlot(reviewer, SLOT_ID)
 
     expect(docs[SLOT]).toBeUndefined()
     expect(docs[BOOKED_APP].meta.interview).toBe(false)
+    // For the applicant's cancellation email.
+    expect(canceled).toMatchObject({
+      id: SLOT_ID,
+      intervieweeId: 'applicant-uid',
+    })
   })
 
   // Account deletion removes the application; the orphaned slot must still
@@ -266,7 +313,7 @@ describe('deleteInterviewSlot', () => {
   it('deletes a booked slot whose application is gone', async () => {
     docs[SLOT] = { interviewerUid: 'rev-1', intervieweeId: 'applicant-uid' }
 
-    await deleteInterviewSlot(reviewer, SLOT_ID)
+    await expect(deleteInterviewSlot(reviewer, SLOT_ID)).resolves.toBeNull()
 
     expect(docs[SLOT]).toBeUndefined()
     expect(mockTransaction.update).not.toHaveBeenCalled()
@@ -282,7 +329,8 @@ describe('deleteInterviewSlot', () => {
     }
     docs[BOOKED_APP] = application({ interview: true })
 
-    await deleteInterviewSlot(reviewer, SLOT_ID)
+    // Its applicant was already emailed when it was marked missed.
+    await expect(deleteInterviewSlot(reviewer, SLOT_ID)).resolves.toBeNull()
 
     expect(docs[SLOT]).toBeUndefined()
     expect(docs[BOOKED_APP].meta.interview).toBe(true)
@@ -291,7 +339,7 @@ describe('deleteInterviewSlot', () => {
   it('deletes an open slot without reading any application', async () => {
     docs[SLOT] = { interviewerUid: 'rev-1', intervieweeId: '' }
 
-    await deleteInterviewSlot(admin, SLOT_ID)
+    await expect(deleteInterviewSlot(admin, SLOT_ID)).resolves.toBeNull()
 
     expect(docs[SLOT]).toBeUndefined()
     expect(mockTransaction.get).toHaveBeenCalledTimes(1)
@@ -307,7 +355,7 @@ describe('deleteInterviewSlot', () => {
   })
 
   it('succeeds for a slot that is already gone', async () => {
-    await expect(deleteInterviewSlot(reviewer, 'nope')).resolves.toBeUndefined()
+    await expect(deleteInterviewSlot(reviewer, 'nope')).resolves.toBeNull()
     expect(mockTransaction.delete).not.toHaveBeenCalled()
   })
 })
@@ -332,8 +380,20 @@ describe('markInterviewSlotMissed', () => {
       docs[SLOT] = booked()
       docs[BOOKED_APP] = application({ interview: true })
 
-      await markInterviewSlotMissed(caller, SLOT_ID, missedBy, AFTER)
+      const missed = await markInterviewSlotMissed(
+        caller,
+        SLOT_ID,
+        missedBy,
+        AFTER,
+      )
 
+      // For the applicant's email, which says who missed it.
+      expect(missed).toMatchObject({
+        id: SLOT_ID,
+        intervieweeId: 'applicant-uid',
+        date: DATE,
+        missedBy,
+      })
       // The booking stays on the slot as the record of what was missed.
       expect(docs[SLOT]).toMatchObject({
         intervieweeId: 'applicant-uid',
@@ -347,7 +407,9 @@ describe('markInterviewSlotMissed', () => {
   it('marks the slot even when its application is gone', async () => {
     docs[SLOT] = booked()
 
-    await markInterviewSlotMissed(reviewer, SLOT_ID, 'interviewee', AFTER)
+    await expect(
+      markInterviewSlotMissed(reviewer, SLOT_ID, 'interviewee', AFTER),
+    ).resolves.toBeNull()
 
     expect(docs[SLOT].interviewSlotStatus).toBe('missed')
     expect(docs[BOOKED_APP]).toBeUndefined()
@@ -418,5 +480,95 @@ describe('sendInterviewAssignedEmail', () => {
 
     await expect(sendInterviewAssignedEmail(slot)).resolves.toBe(false)
     expect(mockSendEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe('the booked-slot change emails', () => {
+  const NEW_DATE = new Date('2026-10-06T18:00:00.000Z')
+  const slot = {
+    id: SLOT_ID,
+    date: NEW_DATE,
+    meetingLink: LINK,
+    interviewerName: 'Jane Doe',
+    interviewerUid: 'rev-1',
+    intervieweeId: 'applicant-uid',
+    intervieweeFirstName: 'Ada',
+    intervieweeLastName: 'Lovelace',
+    interviewSlotStatus: 'pending' as const,
+  }
+  const sent = () => mockSendEmail.mock.calls[0][0]
+  // The sentences as a reader sees them: MJML wraps lines mid-sentence.
+  const text = () =>
+    sent()
+      .html.replace(/\s+/g, ' ')
+      .replace(/&#x27;/g, "'")
+
+  it('mails a moved time with both times in gbSTEM time, copying the interviewer', async () => {
+    await expect(
+      sendInterviewRescheduledEmail({ slot, previousDate: DATE }),
+    ).resolves.toBe(true)
+
+    expect(sent()).toMatchObject({
+      to: 'applicant-uid@test.com',
+      cc: 'rev-1@test.com',
+      replyTo: 'rev-1@test.com',
+      subject: 'Ada, your interview with Jane Doe has been rescheduled',
+    })
+    expect(text()).toMatch(
+      /moved from Monday, October 5, 2026 at 02:00 PM EDT to Tuesday, October 6, 2026/,
+    )
+    expect(sent().html).toContain(LINK)
+  })
+
+  it('mails a new link alone as an update', async () => {
+    await sendInterviewRescheduledEmail({ slot })
+
+    expect(sent().subject).toBe(
+      'Ada, your interview with Jane Doe has been updated',
+    )
+    expect(text()).toContain('has a new meeting link')
+    expect(text()).not.toContain('moved from')
+  })
+
+  it('mails a cancellation, sending the applicant back to book', async () => {
+    await expect(sendInterviewCanceledEmail(slot)).resolves.toBe(true)
+
+    expect(sent()).toMatchObject({
+      to: 'applicant-uid@test.com',
+      cc: 'rev-1@test.com',
+      subject: 'Ada, your interview with Jane Doe has been canceled',
+    })
+    expect(text()).toContain('has been canceled')
+    expect(text()).toContain('book a new interview time')
+    expect(text()).toContain('https://portal.gbstem.org/interview')
+  })
+
+  it.each([
+    ['interviewer', ['Your interviewer', "We're sorry"], ["We didn't see you"]],
+    ['interviewee', ["We didn't see you"], ['Your interviewer', "We're sorry"]],
+  ] as const)(
+    'mails an interview missed by the %s, saying so',
+    async (missedBy, says, doesNotSay) => {
+      await expect(
+        sendInterviewMissedEmail({
+          ...slot,
+          interviewSlotStatus: 'missed',
+          missedBy,
+        }),
+      ).resolves.toBe(true)
+
+      expect(sent().subject).toBe(
+        'Ada, your interview with Jane Doe was missed',
+      )
+      for (const sentence of says) expect(text()).toContain(sentence)
+      for (const sentence of doesNotSay) expect(text()).not.toContain(sentence)
+      expect(text()).toContain('book a new interview time')
+    },
+  )
+
+  it('reports false rather than throwing when the send fails', async () => {
+    mockSendEmail.mockRejectedValue(new Error('SendGrid down'))
+
+    await expect(sendInterviewCanceledEmail(slot)).resolves.toBe(false)
   })
 })

@@ -324,6 +324,23 @@
     alert.trigger('success', 'Interviewee cleared.')
   }
 
+  /**
+   * Toasts a finished slot change, and whether its applicant was emailed
+   * about it when it emailed anyone (`emailSent` is absent when not).
+   */
+  function reportChange(done: string, emailSent: boolean | undefined) {
+    if (emailSent === undefined) {
+      alert.trigger('success', done)
+    } else if (emailSent) {
+      alert.trigger('success', `${done} The applicant was emailed.`)
+    } else {
+      alert.trigger(
+        'error',
+        `${done} But the applicant's email could not be sent.`,
+      )
+    }
+  }
+
   async function updateTime(interview: Data.InterviewSlot) {
     if (
       !canUserModifySlot(
@@ -339,8 +356,9 @@
       return
     }
     try {
-      await interviewService.updateInterviewSlot(interview)
-      alert.trigger('success', 'Timeslot updated successfully.')
+      const { emailSent } =
+        await interviewService.updateInterviewSlot(interview)
+      reportChange('Timeslot updated successfully.', emailSent)
       await refetchSlots()
     } catch (err: any) {
       console.error('Update timeslot error:', err)
@@ -363,13 +381,14 @@
       return
     }
     try {
-      await interviewService.deleteInterviewSlot(interview)
+      const { emailSent } =
+        await interviewService.deleteInterviewSlot(interview)
       // Remove it from local state immediately rather than waiting on the
       // refetch below, so the card disappears even if that round trip is slow.
       allInterviewSlots = allInterviewSlots.filter(
         (slot) => slot.id !== interview.id,
       )
-      alert.trigger('success', 'Timeslot successfully deleted.')
+      reportChange('Timeslot successfully deleted.', emailSent)
       await Promise.all([refetchSlots(), refetchInterviewees()])
     } catch (err: any) {
       console.error('Delete timeslot error:', err)
@@ -391,10 +410,13 @@
   ) {
     markingMissed = ''
     try {
-      await interviewService.markInterviewSlotMissed(interview, missedBy)
-      alert.trigger(
-        'success',
+      const { emailSent } = await interviewService.markInterviewSlotMissed(
+        interview,
+        missedBy,
+      )
+      reportChange(
         `Marked missed. ${interview.intervieweeFirstName} can now be scheduled again.`,
+        emailSent,
       )
       await Promise.all([refetchSlots(), refetchInterviewees()])
     } catch (err: any) {

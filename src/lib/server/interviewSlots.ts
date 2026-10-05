@@ -4,6 +4,7 @@ import {
   withSemester,
 } from '$lib/data/collections'
 import { interviewSlotDocId } from '$lib/data/docIds'
+import type { EmailTemplateName } from '$lib/emails/registry'
 import { renderEmail } from '$lib/emails/render'
 import {
   canUserModifySlot,
@@ -134,29 +135,65 @@ export async function createInterviewSlot(
   })
 }
 
+/** A slot document as read, its `date` still in whatever shape it was stored. */
+type ReadSlot = Omit<Data.InterviewSlot, 'date'> & { date: unknown }
+
+/** `slot` as stored, under `id`, with its `date` as a `Date`. */
+const storedSlot = (id: string, slot: ReadSlot): StoredSlot => ({
+  ...slot,
+  id,
+  date: toDate(slot.date),
+})
+
+/** Whether an applicant holds `slot`: booked, and not yet marked missed. */
+const isBooked = (
+  slot: Pick<Data.InterviewSlot, 'intervieweeId' | 'interviewSlotStatus'>,
+) => !!slot.intervieweeId && slot.interviewSlotStatus !== 'missed'
+
+/** A booked slot whose date or link an edit changed, for its applicant's email. */
+export interface RescheduledSlot {
+  slot: StoredSlot
+  /** Set when the time moved; absent when only the link changed. */
+  previousDate?: Date
+}
+
 /**
  * Changes a slot's date and meeting link, the two fields the edit card
  * offers, leaving any booking on it alone. Refused for a slot that is gone
  * (404) or belongs to someone else, unless the caller is an admin (403), and
  * for a missed one (409), which stays as the record of what was booked.
+ *
+ * Resolves to the updated slot when it is booked and the edit changed
+ * something its applicant needs to know - see sendInterviewRescheduledEmail -
+ * and to null otherwise.
  */
 export async function updateInterviewSlot(
   caller: SlotCaller,
   slotId: string,
   { date, meetingLink }: NewSlot,
-): Promise<void> {
+): Promise<RescheduledSlot | null> {
   const ref = slotRef(slotId)
-  await adminDb.runTransaction(async (transaction) => {
+  return adminDb.runTransaction(async (transaction) => {
     const snap = await transaction.get(ref)
     if (!snap.exists) {
       throw error(404, 'That timeslot no longer exists.')
     }
-    const slot = snap.data() as Data.InterviewSlot
+    const slot = snap.data() as ReadSlot
     requireCanModify(slot, caller)
     if (slot.interviewSlotStatus === 'missed') {
       throw error(409, 'A missed interview can no longer be edited.')
     }
     transaction.update(ref, withSemester({ date, meetingLink }))
+
+    const previousDate = toDate(slot.date)
+    const moved = previousDate.getTime() !== date.getTime()
+    if (!isBooked(slot) || (!moved && slot.meetingLink === meetingLink)) {
+      return null
+    }
+    return {
+      slot: { ...storedSlot(slotId, slot), date, meetingLink },
+      ...(moved ? { previousDate } : {}),
+    }
   })
 }
 
@@ -171,26 +208,28 @@ export async function updateInterviewSlot(
  * The applicant's application may itself be gone (account deletion), so it is
  * read first and only updated if it exists: the slot stays deletable either
  * way. Deleting a slot that is already gone succeeds.
+ *
+ * Resolves to the deleted slot when it was booked and its application is
+ * still there, for sendInterviewCanceledEmail, and to null otherwise.
  */
 export async function deleteInterviewSlot(
   caller: SlotCaller,
   slotId: string,
-): Promise<void> {
+): Promise<StoredSlot | null> {
   const ref = slotRef(slotId)
-  await adminDb.runTransaction(async (transaction) => {
+  return adminDb.runTransaction(async (transaction) => {
     const snap = await transaction.get(ref)
-    if (!snap.exists) return
-    const slot = snap.data() as Data.InterviewSlot
+    if (!snap.exists) return null
+    const slot = snap.data() as ReadSlot
     requireCanModify(slot, caller)
-    const appRef =
-      slot.intervieweeId && slot.interviewSlotStatus !== 'missed'
-        ? applicationRef(slot.intervieweeId)
-        : null
+    const appRef = isBooked(slot) ? applicationRef(slot.intervieweeId) : null
     const appSnap = appRef ? await transaction.get(appRef) : null
     transaction.delete(ref)
     if (appRef && appSnap?.exists) {
       transaction.update(appRef, { 'meta.interview': false })
+      return storedSlot(slotId, slot)
     }
+    return null
   })
 }
 
@@ -202,25 +241,27 @@ export async function deleteInterviewSlot(
  * applicant's open time requests then list again and portal offers them the
  * booking form.
  *
- * `missedBy` only records which side it was - the effect is the same.
- * Allowed for the slot's interviewer or an admin (403 otherwise). Refused for
- * a slot that is gone (404), not booked, or still to come (409).
+ * `missedBy` records which side it was - the effect is the same, though
+ * sendInterviewMissedEmail words the applicant's email by it. Allowed for the
+ * slot's interviewer or an admin (403 otherwise). Refused for a slot that is
+ * gone (404), not booked, or still to come (409).
+ *
+ * Resolves to the missed slot when its application is still there, for that
+ * email, and to null otherwise.
  */
 export async function markInterviewSlotMissed(
   caller: SlotCaller,
   slotId: string,
   missedBy: Data.InterviewMissedBy,
   now: Date = new Date(),
-): Promise<void> {
+): Promise<StoredSlot | null> {
   const ref = slotRef(slotId)
-  await adminDb.runTransaction(async (transaction) => {
+  return adminDb.runTransaction(async (transaction) => {
     const snap = await transaction.get(ref)
     if (!snap.exists) {
       throw error(404, 'That timeslot no longer exists.')
     }
-    const slot = snap.data() as Omit<Data.InterviewSlot, 'date'> & {
-      date: unknown
-    }
+    const slot = snap.data() as ReadSlot
     requireCanModify(slot, caller)
     if (slot.interviewSlotStatus !== 'pending' || !slot.intervieweeId) {
       throw error(409, 'Only a booked interview can be marked missed.')
@@ -234,49 +275,107 @@ export async function markInterviewSlotMissed(
     const appRef = applicationRef(slot.intervieweeId)
     const appSnap = await transaction.get(appRef)
     transaction.update(ref, { interviewSlotStatus: 'missed', missedBy })
-    if (appSnap.exists) {
-      transaction.update(appRef, { 'meta.interview': false })
+    if (!appSnap.exists) return null
+    transaction.update(appRef, { 'meta.interview': false })
+    return {
+      ...storedSlot(slotId, slot),
+      interviewSlotStatus: 'missed',
+      missedBy,
     }
   })
 }
 
+const EMAIL_ROUTE = '/api/interviewSlot'
+const PORTAL = { name: 'Portal', link: 'https://portal.gbstem.org' }
+
 /**
- * Emails an applicant that an interviewer assigned them `slot`, copying the
- * interviewer. Both addresses are resolved from Auth by uid. Resolves to
+ * Emails `slot`'s applicant about it, copying its interviewer, with replies
+ * going to the interviewer. Both addresses are resolved from Auth by uid.
+ * `interview` adds to the fields every interview template shares. Resolves to
  * whether it went out rather than throwing: the slot is already written.
  */
-export async function sendInterviewAssignedEmail(
+async function emailInterviewee(
   slot: StoredSlot,
+  template: EmailTemplateName,
+  subject: string,
+  interview: Record<string, unknown> = {},
 ): Promise<boolean> {
-  const route = '/api/interviewSlot'
   try {
     const [intervieweeEmail, interviewerEmail] = await Promise.all([
-      resolveAccountEmail(slot.intervieweeId, 'Interviewee', route),
-      resolveAccountEmail(slot.interviewerUid, 'Interviewer', route),
+      resolveAccountEmail(slot.intervieweeId, 'Interviewee', EMAIL_ROUTE),
+      resolveAccountEmail(slot.interviewerUid, 'Interviewer', EMAIL_ROUTE),
     ])
-    const subject = `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} has been scheduled`
     await sendEmail({
       to: intervieweeEmail,
       cc: interviewerEmail,
       replyTo: interviewerEmail,
       subject,
-      html: renderEmail('interviewScheduledEmailTemplate', {
+      html: renderEmail(template, {
         subject,
-        app: { name: 'Portal', link: 'https://portal.gbstem.org' },
+        app: PORTAL,
         interview: {
           interviewee: slot.intervieweeFirstName,
           name: slot.interviewerName,
           date: formatDateLocal(slot.date, GBSTEM_TIME_ZONE),
-          link: slot.meetingLink,
+          ...interview,
         },
       }),
     })
     return true
   } catch (err) {
     console.error(
-      `[API ${route}] Assignment email for ${slot.id} not sent:`,
+      `[API ${EMAIL_ROUTE}] ${template} for ${slot.id} not sent:`,
       err,
     )
     return false
   }
+}
+
+/** Emails an applicant that an interviewer assigned them `slot`. */
+export function sendInterviewAssignedEmail(slot: StoredSlot): Promise<boolean> {
+  return emailInterviewee(
+    slot,
+    'interviewScheduledEmailTemplate',
+    `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} has been scheduled`,
+    { link: slot.meetingLink },
+  )
+}
+
+/** Emails an applicant the new time or link of their booked slot. */
+export function sendInterviewRescheduledEmail({
+  slot,
+  previousDate,
+}: RescheduledSlot): Promise<boolean> {
+  return emailInterviewee(
+    slot,
+    'interviewRescheduledEmailTemplate',
+    `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} has been ${previousDate ? 'rescheduled' : 'updated'}`,
+    {
+      link: slot.meetingLink,
+      previousDate:
+        previousDate && formatDateLocal(previousDate, GBSTEM_TIME_ZONE),
+    },
+  )
+}
+
+/** Emails an applicant that their booked slot was deleted, to book again. */
+export function sendInterviewCanceledEmail(slot: StoredSlot): Promise<boolean> {
+  return emailInterviewee(
+    slot,
+    'interviewCanceledEmailTemplate',
+    `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} has been canceled`,
+  )
+}
+
+/**
+ * Emails an applicant that their interview was missed - saying by whom, with
+ * an apology when it was the interviewer - and to book again.
+ */
+export function sendInterviewMissedEmail(slot: StoredSlot): Promise<boolean> {
+  return emailInterviewee(
+    slot,
+    'interviewMissedEmailTemplate',
+    `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} was missed`,
+    { interviewerMissed: slot.missedBy === 'interviewer' },
+  )
 }

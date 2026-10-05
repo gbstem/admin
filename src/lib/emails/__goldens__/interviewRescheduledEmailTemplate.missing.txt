@@ -1,0 +1,15 @@
+title: 
+heading: Interview Updated
+text: Interview Updated
+text: Hi ,
+text: Your interview with on has a new meeting link: .
+text: If you have any questions or concerns, visit our FAQs, or you can reach us at contact@gbstem.org.
+text: With love 🤍,The gbSTEM Team
+text: Check Application Status
+text: Main |
+text: gbSTEM © 2026
+link: contact@gbstem.org -> mailto:contact@gbstem.org
+link: Check Application Status -> https://portal.gbstem.org/dashboard
+link: Main -> https://gbstem.org
+link:  -> 
+image: https://firebasestorage.googleapis.com/v0/b/gbstem-public/o/logoNOBACKGROUND.png?alt=media&token=ccf22ae8-323e-44a6-981c-a314b9563c45 (alt= width=550)

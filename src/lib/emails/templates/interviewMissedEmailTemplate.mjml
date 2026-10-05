@@ -1,0 +1,77 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../layout/head.mjml" />
+  </mj-head>
+  <mj-body background-color="#f8f8f8">
+    <mj-include path="../layout/header.mjml" />
+    <mj-section
+      background-color="#ffffff"
+      padding="20px 0px 20px 0px"
+      padding-top="20px"
+      padding-bottom="50px"
+    >
+      <mj-column>
+        <mj-text color="#797e82" padding="0px 25px 5px 25px">
+          <h1
+            style="
+              text-align: center;
+              color: #000000;
+              font-weight: 700;
+              font-size: 34px;
+            "
+          >
+            Missed Interview
+          </h1>
+        </mj-text>
+        <mj-text
+          font-size="16px"
+          line-height="22px"
+          padding="10px 25px"
+          padding-top="0px"
+        >
+          <p style="margin: 20px 0">Hi {{ interview.interviewee }},</p>
+          <p style="margin: 20px 0">
+            {{#if interview.interviewerMissed}}Your interviewer,
+            {{ interview.name }}, was unable to attend your interview on
+            {{ interview.date }}. We're sorry about that!{{else}}We didn't see
+            you at your interview with {{ interview.name }} on
+            {{ interview.date }}.{{/if}}
+          </p>
+          <p style="margin: 20px 0">
+            Please go back to the gbSTEM portal to book a new interview time,
+            unless you get another email from us saying otherwise, such as a
+            confirmation that a new interview has been booked for you.
+          </p>
+          <p style="margin: 30px 0">
+            If you have any questions or concerns, visit our FAQs, or you can
+            reach us at
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              style="color: darkblue"
+              href="mailto:contact@gbstem.org"
+              >contact@gbstem.org</a
+            >.
+          </p>
+          <p>With love 🤍,<br />The gbSTEM Team</p>
+        </mj-text>
+        <mj-button
+          href="https://portal.gbstem.org/interview"
+          background-color="darkblue"
+          color="#ffffff"
+          font-size="14px"
+          font-weight="normal"
+          line-height="120%"
+          border-radius="100px"
+          inner-padding="15px 25px 15px 25px"
+          padding="10px 25px"
+          padding-top="20px"
+          ><b style="font-weight: 700"
+            ><b style="font-weight: 700">Book an Interview</b></b
+          ></mj-button
+        >
+      </mj-column>
+    </mj-section>
+    <mj-include path="../layout/footer.mjml" />
+  </mj-body>
+</mjml>

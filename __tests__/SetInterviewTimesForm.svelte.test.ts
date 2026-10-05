@@ -111,9 +111,15 @@ describe('SetInterviewTimesForm Component', () => {
     jest
       .spyOn(interviewService, 'createOrAssignInterviewSlot')
       .mockResolvedValue({ id: 'new-slot', emailSent: true })
-    jest.spyOn(interviewService, 'deleteInterviewSlot').mockResolvedValue()
-    jest.spyOn(interviewService, 'updateInterviewSlot').mockResolvedValue()
-    jest.spyOn(interviewService, 'markInterviewSlotMissed').mockResolvedValue()
+    jest
+      .spyOn(interviewService, 'deleteInterviewSlot')
+      .mockResolvedValue({ message: 'Done.', emailSent: true })
+    jest
+      .spyOn(interviewService, 'updateInterviewSlot')
+      .mockResolvedValue({ message: 'Done.', emailSent: true })
+    jest
+      .spyOn(interviewService, 'markInterviewSlotMissed')
+      .mockResolvedValue({ message: 'Done.', emailSent: true })
     jest.spyOn(interviewService, 'fetchSlotRequestEmails').mockResolvedValue({})
   })
 

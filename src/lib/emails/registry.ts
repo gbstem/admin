@@ -9,6 +9,9 @@ import { acceptEmailTemplate } from '$lib/data/emailTemplates/acceptEmailTemplat
 import { actionEmailTemplate } from '$lib/data/emailTemplates/actionEmailTemplate'
 import { classReminderEmailTemplate } from '$lib/data/emailTemplates/classReminderEmailTemplate'
 import { inPersonClassEnrolledEmailTemplate } from '$lib/data/emailTemplates/inPersonClassEnrolledEmailTemplate'
+import { interviewCanceledEmailTemplate } from '$lib/data/emailTemplates/interviewCanceledEmailTemplate'
+import { interviewMissedEmailTemplate } from '$lib/data/emailTemplates/interviewMissedEmailTemplate'
+import { interviewRescheduledEmailTemplate } from '$lib/data/emailTemplates/interviewRescheduledEmailTemplate'
 import { interviewScheduledEmailTemplate } from '$lib/data/emailTemplates/interviewScheduledEmailTemplate'
 import { onlineClassEnrolledEmailTemplate } from '$lib/data/emailTemplates/onlineClassEnrolledEmailTemplate'
 import { rejectionEmailTemplate } from '$lib/data/emailTemplates/rejectionEmailTemplate'
@@ -22,6 +25,9 @@ export const EMAIL_TEMPLATES = {
   actionEmailTemplate,
   classReminderEmailTemplate,
   inPersonClassEnrolledEmailTemplate,
+  interviewCanceledEmailTemplate,
+  interviewMissedEmailTemplate,
+  interviewRescheduledEmailTemplate,
   interviewScheduledEmailTemplate,
   onlineClassEnrolledEmailTemplate,
   rejectionEmailTemplate,
