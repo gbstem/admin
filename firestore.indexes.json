@@ -110,6 +110,14 @@
       ]
     },
     {
+      "collectionGroup": "subRequests",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "subInstructorId", "order": "ASCENDING" },
+        { "fieldPath": "subRequestStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "instructorInterviewTimes",
       "queryScope": "COLLECTION",
       "fields": [

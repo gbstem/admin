@@ -6,6 +6,7 @@ import {
 } from '@firebase/rules-unit-testing'
 import {
   collection,
+  collectionGroup,
   deleteDoc,
   deleteField,
   doc,
@@ -1422,6 +1423,68 @@ describe("subRequests - a request's own people read it; every write goes through
     )
     const anonymous = testEnv.unauthenticatedContext().firestore()
     await assertFails(getDoc(doc(anonymous, 'subRequests', REQUEST_ID)))
+  })
+
+  // Past semesters' requests are archived under the semester by
+  // scripts/archive-past-sub-requests.ts, readable by the same people.
+  const archived = semesterCollectionPath('Spring26', 'subRequests')
+
+  it("lets an archived request's own people read it, and nobody else", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), archived, REQUEST_ID),
+        subRequest({ subInstructorId: UIDS.substitute }),
+      )
+    })
+    for (const uid of [UIDS.accepted, UIDS.substitute]) {
+      await assertSucceeds(
+        getDoc(doc(as(uid, 'instructor'), archived, REQUEST_ID)),
+      )
+    }
+    await assertSucceeds(
+      getDoc(doc(as(UIDS.admin, 'admin'), archived, REQUEST_ID)),
+    )
+    await assertFails(
+      getDoc(doc(as(UIDS.rejected, 'instructor'), archived, REQUEST_ID)),
+    )
+    await assertFails(
+      setDoc(
+        doc(as(UIDS.admin, 'admin'), archived, 'class-9---1'),
+        subRequest(),
+      ),
+    )
+  })
+
+  // Portal's community-service page counts a substitute's covered sessions
+  // in every semester, archived or not.
+  it('lets a substitute count their own covered sessions across semesters, and no one else', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const covered = subRequest({
+        subInstructorId: UIDS.substitute,
+        subRequestStatus: 'NoSubstituteNeeded',
+      })
+      await setDoc(doc(context.firestore(), 'subRequests', REQUEST_ID), covered)
+      await setDoc(doc(context.firestore(), archived, REQUEST_ID), covered)
+    })
+    const covered = (uid: string, role: string, subUid: string) =>
+      getCountFromServer(
+        query(
+          collectionGroup(as(uid, role), 'subRequests'),
+          where('subInstructorId', '==', subUid),
+          where('subRequestStatus', '==', 'NoSubstituteNeeded'),
+        ),
+      )
+
+    const count = await assertSucceeds(
+      covered(UIDS.substitute, 'instructor', UIDS.substitute),
+    )
+    expect(count.data().count).toBe(2)
+    await assertFails(covered(UIDS.rejected, 'instructor', UIDS.substitute))
+    await assertFails(
+      getDocs(
+        collectionGroup(as(UIDS.substitute, 'instructor'), 'subRequests'),
+      ),
+    )
   })
 })
 

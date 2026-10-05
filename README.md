@@ -185,10 +185,12 @@ Most collections are scoped under a semester document: `semesters/{semesterId}/{
 
 [`src/lib/data/collections.ts`](src/lib/data/collections.ts) derives every one of these paths from a single `suffix` constant (the current semester ID, e.g. `'Spring26'`) via a `semesterCollectionPath(semesterId, name)` helper. The exported constant names (`applicationsCollection`, `registrationsCollection`, etc.) stay the same regardless, so call sites throughout the app never construct paths manually.
 
-A handful of collections are **not** semester-scoped and live at the top level: `subRequests`, `users`, `tokens`, `announcements`.
+A handful of collections are **not** semester-scoped and live at the top level: `users`, `tokens`, `announcements`, and the current semester's `subRequests`.
+
+`subRequests` is half-way there. A request's id embeds its class id, and class ids repeat every semester (`${uid}-${n}`), so a past semester's request left at the top level blocks this semester's for the same class and session. [`scripts/archive-past-sub-requests.ts`](scripts/archive-past-sub-requests.ts) moves every request from before the current semester to `semesters/{id}/subRequests`, guessing the semester from `dateOfClass` (Jan 1 - Jul 15 Spring, Jul 16 - Dec 31 Fall), so it runs after each rollover (see [Adding a New Semester](#adding-a-new-semester)). The one reader that wants every semester, portal's community-service hours, counts across both with a collection-group query.
 
 > [!NOTE]
-> TODO: move `subRequests` under the semester too, migrating its existing documents. Its ids embed a class id, which repeats every semester (`${uid}-${n}`), so sub requests can collide across semesters.
+> TODO: write the current semester's sub requests under `semesters/{id}/subRequests` too, so the archive step goes away. Every reader and writer of the top-level collection is in portal's `substituteRequests.ts`, `substituteSessions.ts`, `substituteService.ts`, `emailIntents.ts` and `accountService.ts`, plus admin's `subRequestService.ts`; doing it at a rollover, when there are no current requests to move, avoids racing live traffic.
 
 The current semester's key dates (`classesStart`, `registrationsDue`, etc.) aren't in Firestore at all — every read site only ever needs the _current_ semester's dates, never a past one, so they're static data in [`semesterDates.json`](src/lib/data/semesterDates.json), re-exported as `semesterDates` from `collections.ts`. `__tests__/collections.test.ts` validates every field is a well-formed `MM/DD/YY` date whose year matches `currentSemester`. The portal and website repos each keep a verbatim copy of this same file (see [Adding a New Semester](#adding-a-new-semester) for the paths and the copy step).
 
@@ -362,6 +364,13 @@ Each downstream repo checks its own copies, and the website additionally checks 
 3. Run `yarn lint && yarn test` in **all four repos** to verify the changes (this will fail loudly for errors like a malformed date, incorrect year in `semesterDates.json`, or a course with no page in the curriculum or website repos — the website's `__tests__/constants.test.ts` re-checks the copied dates the same way this repo's `__tests__/collections.test.ts` does, and curriculum's `__tests__/courses.test.ts` and the website's `__tests__/courses.test.tsx` both re-check the copied catalog, the first for a missing curriculum page and the second for a course the public site doesn't advertise).
 4. Create a PR for each repo you changed and merge each to `main` for the Vercel auto-deployment to update the live apps. Merge curriculum's first if you added a course, so the pages exist before portal starts linking to them.
 5. Load the deployed public site's [home page](https://www.gbstem.org/) and [FAQ](https://www.gbstem.org/faq) and confirm the registration/application copy, links, and dates match the new semester. If you added or retired a course, open its track page there too and check the progression reads the way you intended — the website's test proves the course is linked from somewhere on that page, not that the prose around it still makes sense. Those sections switch between "open" and "closed" wording purely from the dates in the JSON, so a wrong date there is visible to families and prospective instructors immediately.
+
+6. Once the new `suffix` is deployed, archive the semester that just ended's sub requests — dry run first, and keep both logs:
+
+   ```bash
+   npx tsx scripts/archive-past-sub-requests.ts --production --dry-run | tee ../backfill-logs/archive-past-sub-requests-dry.log
+   npx tsx scripts/archive-past-sub-requests.ts --production | tee ../backfill-logs/archive-past-sub-requests.log
+   ```
 
 That's it — the new semester's subcollections (`semesters/Fall26/applications`, etc.) spring into existence automatically on first write.
 
