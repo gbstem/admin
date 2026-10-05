@@ -159,22 +159,6 @@ service cloud.firestore {
     }
 
     //
-    // INSTRUCTOR TO CLASS MAPPING
-    //
-    // TODO: move under semesters/{semesterId}. The classIds are bare ids,
-    // resolved against the current semester's classes, and class ids repeat
-    // every semester (`${uid}-${n}`), so last semester's mapping points at
-    // this semester's class of the same id. See README's Firestore Schema.
-    //
-    // Keyed by instructor uid: each document is `{ classIds: [...] }`, the
-    // classes shared with that instructor. Server-only: portal's
-    // /api/classDetails reads it and keeps it in step with each class's
-    // otherInstructorUids through the Admin SDK, which bypasses these rules.
-    match /instructorClasses/{userId} {
-      allow read, write: if false;
-    }
-
-    //
     // SUBSTITUTE INSTRUCTORS REQUESTS
     //
     // TODO: move under semesters/{semesterId}. The id embeds a class id,

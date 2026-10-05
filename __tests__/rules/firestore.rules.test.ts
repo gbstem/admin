@@ -1072,54 +1072,6 @@ describe('decisions - read by their applicant, admins and reviewers; no client w
   })
 })
 
-describe('instructorClasses - server-only class mapping', () => {
-  // Keyed by instructor uid; only portal's /api/classDetails (Admin SDK)
-  // reads or writes it.
-  beforeEach(async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(
-        doc(context.firestore(), 'instructorClasses', UIDS.accepted),
-        {
-          classIds: [`${UIDS.accepted}-1`],
-        },
-      )
-    })
-  })
-
-  it('refuses an instructor reading or writing even their own mapping', async () => {
-    const db = as(UIDS.accepted, 'instructor')
-    const ref = doc(db, 'instructorClasses', UIDS.accepted)
-    await assertFails(getDoc(ref))
-    await assertFails(setDoc(ref, { classIds: [`${UIDS.accepted}-2`] }))
-    await assertFails(
-      setDoc(doc(db, 'instructorClasses', UIDS.substitute), {
-        classIds: [`${UIDS.accepted}-1`],
-      }),
-    )
-  })
-
-  it('refuses an admin or reviewer reading or writing a mapping', async () => {
-    for (const [uid, role] of [
-      [UIDS.admin, 'admin'],
-      [UIDS.reviewer, 'reviewer'],
-    ]) {
-      const db = as(uid, role)
-      const ref = doc(db, 'instructorClasses', UIDS.accepted)
-      await assertFails(getDoc(ref))
-      await assertFails(setDoc(ref, { classIds: [] }))
-    }
-  })
-
-  it('refuses a student or an unauthenticated user', async () => {
-    const student = as(UIDS.student, 'student')
-    await assertFails(getDoc(doc(student, 'instructorClasses', UIDS.accepted)))
-    const anonymous = testEnv.unauthenticatedContext().firestore()
-    await assertFails(
-      getDoc(doc(anonymous, 'instructorClasses', UIDS.accepted)),
-    )
-  })
-})
-
 describe('interviewTimeRequests - admins/reviewers read; applicants file through the API', () => {
   // Keyed `${uid}-${requestedDate}` - see portal's /api/slotRequest.
   const requestId = (uid: string) => `${uid}-2026-10-05T14:00`

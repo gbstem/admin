@@ -204,7 +204,6 @@ export async function seedEmulator(): Promise<void> {
     'tokens',
     checkInsCollection,
     'users',
-    'instructorClasses',
     interviewTimeRequestsCollection,
     'semesterDates',
   ]
@@ -1035,15 +1034,6 @@ export async function seedEmulator(): Promise<void> {
     time: 'Monday/Wednesday 16:00',
     notes: 'Welcome to the team!',
   })
-
-  console.log(`Seeding instructor-to-class mapping...`)
-  // Keyed by uid, not email - see classService.ts's fetchInstructorClasses.
-  await db
-    .collection('instructorClasses')
-    .doc('instructor-demo-uid')
-    .set({
-      classIds: ['class-python1'],
-    })
 
   console.log(`Seeding mock application for instructor-rejected-uid...`)
   const appInstructorRejected = {
