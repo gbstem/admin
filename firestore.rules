@@ -161,10 +161,13 @@ service cloud.firestore {
     //
     // SUBSTITUTE INSTRUCTORS REQUESTS
     //
-    // TODO: move under semesters/{semesterId}. The id embeds a class id,
-    // which repeats every semester, so requests from different semesters can
-    // collide; admin's log filters by date to approximate the scope. See
-    // README's Firestore Schema.
+    // The current semester's requests are top-level; past semesters' are
+    // archived to semesters/{semesterId}/subRequests by
+    // scripts/archive-past-sub-requests.ts, since the id embeds a class id
+    // and class ids repeat every semester. The recursive match covers both,
+    // and the collection-group query portal's community-service hours make
+    // across them. TODO: write the current semester's under
+    // semesters/{semesterId} too. See README's Firestore Schema.
     //
     // Keyed `${classId}---${classNumber}`. The people a request belongs to
     // read it directly: whoever filed it, the class's instructor of record,
@@ -176,7 +179,7 @@ service cloud.firestore {
     // its feedback through /api/substituteSession and /api/substituteFeedback.
     // Admin only reads them, for its sub requests log, so no client writes
     // one.
-    match /subRequests/{subRequestId} {
+    match /{path=**}/subRequests/{subRequestId} {
       allow read: if isAdminOrReviewer() || isSubRequestParty(resource.data);
     }
 

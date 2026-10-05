@@ -24,6 +24,7 @@ import {
   interviewTimeRequestsCollection,
   interviewTimesCollection,
   registrationsCollection,
+  semesterCollectionPath,
   subRequestsCollection,
 } from '../src/lib/data/collections'
 import collectionsList from '../src/lib/data/collectionsList.json'
@@ -206,6 +207,11 @@ export async function seedEmulator(): Promise<void> {
     'users',
     interviewTimeRequestsCollection,
     'semesterDates',
+    // Past semesters' sub requests, archived by
+    // scripts/archive-past-sub-requests.ts - e2e tests plant some.
+    ...collectionsList.map(({ id }) =>
+      semesterCollectionPath(id, 'subRequests'),
+    ),
   ]
   for (const collectionName of collectionsToClear) {
     await deleteCollection(collectionName)
