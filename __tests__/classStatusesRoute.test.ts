@@ -9,8 +9,18 @@ jest.mock('$lib/server/classService', () => ({
 import { error } from '@sveltejs/kit'
 import { POST } from '../src/routes/api/classStatuses/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 
 const call = (user: unknown, body: unknown) =>
   (POST as any)({
@@ -45,7 +55,11 @@ describe('POST /api/classStatuses', () => {
 
   it.each([
     ['a signed-out caller', null, 401],
-    ['an instructor', { uid: 'inst-uid', role: 'instructor' }, 403],
+    [
+      'an instructor',
+      { uid: 'inst-uid', role: 'instructor', emailVerified: true },
+      403,
+    ],
   ])('refuses %s', async (_, user, status) => {
     await expect(call(user, { classId: 'inst-uid-1' })).rejects.toMatchObject({
       status,

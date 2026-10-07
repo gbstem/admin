@@ -8,9 +8,24 @@ jest.mock('$lib/server/checkIns', () => ({
 
 import { PATCH, POST } from '../src/routes/api/checkIn/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
-const instructor = { uid: 'inst-1', email: 'i@test.com', role: 'instructor' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
+const instructor = {
+  uid: 'inst-1',
+  email: 'i@test.com',
+  role: 'instructor',
+  emailVerified: true,
+}
 
 const call = (handler: any, user: unknown, body: unknown) =>
   handler({

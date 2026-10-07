@@ -31,7 +31,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     switch (body.type) {
       case 'verifyEmail': {
-        const user = verifyAuthenticated(locals)
+        // The one action an unverified person needs. changeEmail stays
+        // strict: its link verifies the *new* address, so allowing it here
+        // would let anyone holding only a password re-verify the account
+        // with a mailbox of their own.
+        const user = verifyAuthenticated(locals, { allowUnverified: true })
         const email = user.email
         const link = await adminAuth.generateEmailVerificationLink(email)
         to = email

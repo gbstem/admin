@@ -59,7 +59,7 @@ service cloud.firestore {
     // semesters/{semesterId}/applications/{userId}, .../registrations/{userId}, etc.
     //
     match /semesters/{semesterId} {
-      allow read: if isSignedIn(); // parent docs, if we ever materialize them
+      allow read: if isVerified(); // parent docs, if we ever materialize them
 
       // No client writes an application. Applicants create, save and submit
       // theirs through portal's /apply form actions and book an interview
@@ -111,7 +111,7 @@ service cloud.firestore {
       // rather than taking it from the client, and writes with the Admin SDK,
       // bypassing these rules.
       match /classes/{classId} {
-        allow read: if isSignedIn();
+        allow read: if isVerified();
       }
 
       // Admins and reviewers manage interview slots through admin's
@@ -207,7 +207,8 @@ service cloud.firestore {
     // the ID token refreshes (within the hour). Code that changes a role should
     // force a refresh - see portal's SignUpForm - or revoke refresh tokens.
     function hasRRole(role) {
-      return 'role' in request.auth.token && request.auth.token.role == role;
+      return isVerified()
+        && 'role' in request.auth.token && request.auth.token.role == role;
     }
     // The role means "has registered", not "is enrolled in a class" - it is
     // held from registration onward, long before any class placement.
@@ -231,16 +232,28 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    // Signed in with an email address the person has proven they control.
+    // Everything beyond a person's own `users` document needs this, role or
+    // not: a long-idle account has its verification reset (and must be
+    // redone from an inbox) so that a stale or leaked password alone opens
+    // nothing. Role checks (hasRRole) include it, so a rule that tests a role
+    // needs no second call; a rule that only needs "someone signed in" must
+    // call this rather than isSignedIn(). The token's claim can lag a reset
+    // by up to an hour; resetting also revokes refresh tokens to close that.
+    // Server routes bypass these rules, so apiHelpers.ts checks it as well.
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
     // Filed the sub request, or is the instructor of record on its class.
     function isSubRequestOwner(data) {
-      return isSignedIn()
+      return isVerified()
         && (data.get('requestedByUid', '') == request.auth.uid
             || data.get('originalInstructorUid', '') == request.auth.uid);
     }
     // An owner (above), or the substitute covering the session.
     function isSubRequestParty(data) {
       return isSubRequestOwner(data)
-        || (isSignedIn() && data.get('subInstructorId', '') == request.auth.uid);
+        || (isVerified() && data.get('subInstructorId', '') == request.auth.uid);
     }
     // In gbSTEM, children do not have separate Auth accounts. A parent's
     // child registrations (and admin's check-ins) are keyed as `${parentUid}` (primary)
@@ -251,10 +264,12 @@ service cloud.firestore {
       return isSignedIn() && hasUserId(userId);
     }
     function isInstructorUser(userId) {
-      return isUser(userId) && isInstructor();
+      return isVerified() && isUser(userId) && isInstructor();
     }
     function isStudentUserOrTheirChild(userId) {
-      return isStudent() && (userId == request.auth.uid || userId.matches(request.auth.uid + '-[0-9]+'));
+      return isVerified() && isStudent()
+        && (userId == request.auth.uid
+            || userId.matches(request.auth.uid + '-[0-9]+'));
     }
   }
 }

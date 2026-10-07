@@ -137,6 +137,20 @@ export default defineConfig({
             return null
           }
         },
+        // Marks an account's email verified, as clicking the emailed link
+        // does. Deleting an account is refused until then, and a spec that
+        // signs a fresh account up has no inbox to click from.
+        async markEmailVerified(email: string) {
+          if (getApps().length === 0) {
+            initializeApp({
+              projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
+            })
+          }
+          const auth = getAuth()
+          const { uid } = await auth.getUserByEmail(email)
+          await auth.updateUser(uid, { emailVerified: true })
+          return null
+        },
         // Writes an interview slot doc directly, bypassing the app's own
         // create flow, so a spec can seed a slot belonging to an arbitrary
         // interviewer. A slot records one as `interviewerUid` and stores no

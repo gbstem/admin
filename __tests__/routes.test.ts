@@ -1031,9 +1031,29 @@ describe('API routes POST endpoints', () => {
     })
     const res = await actionPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'test@test.com', role: 'admin' } },
+      locals: {
+        user: { email: 'test@test.com', role: 'admin', emailVerified: false },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+  })
+
+  it('actionPOST changeEmail refuses an unverified account, since its link would verify the new address', async () => {
+    mockRequest.json.mockResolvedValue({
+      type: 'changeEmail',
+      newEmail: 'new@test.com',
+    })
+    await expect(
+      actionPOST({
+        request: mockRequest as any,
+        locals: {
+          user: { email: 'old@test.com', role: 'admin', emailVerified: false },
+        },
+      } as any),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(
+      mockAdminAuth.generateVerifyAndChangeEmailLink,
+    ).not.toHaveBeenCalled()
   })
 
   it('actionPOST changeEmail successfully', async () => {
@@ -1043,7 +1063,9 @@ describe('API routes POST endpoints', () => {
     })
     const res = await actionPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'old@test.com', role: 'admin' } },
+      locals: {
+        user: { email: 'old@test.com', role: 'admin', emailVerified: true },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
   })
@@ -1123,7 +1145,13 @@ describe('API routes POST endpoints', () => {
     })
     const res = await actionPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'attacker@test.com', role: 'student' } },
+      locals: {
+        user: {
+          email: 'attacker@test.com',
+          role: 'student',
+          emailVerified: true,
+        },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
     expect(mockAdminAuth.generatePasswordResetLink).toHaveBeenCalledWith(
@@ -1145,7 +1173,9 @@ describe('API routes POST endpoints', () => {
     await expect(
       remindInstructorPOST({
         request: mockRequest as any,
-        locals: { user: { email: 'admin@test.com', role: 'admin' } },
+        locals: {
+          user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
+        },
       } as any),
     ).rejects.toMatchObject({ status: 400 })
     expect(MailService.send).not.toHaveBeenCalled()
@@ -1165,7 +1195,9 @@ describe('API routes POST endpoints', () => {
     })
     const res = await remindInstructorPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      locals: {
+        user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
     expect(mockAdminAuth.getUser).toHaveBeenCalledWith('inst-uid-1')
@@ -1190,7 +1222,9 @@ describe('API routes POST endpoints', () => {
     })
     const res = await remindStudentsPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      locals: {
+        user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
     expect(MailService.send).toHaveBeenCalledWith(
@@ -1215,7 +1249,9 @@ describe('API routes POST endpoints', () => {
     })
     const res = await remindInstructorPOST({
       request: mockRequest as any,
-      locals: { user: { email: 'admin@test.com', role: 'admin' } },
+      locals: {
+        user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
+      },
     } as any)
     expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
     expect(mockAdminAuth.getUsers).toHaveBeenCalledWith([
@@ -1232,7 +1268,12 @@ describe('api/resolveEmails', () => {
   let mockRequest: any
 
   const adminLocals = {
-    user: { uid: 'admin-uid', email: 'admin@test.com', role: 'admin' },
+    user: {
+      uid: 'admin-uid',
+      email: 'admin@test.com',
+      role: 'admin',
+      emailVerified: true,
+    },
   }
   const lookup = (overrides: Record<string, unknown> = {}) => ({
     intent: 'classInstructors',

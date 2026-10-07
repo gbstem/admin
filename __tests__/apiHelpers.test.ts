@@ -31,7 +31,7 @@ describe('apiHelpers', () => {
 
     it('throws 403 if user is not an admin', () => {
       const locals = {
-        user: { uid: '123', role: 'student' },
+        user: { uid: '123', role: 'student', emailVerified: true },
       } as any as App.Locals
       const err = captureThrown(() => verifyAdmin(locals))
       expect(err.status).toBe(403)
@@ -39,10 +39,19 @@ describe('apiHelpers', () => {
     })
 
     it('returns the user if role is admin', () => {
-      const user = { uid: '123', role: 'admin' }
+      const user = { uid: '123', role: 'admin', emailVerified: true }
       const locals = { user } as any as App.Locals
       const result = verifyAdmin(locals)
       expect(result).toBe(user)
+    })
+
+    it('throws 403 if the admin has not verified their email', () => {
+      const locals = {
+        user: { uid: '123', role: 'admin', emailVerified: false },
+      } as any as App.Locals
+      const err = captureThrown(() => verifyAdmin(locals))
+      expect(err.status).toBe(403)
+      expect(err.body.message).toBe('Verify your email address first.')
     })
   })
 
@@ -54,8 +63,23 @@ describe('apiHelpers', () => {
       expect(err.body.message).toBe('User not signed in.')
     })
 
+    it('throws 403 if the email is not verified', () => {
+      const locals = {
+        user: { uid: '456', role: 'instructor', emailVerified: false },
+      } as any as App.Locals
+      const err = captureThrown(() => verifyAuthenticated(locals))
+      expect(err.status).toBe(403)
+      expect(err.body.message).toBe('Verify your email address first.')
+    })
+
+    it('lets an unverified user through when allowUnverified is set', () => {
+      const user = { uid: '456', role: 'instructor', emailVerified: false }
+      const locals = { user } as any as App.Locals
+      expect(verifyAuthenticated(locals, { allowUnverified: true })).toBe(user)
+    })
+
     it('returns the user if signed in', () => {
-      const user = { uid: '456', role: 'instructor' }
+      const user = { uid: '456', role: 'instructor', emailVerified: true }
       const locals = { user } as any as App.Locals
       const result = verifyAuthenticated(locals)
       expect(result).toBe(user)

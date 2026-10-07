@@ -251,6 +251,11 @@ describe('Section L: Account Deletion Eligibility', () => {
     })
     cy.get('[role="dialog"]').should('not.exist')
 
+    // Deleting an account needs a verified email (apiHelpers'
+    // verifyAuthenticated), as does anything else beyond the profile page.
+    cy.task('markEmailVerified', email)
+    cy.reload()
+
     cy.task('getFirestoreUserId', email).then((uid) => {
       expect(uid).to.be.a('string')
       cy.setInterviewSlot({
@@ -301,6 +306,11 @@ describe('Section L: Account Deletion Eligibility', () => {
       force: true,
     })
     cy.get('[role="dialog"]').should('not.exist')
+
+    // Deleting an account needs a verified email (apiHelpers'
+    // verifyAuthenticated), as does anything else beyond the profile page.
+    cy.task('markEmailVerified', email)
+    cy.reload()
 
     cy.task('getFirestoreUserId', email).then((uid) => {
       expect(uid).to.be.a('string')

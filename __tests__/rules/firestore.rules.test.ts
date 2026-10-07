@@ -70,12 +70,22 @@ const UIDS = {
 
 let testEnv: RulesTestEnvironment
 
-/** A client carrying `role` as a custom claim, the way a real ID token does. */
+/**
+ * A client carrying `role` as a custom claim and a verified email, the way a
+ * real ID token does for an account in good standing.
+ */
 function as(uid: string, role?: string) {
   const context = role
-    ? testEnv.authenticatedContext(uid, { role })
-    : testEnv.authenticatedContext(uid)
+    ? testEnv.authenticatedContext(uid, { role, email_verified: true })
+    : testEnv.authenticatedContext(uid, { email_verified: true })
   return context.firestore()
+}
+
+/** The same account after its verification was reset for inactivity. */
+function asUnverified(uid: string, role: string) {
+  return testEnv
+    .authenticatedContext(uid, { role, email_verified: false })
+    .firestore()
 }
 
 beforeAll(async () => {
@@ -1572,5 +1582,66 @@ describe('the escalation this change closes, end to end', () => {
     // now too: the rules read the Auth claim, so even a forged document would
     // not have helped.
     await assertFails(getDoc(doc(db, registrations, UIDS.otherStudent)))
+  })
+})
+
+describe("an unverified email - reads beyond a person's own users document are refused", () => {
+  const currentSemesterPath = `semesters/${currentSemester}`
+
+  it.each([
+    ['admin', UIDS.admin],
+    ['reviewer', UIDS.reviewer],
+    ['instructor', UIDS.accepted],
+    ['student', UIDS.student],
+  ])('refuses a %s every semester read', async (role, uid) => {
+    const db = asUnverified(uid, role)
+    await assertFails(getDoc(doc(db, currentSemesterPath)))
+    await assertFails(getDoc(doc(db, `${currentSemesterPath}/classes/any`)))
+    await assertFails(
+      getDoc(doc(db, `${currentSemesterPath}/applications/${uid}`)),
+    )
+    await assertFails(
+      getDoc(doc(db, `${currentSemesterPath}/registrations/${uid}`)),
+    )
+    await assertFails(
+      getDoc(doc(db, `${currentSemesterPath}/decisions/${uid}`)),
+    )
+    await assertFails(
+      getDocs(collection(db, `${currentSemesterPath}/registrations`)),
+    )
+  })
+
+  it('refuses an unverified admin the users collection, but not their own document', async () => {
+    const db = asUnverified(UIDS.admin, 'admin')
+    await assertFails(getDoc(doc(db, `users/${UIDS.student}`)))
+    await assertSucceeds(getDoc(doc(db, `users/${UIDS.admin}`)))
+  })
+
+  it('refuses an unverified party their own sub request', async () => {
+    const db = asUnverified(UIDS.accepted, 'instructor')
+    await assertFails(
+      getDocs(
+        query(
+          collectionGroup(db, 'subRequests'),
+          where('requestedByUid', '==', UIDS.accepted),
+        ),
+      ),
+    )
+  })
+
+  it('still lets the same people read once verified', async () => {
+    await assertSucceeds(
+      getDoc(doc(as(UIDS.student, 'student'), currentSemesterPath)),
+    )
+    await assertSucceeds(
+      getDoc(doc(as(UIDS.admin, 'admin'), `users/${UIDS.student}`)),
+    )
+  })
+
+  it('treats a token with no email_verified claim as unverified', async () => {
+    const db = testEnv
+      .authenticatedContext(UIDS.admin, { role: 'admin' })
+      .firestore()
+    await assertFails(getDoc(doc(db, currentSemesterPath)))
   })
 })

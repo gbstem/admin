@@ -8,8 +8,18 @@ jest.mock('$lib/server/tokenService', () => ({
 
 import { DELETE } from '../src/routes/api/tokens/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 
 const call = (user: unknown, body: unknown) =>
   (DELETE as any)({
