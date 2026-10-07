@@ -63,9 +63,16 @@
   {#snippet description()}
     <div class="space-y-4">
       <p>
-        Your email is not verified. Please check your inbox and spam folder for
-        the verification email. If you want to use another email, please change
-        your email through the profile.
+        Your email is not verified, so most of the site is locked until it is.
+        Close this message, press "Send verification email" on the red banner,
+        then open the link in the message we send you. If you've just signed up,
+        an email is already on its way; check your spam folder too.
+      </p>
+      <p>
+        We also reset email verification on accounts that haven't been used in a
+        long while, to keep personal information safe. Can't get the email?
+        Contact us at
+        <a href="mailto:contact@gbstem.org" class="link">contact@gbstem.org</a>.
       </p>
       <DialogActions>
         <Button onclick={() => (showVerifyDialog = false)}>Close</Button>
@@ -86,13 +93,14 @@
       >
         <Icon src={ExclamationCircle} class="size-6 shrink-0" />
         <div class="grow">
-          Email is not verified. Try reloading or check your inbox to verify
-          your account. Can't find the email? <button
+          Email is not verified. Press <button
             class="inline-block border-b border-black text-black transition-colors duration-300 hover:border-gray-600 hover:text-gray-600 disabled:border-gray-600 disabled:text-gray-600"
             type="button"
             onclick={handleVerificationEmail}
-            {disabled}>Send it again.</button
-          >
+            {disabled}>Send verification email</button
+          >, then open the link in the message we send you (check your spam
+          folder too). If you've just signed up, an email is already on its way.
+          After opening the link, reload this page.
         </div>
       </div>
     {/if}
