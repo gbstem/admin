@@ -16,8 +16,18 @@ jest.mock('$lib/server/email', () => ({
 
 import { DELETE, POST } from '../src/routes/api/enroll/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 
 const call = (handler: any, user: unknown, body: unknown) =>
   handler({

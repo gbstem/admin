@@ -25,8 +25,18 @@ jest.mock('$lib/server/interviewSlots', () => ({
 
 import { DELETE, PATCH, POST } from '../src/routes/api/interviewSlot/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 const DATE = '2026-10-05T18:00:00.000Z'
 const LINK = 'https://mit.zoom.us/j/1'
 

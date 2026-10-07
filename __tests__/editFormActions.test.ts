@@ -46,8 +46,18 @@ import { actions as tokensActions } from '../src/routes/(signedIn)/(emailVerifie
 import { actions as registrationsActions } from '../src/routes/(signedIn)/(emailVerified)/registrations/+page.server'
 import { stringify } from 'devalue'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 
 /** A request shaped the way superforms' `dataType: 'json'` posts a form. */
 function superformRequest(id: string, data: unknown) {
@@ -330,7 +340,11 @@ describe('/classes?/saveClass', () => {
 
   it.each([
     ['a signed-out caller', null, 401],
-    ['an instructor', { uid: 'inst-uid', role: 'instructor' }, 403],
+    [
+      'an instructor',
+      { uid: 'inst-uid', role: 'instructor', emailVerified: true },
+      403,
+    ],
   ])('refuses %s', async (_, user, status) => {
     await expect(save(user, validClass())).rejects.toMatchObject({ status })
     expect(mockSaveClassEdits).not.toHaveBeenCalled()

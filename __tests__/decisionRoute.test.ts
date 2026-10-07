@@ -17,8 +17,18 @@ jest.mock('$lib/server/decisionEmails', () => ({
 import { currentSemester } from '$lib/data/collections'
 import { POST } from '../src/routes/api/decision/+server'
 
-const admin = { uid: 'admin-1', email: 'a@test.com', role: 'admin' }
-const reviewer = { uid: 'rev-1', email: 'r@test.com', role: 'reviewer' }
+const admin = {
+  uid: 'admin-1',
+  email: 'a@test.com',
+  role: 'admin',
+  emailVerified: true,
+}
+const reviewer = {
+  uid: 'rev-1',
+  email: 'r@test.com',
+  role: 'reviewer',
+  emailVerified: true,
+}
 
 const post = (user: unknown, body: unknown): Promise<any> =>
   (POST as any)({ request: { json: async () => body }, locals: { user } })
@@ -189,7 +199,11 @@ describe('POST /api/decision', () => {
 
   it.each([
     ['a signed-out caller', null, 401],
-    ['an instructor', { uid: 'i', role: 'instructor' }, 403],
+    [
+      'an instructor',
+      { uid: 'i', role: 'instructor', emailVerified: true },
+      403,
+    ],
   ])('refuses %s', async (_, user, status) => {
     await expect(
       post(user, {
