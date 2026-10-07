@@ -296,6 +296,20 @@ npx tsx scripts/set-user-role.ts --email someone@example.com --role instructor -
 
 It sets the claim and, by default, revokes the account's refresh tokens — a claim only reaches `request.auth.token` when the ID token refreshes, and tokens live an hour, so without the revoke a demotion stays ineffective that long. The cost is that the account is signed out. Granting `admin` or `reviewer` needs `--force`; issue a signup token instead where you can, since tokens are auditable and expire.
 
+### Idle accounts and email verification
+
+Volunteers rotate out and leave accounts behind that can still read applicants' and families' personal information. A weekly Vercel cron ([`vercel.json`](vercel.json) → `/api/cron/resetIdleVerification` → [`idleAccounts.ts`](src/lib/server/idleAccounts.ts)) resets `emailVerified` and revokes refresh tokens for every verified account unused for **180 days** (`admin`, `reviewer`, `instructor`) or **2 years** (`student`, i.e. a parent). "Unused" is the latest of `lastRefreshTime`, `lastSignInTime` and `creationTime`; `lastRefreshTime` matters because the browser keeps people signed in, so the console's "Signed in" column alone would flag someone who uses the site weekly.
+
+A reset account can still sign in and reach `/profile`, but nothing else: `firestore.rules` (`isVerified()`, which `hasRRole()` includes) refuses its reads, and `verifyAuthenticated` and the role checks built on it refuse its API calls and form actions. The person presses **Send verification email** on their profile and opens the link, which restores access. Nothing is emailed by the cron itself.
+
+The cron needs `CRON_SECRET` set in the Vercel project (see `.env.example`) and refuses every request without it. To see who the next run would reset without changing anyone, call it with `?dryRun=1`:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "https://admin.gbstem.org/api/cron/resetIdleVerification?dryRun=1"
+```
+
+The first run after deploying resets every account already past its window, so expect a burst of people re-verifying. Someone whose mailbox no longer exists can be verified by hand with [`scripts/force-verify-email.ts`](scripts/force-verify-email.ts), once you've confirmed who they are another way.
+
 ## API Routes (`+server.ts`)
 
 Everything under `src/routes/api/` is a SvelteKit [server route](https://svelte.dev/docs/kit/routing#server): a `+server.ts` file exporting a `POST` handler (and sometimes `PATCH` or `DELETE`). These run with the **Firebase Admin SDK**, which bypasses `firestore.rules` completely — the rules protect the client SDK, and nothing protects these but the code inside them. Most of them send email, so a mistake here doesn't just read the wrong document, it mails real families and instructors.

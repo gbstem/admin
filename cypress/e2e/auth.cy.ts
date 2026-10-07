@@ -175,8 +175,8 @@ describe('Section A: Authentication and Navigation', () => {
         cy.getLatestOobLink(email, 'VERIFY_EMAIL').should('exist')
         // Clear out the original verification email
         cy.clearTestEmails()
-        // Click "Send it again" to get a second OOB link
-        cy.contains('button', 'Send it again.').click()
+        // Click "Send verification email" to get a second OOB link
+        cy.contains('button', 'Send verification email').click()
         cy.waitForNotification('Verification email was sent.', 'bg-gray-200')
         // Verify using the new OOB link
         cy.getLatestOobLink(email, 'VERIFY_EMAIL').then((link) => {
@@ -266,8 +266,8 @@ describe('Section A: Authentication and Navigation', () => {
         cy.getLatestOobLink(email, 'VERIFY_EMAIL').should('exist')
         // Clear out the original verification email
         cy.clearTestEmails()
-        // Click "Send it again" to get a second OOB link
-        cy.contains('button', 'Send it again.').click()
+        // Click "Send verification email" to get a second OOB link
+        cy.contains('button', 'Send verification email').click()
         cy.waitForNotification('Verification email was sent.', 'bg-gray-200')
         // Verify using the new OOB link
         cy.getLatestOobLink(email, 'VERIFY_EMAIL').then((link) => {
