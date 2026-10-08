@@ -187,12 +187,11 @@ describe('Section N: End-to-End Account Lifecycle', () => {
 
     cy.waitForNotification('A verification email was sent.', 'bg-gray-200')
 
-    // Verify the new email (emulated email side-channel)
-    cy.getLatestOobLink(updatedEmail, 'VERIFY_AND_CHANGE_EMAIL').then(
-      (link) => {
-        cy.request(link)
-      },
-    )
+    // Verify the new email. Firebase, not this app, sends this link, so it
+    // comes from the Auth emulator rather than the emulated email side-channel.
+    cy.getChangeEmailLink(updatedEmail).then((link) => {
+      cy.request(link)
+    })
 
     // Refresh profile and check email is updated
     cy.visit('/profile')

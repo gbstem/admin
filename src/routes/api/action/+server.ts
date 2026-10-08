@@ -12,10 +12,6 @@ const actionSchema = z.discriminatedUnion('type', [
     type: z.literal('verifyEmail'),
   }),
   z.object({
-    type: z.literal('changeEmail'),
-    newEmail: z.string().email('Invalid email address'),
-  }),
-  z.object({
     type: z.literal('resetPassword'),
     email: z.string().email('Invalid email address'),
   }),
@@ -31,10 +27,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     switch (body.type) {
       case 'verifyEmail': {
-        // The one action an unverified person needs. changeEmail stays
-        // strict: its link verifies the *new* address, so allowing it here
-        // would let anyone holding only a password re-verify the account
-        // with a mailbox of their own.
+        // The one action an unverified person needs.
         const user = verifyAuthenticated(locals, { allowUnverified: true })
         const email = user.email
         const link = await adminAuth.generateEmailVerificationLink(email)
@@ -46,26 +39,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             name: 'Verify Email',
             description:
               'Please verify your email for your gbSTEM account by clicking the button below.',
-          },
-        }
-        break
-      }
-      case 'changeEmail': {
-        const user = verifyAuthenticated(locals)
-        if (!body.newEmail) {
-          throw error(400, 'Invalid request body.')
-        }
-        const link = await adminAuth.generateVerifyAndChangeEmailLink(
-          user.email,
-          body.newEmail,
-        )
-        to = body.newEmail
-        data = {
-          subject: 'Change Email for gbSTEM Account',
-          action: {
-            link,
-            name: 'Change Email',
-            description: `Please confirm that you want to change your email from ${user.email} to ${body.newEmail} by clicking the button below.`,
           },
         }
         break

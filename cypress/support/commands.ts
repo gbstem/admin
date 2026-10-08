@@ -313,10 +313,7 @@ Cypress.Commands.add(
 
 Cypress.Commands.add(
   'getLatestOobLink',
-  (
-    email: string,
-    requestType: 'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'VERIFY_AND_CHANGE_EMAIL',
-  ) => {
+  (email: string, requestType: 'VERIFY_EMAIL' | 'PASSWORD_RESET') => {
     return cy.request('GET', '/api/test/emails').then((response) => {
       const sentEmails = response.body || []
       const match = sentEmails
@@ -328,9 +325,7 @@ Cypress.Commands.add(
             (requestType === 'VERIFY_EMAIL' &&
               msg.subject.includes('Verify Email')) ||
             (requestType === 'PASSWORD_RESET' &&
-              msg.subject.includes('Reset Password')) ||
-            (requestType === 'VERIFY_AND_CHANGE_EMAIL' &&
-              msg.subject.includes('Change Email'))
+              msg.subject.includes('Reset Password'))
           return toMatch && subjectMatch
         })
         .pop()
@@ -351,6 +346,34 @@ Cypress.Commands.add(
     })
   },
 )
+
+/**
+ * Yields the verify-and-change link from the latest email Firebase Auth
+ * itself sent to `newEmail`. The change-email flow calls the client SDK's
+ * verifyBeforeUpdateEmail, so that email never passes through this app's
+ * /api/test/emails (see getLatestOobLink); the Auth emulator lists it instead.
+ */
+Cypress.Commands.add('getChangeEmailLink', (newEmail: string) => {
+  return cy
+    .request(
+      'GET',
+      `${getFirebaseAuthBaseUrl()}/emulator/v1/projects/demo-gbstem/oobCodes`,
+    )
+    .then((response) => {
+      const match = (response.body.oobCodes || [])
+        .filter(
+          (oob: any) =>
+            oob.requestType === 'VERIFY_AND_CHANGE_EMAIL' &&
+            oob.newEmail === newEmail,
+        )
+        .pop()
+      expect(
+        match,
+        `Expected Firebase Auth to send ${newEmail} a verify-and-change link`,
+      ).to.not.equal(undefined)
+      return match.oobLink as string
+    })
+})
 
 Cypress.Commands.add('clearTestEmails', () => {
   return cy.request('DELETE', '/api/test/emails')
