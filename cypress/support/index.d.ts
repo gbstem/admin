@@ -26,9 +26,9 @@ declare namespace Cypress {
     ): Chainable<string[][]>
     getLatestOobLink(
       email: string,
-      requestType:
-        'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'VERIFY_AND_CHANGE_EMAIL',
+      requestType: 'VERIFY_EMAIL' | 'PASSWORD_RESET',
     ): Chainable<string>
+    getChangeEmailLink(newEmail: string): Chainable<string>
     clearTestEmails(): Chainable<any>
     verifyEmailSent(
       email: string,

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { ActionRequestBody } from '../../../routes/api/action/+server'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { z } from 'zod'
+  import { verifyBeforeUpdateEmail } from 'firebase/auth'
   import { alert } from '$lib/stores'
   import Dialog from '$lib/components/Dialog.svelte'
   import ReauthenticateForm from '$lib/components/forms/ReauthenticateForm.svelte'
@@ -43,24 +43,16 @@
   async function handleReauthenticate() {
     if ($user) {
       showReauthDialog = false
-      const payload: ActionRequestBody = {
-        type: 'changeEmail',
-        newEmail: emailToUpdate,
-      }
       try {
-        const res = await fetch('/api/action', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-        if (res.ok) {
-          alert.trigger('info', 'A verification email was sent.')
-        } else {
-          const { message } = await res.json()
-          alert.trigger('error', message)
-        }
+        // The client SDK on purpose, not an /api/action route: Firebase's own
+        // servers refuse this with auth/requires-recent-login unless
+        // ReauthenticateForm has just re-signed in, so the password prompt
+        // can't be skipped by someone holding only a session cookie. The
+        // Admin SDK has no such check. The address changes only when the link
+        // sent to it is clicked, and Firebase then emails the old address a
+        // link that undoes the change.
+        await verifyBeforeUpdateEmail($user.object, emailToUpdate)
+        alert.trigger('info', 'A verification email was sent.')
       } catch (err: any) {
         console.error('Email change error:', err)
         alert.trigger('error', err.message || 'An error occurred.')

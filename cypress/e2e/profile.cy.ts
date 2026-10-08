@@ -69,16 +69,16 @@ describe('Section L: Profile and Account Customization', () => {
 
     // 3. Request an email change.
     //
-    // There is nothing to change back here: /api/action's `changeEmail` only
-    // *sends* a verify-and-change link (generateVerifyAndChangeEmailLink), and
-    // the address does not move until a recipient clicks it, which no test
-    // does. This step used to ask for a second change, back to
-    // demo@gbstem.org -- a link from the account's own address to itself,
-    // which Firebase rejects as auth/email-already-exists. That 400 was
-    // invisible: waitForNotification matched `.bg-gray-200` anywhere on the
-    // page, and the page's own <h1> carries that class, so the assertion
-    // passed on a heading while the real toast was red. It is scoped to the
-    // Alert component now, so the request has to actually succeed.
+    // There is nothing to change back here: verifyBeforeUpdateEmail only
+    // *sends* a verify-and-change link, and the address does not move until a
+    // recipient clicks it, which this test doesn't. This step used to ask for
+    // a second change, back to demo@gbstem.org -- a link from the account's
+    // own address to itself, which Firebase rejects as
+    // auth/email-already-exists. That error was invisible: waitForNotification
+    // matched `.bg-gray-200` anywhere on the page, and the page's own <h1>
+    // carries that class, so the assertion passed on a heading while the real
+    // toast was red. It is scoped to the Alert component now, so the request
+    // has to actually succeed.
     cy.contains('span', 'Change email')
       .parent()
       .within(() => {
