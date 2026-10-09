@@ -270,6 +270,8 @@ It is granted at signup, before any interview — so it says nothing about wheth
 
 When a feature needs an instructor to write something, add a route like these rather than widening a rule.
 
+**Class documents are readable only by admins and reviewers.** A class carries its online meeting link and the registration ids on its roster, and a rule can't hide single fields, so portal reads classes on the server and returns only what the caller may see: `/api/classes` lists every class without rosters, with a meeting link only for a class the caller's own child is enrolled in; `/api/studentClasses` gives a parent one child's classes; `/api/classDetails` gives an instructor their own classes; and `/api/substituteSession` gives a substitute the link for a session they cover. When a portal page needs more of a class, extend one of these routes rather than reopening the rule.
+
 **A role alone never authorizes a write.** A rule like `allow create: if isStudent()` can't tell whether the class or student a document names is the caller's, or keep them from choosing its fields, so no rule grants a whole role a write. `classFeedback` and `instructorFeedback` are admin-read-only, and portal files them through routes that check the caller against the class and fill in the names themselves:
 
 - `/api/instructorFeedback` requires an accepted instructor who owns or co-teaches the class, and marks the session complete in the same transaction (a substitute files through `/api/substituteFeedback` instead)

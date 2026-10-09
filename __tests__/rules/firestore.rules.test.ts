@@ -799,9 +799,25 @@ describe('classes - written only by the server', () => {
     )
   })
 
-  it('lets any signed-in user read a class', async () => {
-    const db = as(UIDS.student, 'student')
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a reviewer', UIDS.reviewer, 'reviewer'],
+  ] as const)('lets %s read a class', async (_, uid, role) => {
+    const db = as(uid, role)
     await assertSucceeds(getDoc(doc(db, classes, `${UIDS.accepted}-1`)))
+    await assertSucceeds(getDocs(collection(db, classes)))
+  })
+
+  // A class carries its meeting link and roster; portal users get the parts
+  // they may see through server routes (/api/classes and the like).
+  it.each([
+    ['a parent', UIDS.student, 'student'],
+    ["the class's own instructor", UIDS.accepted, 'instructor'],
+    ['another instructor', UIDS.undecided, 'instructor'],
+  ] as const)('refuses %s reading a class', async (_, uid, role) => {
+    const db = as(uid, role)
+    await assertFails(getDoc(doc(db, classes, `${UIDS.accepted}-1`)))
+    await assertFails(getDocs(collection(db, classes)))
   })
 
   it('refuses an unauthenticated user reading a class', async () => {
@@ -1024,18 +1040,23 @@ describe('tokens - account creation tokens are server-only', () => {
   })
 })
 
-describe('semesters/{semesterId} - parent document read access', () => {
-  it('lets any signed-in user read the semester document', async () => {
-    const db = as(UIDS.student, 'student')
-    await assertSucceeds(getDoc(doc(db, `semesters/${currentSemester}`)))
+describe('semesters/{semesterId} - the parent document itself', () => {
+  // No semester document exists or is read, so none is granted: adding one
+  // has to come with a deliberate rule.
+  it.each([
+    ['an admin', UIDS.admin, 'admin'],
+    ['a parent', UIDS.student, 'student'],
+  ] as const)('refuses %s reading it', async (_, uid, role) => {
+    const db = as(uid, role)
+    await assertFails(getDoc(doc(db, `semesters/${currentSemester}`)))
   })
 
-  it('refuses an unauthenticated user reading the semester document', async () => {
+  it('refuses an unauthenticated user reading it', async () => {
     const db = testEnv.unauthenticatedContext().firestore()
     await assertFails(getDoc(doc(db, `semesters/${currentSemester}`)))
   })
 
-  it('refuses client writes to the semester document', async () => {
+  it('refuses client writes to it', async () => {
     const db = as(UIDS.admin, 'admin')
     await assertFails(
       setDoc(doc(db, `semesters/${currentSemester}`), { name: 'Fall 2026' }),
@@ -1631,7 +1652,17 @@ describe("an unverified email - reads beyond a person's own users document are r
 
   it('still lets the same people read once verified', async () => {
     await assertSucceeds(
-      getDoc(doc(as(UIDS.student, 'student'), currentSemesterPath)),
+      getDoc(
+        doc(
+          as(UIDS.student, 'student'),
+          `${currentSemesterPath}/registrations/${UIDS.student}`,
+        ),
+      ),
+    )
+    await assertSucceeds(
+      getDoc(
+        doc(as(UIDS.admin, 'admin'), `${currentSemesterPath}/classes/any`),
+      ),
     )
     await assertSucceeds(
       getDoc(doc(as(UIDS.admin, 'admin'), `users/${UIDS.student}`)),
@@ -1642,6 +1673,6 @@ describe("an unverified email - reads beyond a person's own users document are r
     const db = testEnv
       .authenticatedContext(UIDS.admin, { role: 'admin' })
       .firestore()
-    await assertFails(getDoc(doc(db, currentSemesterPath)))
+    await assertFails(getDoc(doc(db, `${currentSemesterPath}/classes/any`)))
   })
 })
