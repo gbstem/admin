@@ -11,7 +11,7 @@ const mockSearchIndex = jest.fn()
 
 const mockGetUsers = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
   },
@@ -20,15 +20,15 @@ jest.mock('$lib/server/firebase', () => ({
   },
 }))
 
-jest.mock('$lib/server/search', () => ({
+jest.mock('#lib/server/search.js', () => ({
   searchIndex: (...args: any[]) => mockSearchIndex(...args),
 }))
 
-import { semesterDates, subRequestsCollection } from '$lib/data/collections'
+import { semesterDates, subRequestsCollection } from '#lib/data/collections.js'
 import {
   currentSemesterCutoff,
   subRequestService,
-} from '$lib/server/subRequestService'
+} from '#lib/server/subRequestService.js'
 
 const storedSubRequest = (overrides: Record<string, unknown> = {}) => ({
   classNumber: 2,

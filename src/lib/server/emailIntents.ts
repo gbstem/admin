@@ -3,10 +3,10 @@ import {
   interviewTimeRequestsCollection,
   resolveSemester,
   semesterCollectionPath,
-} from '$lib/data/collections'
-import { registrationParentUid } from '$lib/data/docIds'
-import type ClassData from '$lib/data/types/ClassData'
-import { adminDb } from '$lib/server/firebase'
+} from '#lib/data/collections.js'
+import { registrationParentUid } from '#lib/data/docIds.js'
+import type ClassData from '#lib/data/types/ClassData.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 

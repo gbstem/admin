@@ -1,14 +1,14 @@
 import {
   registrationsCollection,
   classesCollection,
-} from '$lib/data/collections'
-import { resolveRegistrationParentEmails } from '$lib/server/accountEmails'
-import { adminDb, toDateSafe } from '$lib/server/firebase'
+} from '#lib/data/collections.js'
+import { resolveRegistrationParentEmails } from '#lib/server/accountEmails.js'
+import { adminDb, toDateSafe } from '#lib/server/firebase.js'
 import {
   toRegistrationRow,
   type AdminRegistrationRow,
-} from '$lib/server/registrationService'
-import { searchIndex } from '$lib/server/search'
+} from '#lib/server/registrationService.js'
+import { searchIndex } from '#lib/server/search.js'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 /**

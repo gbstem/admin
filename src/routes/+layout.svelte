@@ -1,10 +1,10 @@
 <script lang="ts">
   import '../app.css'
-  import Alert from '$lib/components/Alert.svelte'
-  import Footer from '$lib/components/Footer.svelte'
-  import StaleClientBanner from '$lib/components/StaleClientBanner.svelte'
+  import Alert from '#lib/components/Alert.svelte'
+  import Footer from '#lib/components/Footer.svelte'
+  import StaleClientBanner from '#lib/components/StaleClientBanner.svelte'
   import { navigating } from '$app/state'
-  import progress from '$lib/client/progress'
+  import progress from '#lib/client/progress.js'
   import { onMount } from 'svelte'
   interface Props {
     children?: import('svelte').Snippet

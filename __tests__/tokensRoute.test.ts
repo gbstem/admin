@@ -1,6 +1,10 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockDeleteTokens = jest.fn()
 
-jest.mock('$lib/server/tokenService', () => ({
+jest.mock('#lib/server/tokenService.js', () => ({
   tokenService: {
     deleteTokens: (...args: any[]) => mockDeleteTokens(...args),
   },
@@ -36,7 +40,7 @@ describe('DELETE /api/tokens', () => {
   it('deletes the named tokens for an admin', async () => {
     const res = await call(admin, { tokenIds: ['tok-1', 'tok-2'] })
 
-    expect(res.body).toEqual({ success: true })
+    expect(await res.json()).toEqual({ success: true })
     expect(mockDeleteTokens).toHaveBeenCalledWith(['tok-1', 'tok-2'])
   })
 

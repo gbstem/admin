@@ -16,12 +16,13 @@ const config: Config = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/__tests__/rules/**/*.test.ts'],
   moduleNameMapper: {
-    '^\\$lib/(.*)$': '<rootDir>/src/lib/$1',
+    '^#lib/(.*)\\.js$': '<rootDir>/src/lib/$1',
+    '^#lib/(.*)$': '<rootDir>/src/lib/$1',
   },
   transform: {
     // __tests__/rules has its own tsconfig, which does not extend the root
-    // one: that chain reaches .svelte-kit/tsconfig.json, a generated file that
-    // only exists after `svelte-kit sync`. These tests contain no SvelteKit,
+    // one: that chain reaches $app/tsconfig, a generated file that only exists
+    // after `svelte-kit sync`. These tests contain no SvelteKit,
     // and CI runs them in the emulator job, which does no build - inheriting
     // that dependency failed there with TS5083.
     '^.+\\.tsx?$': [

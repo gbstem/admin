@@ -1,4 +1,4 @@
-import { tokenService } from '$lib/services/tokenService'
+import { tokenService } from '#lib/services/tokenService.js'
 
 describe('tokenService (Data Access Layer)', () => {
   beforeEach(() => {

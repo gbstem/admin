@@ -1,4 +1,4 @@
-import { adminDb } from '$lib/server/firebase'
+import { adminDb } from '#lib/server/firebase.js'
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 const announcementsCollection = 'announcements'

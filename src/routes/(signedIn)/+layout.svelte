@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Nav from '$lib/components/Nav.svelte'
+  import Nav from '#lib/components/Nav.svelte'
   import type { LayoutData } from './$types'
 
   interface Props {

@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { alert } from '$lib/stores'
+  import { alert } from '#lib/stores.js'
   import { invalidate } from '$app/navigation'
-  import { coursesJson, daysOfWeekJson } from '$lib/data'
-  import type ClassData from '$lib/data/types/ClassData'
-  import { currentSemester } from '$lib/data/collections'
+  import { coursesJson, daysOfWeekJson } from '#lib/data/index.js'
+  import type ClassData from '#lib/data/types/ClassData.js'
+  import { currentSemester } from '#lib/data/collections.js'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { EDIT_CLASS_FORM_ID, editClassFormSchema } from './schemas'
   import {
     classEditedFields,
     toClassFormValues as toFormValues,
-  } from '$lib/helpers/editClassForm'
+  } from '#lib/helpers/editClassForm.js'
   import FormInput from '../FormInput.svelte'
   import FormNativeSelect from '../FormNativeSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'

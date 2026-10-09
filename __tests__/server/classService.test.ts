@@ -18,7 +18,7 @@ const mockTransaction = {
 }
 const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
     doc: (path: string) => mockAdminDoc(path),
@@ -30,13 +30,13 @@ jest.mock('$lib/server/firebase', () => ({
   },
 }))
 
-jest.mock('$lib/server/search', () => ({
+jest.mock('#lib/server/search.js', () => ({
   searchIndex: (...args: any[]) => mockSearchIndex(...args),
 }))
 
-import { classesCollection } from '$lib/data/collections'
-import { ClassStatus } from '$lib/data/types/ClassStatus'
-import { classService } from '$lib/server/classService'
+import { classesCollection } from '#lib/data/collections.js'
+import { ClassStatus } from '#lib/data/types/ClassStatus.js'
+import { classService } from '#lib/server/classService.js'
 
 const storedClass = (overrides: Record<string, unknown> = {}) => ({
   instructorFirstName: 'Grace',

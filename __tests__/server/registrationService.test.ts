@@ -17,7 +17,7 @@ const mockGetUsers = jest.fn()
 const mockTransaction = { get: jest.fn(), set: jest.fn(), update: jest.fn() }
 const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
     doc: (path: string) => mockAdminDoc(path),
@@ -30,11 +30,11 @@ jest.mock('$lib/server/firebase', () => ({
   toDateSafe: (...args: any[]) => mockToDateSafe(...args),
 }))
 
-jest.mock('$lib/server/search', () => ({
+jest.mock('#lib/server/search.js', () => ({
   searchIndex: (...args: any[]) => mockSearchIndex(...args),
 }))
 
-import { registrationService } from '$lib/server/registrationService'
+import { registrationService } from '#lib/server/registrationService.js'
 
 const storedRegistration = (overrides: Record<string, unknown> = {}) => ({
   personal: {

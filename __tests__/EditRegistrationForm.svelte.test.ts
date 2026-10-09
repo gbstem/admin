@@ -3,7 +3,7 @@
 // `ts.transpileModule` compilation with no jest-hoist step, so `jest.mock()`
 // here is NOT hoisted the way it is in an ordinary `.test.ts`. See the same
 // note in SetInterviewTimesForm.svelte.test.ts.
-jest.mock('$lib/client/firebase', () => {
+jest.mock('#lib/client/firebase.js', () => {
   const { writable } = require('svelte/store')
   return {
     user: writable(undefined),
@@ -14,8 +14,8 @@ jest.mock('$lib/client/firebase', () => {
 })
 
 import { mount, unmount, flushSync } from 'svelte'
-import EditRegistrationForm from '$lib/components/forms/EditRegistrationForm.svelte'
-import { createDefaultRegistrationValues } from '$lib/helpers/editRegistrationForm'
+import EditRegistrationForm from '#lib/components/forms/EditRegistrationForm.svelte'
+import { createDefaultRegistrationValues } from '#lib/helpers/editRegistrationForm.js'
 
 function registration(
   overrides: Partial<Data.Registration<'client'>['personal']> = {},

@@ -1,5 +1,5 @@
 <script>
-  import ResetPasswordForm from '$lib/components/forms/ResetPasswordForm.svelte'
+  import ResetPasswordForm from '#lib/components/forms/ResetPasswordForm.svelte'
 </script>
 
 <svelte:head>

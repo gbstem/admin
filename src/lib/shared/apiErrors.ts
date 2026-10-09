@@ -1,5 +1,5 @@
 // apiErrors.ts - Reading the refusal of one of our own API routes. Kept
-// byte-identical in admin and portal, and free of `$lib` imports.
+// byte-identical in admin and portal, and free of `#lib` imports.
 
 /**
  * Why a `fetch` to one of our API routes failed, for showing to the person

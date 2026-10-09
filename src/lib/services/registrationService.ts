@@ -1,6 +1,6 @@
-import { db } from '$lib/client/firebase'
+import { db } from '#lib/client/firebase.js'
 import { deserialize } from '$app/forms'
-import { currentSemester, semesterIdFromPath } from '$lib/data/collections'
+import { currentSemester, semesterIdFromPath } from '#lib/data/collections.js'
 import { doc, getDoc } from 'firebase/firestore'
 
 /**

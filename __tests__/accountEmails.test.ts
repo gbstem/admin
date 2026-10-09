@@ -1,6 +1,6 @@
 const mockGetUsers = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminAuth: {
     getUsers: (...args: any[]) => mockGetUsers(...args),
   },
@@ -9,7 +9,7 @@ jest.mock('$lib/server/firebase', () => ({
 import {
   resolveAccountEmails,
   resolveRegistrationParentEmails,
-} from '$lib/server/accountEmails'
+} from '#lib/server/accountEmails.js'
 
 /** Answers getUsers with an account, and an address, for every uid asked. */
 function everyUidHasAnAccount() {

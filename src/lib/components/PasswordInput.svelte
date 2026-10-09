@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
   import { kebabCase, uniqueId } from 'lodash-es'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { Eye, EyeSlash } from '@steeze-ui/heroicons'

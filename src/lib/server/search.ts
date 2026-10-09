@@ -1,7 +1,11 @@
-import { env } from '$env/dynamic/private'
-import { ALGOLIA_APP_ID, ALGOLIA_PRIVATE_KEY } from '$env/static/private'
-import { semesterIdFromPath } from '$lib/data/collections'
-import { adminDb } from '$lib/server/firebase'
+import {
+  USE_LOCAL_SEARCH,
+  VITE_USE_LOCAL_SEARCH,
+  ALGOLIA_APP_ID,
+  ALGOLIA_PRIVATE_KEY,
+} from '$app/env/private'
+import { semesterIdFromPath } from '#lib/data/collections.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { algoliasearch } from 'algoliasearch'
 
 // Use only a local search instead of Algolia if:
@@ -13,8 +17,8 @@ const isTest =
   process.env &&
   process.env.NODE_ENV === 'test'
 const isLocalForced =
-  env.USE_LOCAL_SEARCH === 'true' ||
-  env.VITE_USE_LOCAL_SEARCH === 'true' ||
+  USE_LOCAL_SEARCH === 'true' ||
+  VITE_USE_LOCAL_SEARCH === 'true' ||
   (typeof process !== 'undefined' &&
     process.env &&
     process.env.VITE_USE_LOCAL_SEARCH === 'true')

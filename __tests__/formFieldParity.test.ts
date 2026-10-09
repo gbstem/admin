@@ -27,20 +27,20 @@ import {
   interviewSlotSchema,
   registrationSchema,
   tokenSchema,
-} from '$lib/components/forms/schemas'
-import { createDefaultApplicationValues } from '$lib/helpers/application'
+} from '#lib/components/forms/schemas.js'
+import { createDefaultApplicationValues } from '#lib/helpers/application.js'
 import {
   APPLICATION_ADMIN_OWNED_FIELDS,
   applicationEditedFields,
   toApplicationFormValues,
-} from '$lib/helpers/editApplicationForm'
-import { toClassFormValues } from '$lib/helpers/editClassForm'
+} from '#lib/helpers/editApplicationForm.js'
+import { toClassFormValues } from '#lib/helpers/editClassForm.js'
 import {
   createDefaultRegistrationValues,
   REGISTRATION_ADMIN_OWNED_FIELDS,
   registrationEditedFields,
   toRegistrationFormValues,
-} from '$lib/helpers/editRegistrationForm'
+} from '#lib/helpers/editRegistrationForm.js'
 import { z } from 'zod'
 import type {} from '../src/data.d.ts'
 

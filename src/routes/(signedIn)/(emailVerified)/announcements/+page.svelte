@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import Table from '$lib/components/Table.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
+  import Button from '#lib/components/Button.svelte'
+  import Table from '#lib/components/Table.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
   import { format } from 'date-fns'
   import type { PageData } from './$types'
 
@@ -18,7 +18,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -27,7 +27,7 @@
   let nextHref = $derived(
     (() => {
       if (data.announcements.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

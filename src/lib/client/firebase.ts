@@ -6,9 +6,9 @@ import {
   PUBLIC_FIREBASE_MESSAGE_SENDER_ID,
   PUBLIC_FIREBASE_PROJECT_ID,
   PUBLIC_FIREBASE_STORAGE_BUCKET,
-} from '$env/static/public'
+} from '$app/env/public'
 
-import { browser, dev } from '$app/environment'
+import { browser, dev } from '$app/env'
 import { getApps, initializeApp } from 'firebase/app'
 import {
   browserLocalPersistence,

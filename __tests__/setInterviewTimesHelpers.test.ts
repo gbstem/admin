@@ -12,7 +12,7 @@ import {
   isFinalDecision,
   needsInterview,
   type EligibleInterviewee,
-} from '$lib/helpers/setInterviewTimes'
+} from '#lib/helpers/setInterviewTimes.js'
 
 describe('SetInterviewTimes Helpers', () => {
   describe('parseInterviewSlotDoc', () => {

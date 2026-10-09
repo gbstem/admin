@@ -2,8 +2,8 @@
   import Select from './Select.svelte'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { currentSemester, resolveSemester } from '$lib/data/collections'
-  import collectionsList from '$lib/data/collectionsList.json'
+  import { currentSemester, resolveSemester } from '#lib/data/collections.js'
+  import collectionsList from '#lib/data/collectionsList.json'
 
   const idToName: Record<string, string> = $state({})
   const nameToId: Record<string, string> = {}
@@ -33,12 +33,12 @@
     const targetId = nameToId[newDisplayName] ?? currentSemester
     if (targetId === urlSemester) return
 
-    const base = new URLSearchParams(page.url.searchParams)
+    const base = new URLSearchParams(page.url.search)
     base.set('semester', targetId)
     base.delete('updated') // Reset pagination
     base.delete('page') // Reset page parameter
-    // keepFocus: see PerPageControl.
-    goto(`?${base.toString()}`, { keepFocus: true })
+    // reset: false - see PerPageControl.
+    goto(`?${base.toString()}`, { reset: false })
   }
 
   const options = collectionsList.map((col) => ({ name: col.name }))

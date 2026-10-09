@@ -1,5 +1,5 @@
-import { alert } from '$lib/stores'
-import { normalizeCapitals } from '$lib/utils'
+import { alert } from '#lib/stores.js'
+import { normalizeCapitals } from '#lib/utils.js'
 import type { RemindInstructorRequestBody } from '../../../routes/api/remindInstructor/+server'
 import type { RemindStudentsRequestBody } from '../../../routes/api/remindStudents/+server'
 import type Student from '../types/Student'

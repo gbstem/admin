@@ -1,10 +1,10 @@
-import { semesterCollectionPath, withSemester } from '$lib/data/collections'
+import { semesterCollectionPath, withSemester } from '#lib/data/collections.js'
 import {
   buildFullDecisionPayload,
   buildLikelyDecisionPayload,
   buildNotesPayload,
-} from '$lib/helpers/application'
-import { adminDb } from '$lib/server/firebase'
+} from '#lib/helpers/application.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 import type { Transaction } from 'firebase-admin/firestore'
 

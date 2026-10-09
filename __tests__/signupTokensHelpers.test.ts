@@ -1,5 +1,5 @@
 import type {} from '../src/data.d.ts'
-import { tokenRejection } from '$lib/helpers/signupTokens'
+import { tokenRejection } from '#lib/helpers/signupTokens.js'
 
 const NOW = new Date('2026-09-10T12:00:00Z')
 const token = (overrides: Record<string, unknown> = {}) =>

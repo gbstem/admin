@@ -11,8 +11,8 @@ import { mount, unmount, flushSync } from 'svelte'
 import { fireEvent, within } from '@testing-library/dom'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
-import Select from '$lib/components/Select.svelte'
-import StatusFilter from '$lib/components/StatusFilter.svelte'
+import Select from '#lib/components/Select.svelte'
+import StatusFilter from '#lib/components/StatusFilter.svelte'
 
 const gotoMock = goto as unknown as jest.Mock
 
@@ -23,7 +23,7 @@ const afterDebounce = () =>
   new Promise((resolve) => setTimeout(resolve, DEBOUNCE_MS + 50))
 
 function setUrl(url: string) {
-  ;(page as { url: URL }).url = new URL(url)
+  ;(page as unknown as { url: URL }).url = new URL(url)
 }
 
 function optionButtons(container: HTMLElement) {
@@ -159,7 +159,7 @@ describe('StatusFilter', () => {
     flushSync()
 
     expect(gotoMock).toHaveBeenCalledWith('?filter=all', {
-      keepFocus: true,
+      reset: false,
     })
   })
 

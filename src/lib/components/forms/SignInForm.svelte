@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { auth } from '$lib/client/firebase'
-  import Brand from '$lib/components/Brand.svelte'
-  import { alert } from '$lib/stores'
+  import { auth } from '#lib/client/firebase.js'
+  import Brand from '#lib/components/Brand.svelte'
+  import { alert } from '#lib/stores.js'
   import { signInWithEmailAndPassword } from 'firebase/auth'
   import { defaults, superForm } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'

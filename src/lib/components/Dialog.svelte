@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { browser } from '$app/environment'
-  import { dialogState } from '$lib/stores.svelte'
-  import { clickOutside, cn, trapFocus } from '$lib/utils'
+  import { browser } from '$app/env'
+  import { dialogState } from '#lib/stores.svelte.js'
+  import { clickOutside, cn, trapFocus } from '#lib/utils.js'
   import { uniqueId } from 'lodash-es'
   import { onDestroy } from 'svelte'
   import { fade } from 'svelte/transition'
@@ -81,7 +81,7 @@
     e.stopPropagation()
     handleEscape(e)
   }}
-/>
+></svelte:body>
 
 {#if open}
   <div

@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockCreateInterviewSlot = jest.fn()
 const mockUpdateInterviewSlot = jest.fn()
 const mockDeleteInterviewSlot = jest.fn()
@@ -7,7 +11,7 @@ const mockSendInterviewRescheduledEmail = jest.fn()
 const mockSendInterviewCanceledEmail = jest.fn()
 const mockSendInterviewMissedEmail = jest.fn()
 
-jest.mock('$lib/server/interviewSlots', () => ({
+jest.mock('#lib/server/interviewSlots.js', () => ({
   createInterviewSlot: (...args: any[]) => mockCreateInterviewSlot(...args),
   updateInterviewSlot: (...args: any[]) => mockUpdateInterviewSlot(...args),
   deleteInterviewSlot: (...args: any[]) => mockDeleteInterviewSlot(...args),
@@ -71,7 +75,7 @@ describe('POST /api/interviewSlot', () => {
       undefined,
     )
     expect(mockSendInterviewAssignedEmail).not.toHaveBeenCalled()
-    expect(res.body).toEqual({ id: 'slot-1', emailSent: true })
+    expect(await res.json()).toEqual({ id: 'slot-1', emailSent: true })
   })
 
   it('ignores an interviewer or interviewee the caller names', async () => {
@@ -107,7 +111,7 @@ describe('POST /api/interviewSlot', () => {
     expect(mockSendInterviewAssignedEmail).toHaveBeenCalledWith({
       id: 'slot-1',
     })
-    expect(res.body).toEqual({ id: 'slot-1', emailSent: false })
+    expect(await res.json()).toEqual({ id: 'slot-1', emailSent: false })
   })
 
   it('refuses a reviewer assigning a slot', async () => {
@@ -186,7 +190,7 @@ describe('PATCH /api/interviewSlot', () => {
         missedBy,
       )
       expect(mockUpdateInterviewSlot).not.toHaveBeenCalled()
-      expect(res.body).toEqual({ message: 'Marked missed.' })
+      expect(await res.json()).toEqual({ message: 'Marked missed.' })
     },
   )
 
@@ -266,11 +270,11 @@ describe('/api/interviewSlot emails for a booked slot', () => {
       const res = await call(handler, reviewer, body)
 
       expect(send).toHaveBeenCalledWith(booked)
-      expect(res.body).toEqual({ message, emailSent: true })
+      expect(await res.json()).toEqual({ message, emailSent: true })
 
       send.mockResolvedValue(false)
       const failed = await call(handler, reviewer, body)
-      expect(failed.body).toEqual({ message, emailSent: false })
+      expect(await failed.json()).toEqual({ message, emailSent: false })
     },
   )
 
@@ -283,7 +287,7 @@ describe('/api/interviewSlot emails for a booked slot', () => {
     async (_, handler, body, message) => {
       const res = await call(handler, reviewer, body)
 
-      expect(res.body).toEqual({ message })
+      expect(await res.json()).toEqual({ message })
       expect(mockSendInterviewRescheduledEmail).not.toHaveBeenCalled()
       expect(mockSendInterviewMissedEmail).not.toHaveBeenCalled()
       expect(mockSendInterviewCanceledEmail).not.toHaveBeenCalled()

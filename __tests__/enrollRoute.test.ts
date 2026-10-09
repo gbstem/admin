@@ -1,16 +1,20 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockEnrollStudent = jest.fn()
 const mockDropStudent = jest.fn()
 const mockResolveAccountEmail = jest.fn()
 const mockSendEmail = jest.fn()
 
-jest.mock('$lib/server/classEnrollments', () => ({
+jest.mock('#lib/server/classEnrollments.js', () => ({
   enrollStudent: (...args: any[]) => mockEnrollStudent(...args),
   dropStudent: (...args: any[]) => mockDropStudent(...args),
 }))
-jest.mock('$lib/server/accountEmail', () => ({
+jest.mock('#lib/server/accountEmail.js', () => ({
   resolveAccountEmail: (...args: any[]) => mockResolveAccountEmail(...args),
 }))
-jest.mock('$lib/server/email', () => ({
+jest.mock('#lib/server/email.js', () => ({
   sendEmail: (...args: any[]) => mockSendEmail(...args),
 }))
 
@@ -84,7 +88,7 @@ describe('POST /api/enroll', () => {
     })
 
     expect(mockEnrollStudent).toHaveBeenCalledWith('c-1', 'parent-uid-1')
-    expect(res.body).toEqual({ emailSent: true })
+    expect(await res.json()).toEqual({ emailSent: true })
     expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'parent@test.com',
@@ -116,8 +120,8 @@ describe('POST /api/enroll', () => {
       registrationId: 'parent-uid-1',
     })
 
-    expect(res.init?.status ?? 200).toBe(200)
-    expect(res.body).toEqual({ emailSent: false })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ emailSent: false })
   })
 
   it('reports an unsent email when the parent account is gone', async () => {
@@ -130,7 +134,7 @@ describe('POST /api/enroll', () => {
       registrationId: 'parent-uid-1',
     })
 
-    expect(res.body).toEqual({ emailSent: false })
+    expect(await res.json()).toEqual({ emailSent: false })
     expect(mockSendEmail).not.toHaveBeenCalled()
   })
 
@@ -161,7 +165,7 @@ describe('DELETE /api/enroll', () => {
       registrationId: 'parent-uid-1',
     })
 
-    expect(res.init?.status ?? 200).toBe(200)
+    expect(res.status).toBe(200)
     expect(mockDropStudent).toHaveBeenCalledWith('c-1', 'parent-uid-1')
     expect(mockSendEmail).not.toHaveBeenCalled()
   })

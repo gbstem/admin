@@ -8,14 +8,14 @@ const mockQuery = {
 const mockCollection = jest.fn()
 const mockBatch = { delete: jest.fn(), commit: jest.fn() }
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
     batch: () => mockBatch,
   },
 }))
 
-import { tokenService } from '$lib/server/tokenService'
+import { tokenService } from '#lib/server/tokenService.js'
 
 const storedToken = (overrides: Record<string, unknown> = {}) => ({
   role: 'applicant',

@@ -2,21 +2,21 @@ import {
   applicationsCollection,
   interviewTimesCollection,
   withSemester,
-} from '$lib/data/collections'
-import { interviewSlotDocId } from '$lib/data/docIds'
-import type { EmailTemplateName } from '$lib/emails/registry'
-import { renderEmail } from '$lib/emails/render'
+} from '#lib/data/collections.js'
+import { interviewSlotDocId } from '#lib/data/docIds.js'
+import type { EmailTemplateName } from '#lib/emails/registry.js'
+import { renderEmail } from '#lib/emails/render.js'
 import {
   canUserModifySlot,
   interviewIneligibility,
   type InterviewIneligibility,
-} from '$lib/helpers/setInterviewTimes'
-import { resolveAccountEmail } from '$lib/server/accountEmail'
-import { sendEmail } from '$lib/server/email'
-import { adminDb } from '$lib/server/firebase'
-import { accountName } from '$lib/server/userProfile'
-import { GBSTEM_TIME_ZONE, formatDateLocal } from '$lib/utils'
-import { toDate } from '$lib/shared/timestamps'
+} from '#lib/helpers/setInterviewTimes.js'
+import { resolveAccountEmail } from '#lib/server/accountEmail.js'
+import { sendEmail } from '#lib/server/email.js'
+import { adminDb } from '#lib/server/firebase.js'
+import { accountName } from '#lib/server/userProfile.js'
+import { GBSTEM_TIME_ZONE, formatDateLocal } from '#lib/utils.js'
+import { toDate } from '#lib/shared/timestamps.js'
 import { error } from '@sveltejs/kit'
 
 /**

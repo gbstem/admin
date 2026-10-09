@@ -3,14 +3,14 @@
   import { zod } from 'sveltekit-superforms/adapters'
   import { z } from 'zod'
   import { Field, Control, Label, FieldErrors } from 'formsnap'
-  import { alert } from '$lib/stores'
+  import { alert } from '#lib/stores.js'
   import {
     EmailAuthProvider,
     reauthenticateWithCredential,
   } from 'firebase/auth'
-  import Dialog from '$lib/components/Dialog.svelte'
-  import { auth, user } from '$lib/client/firebase'
-  import { userService } from '$lib/services/userService'
+  import Dialog from '#lib/components/Dialog.svelte'
+  import { auth, user } from '#lib/client/firebase.js'
+  import { userService } from '#lib/services/userService.js'
   import Button from '../Button.svelte'
   import DialogActions from '../DialogActions.svelte'
 

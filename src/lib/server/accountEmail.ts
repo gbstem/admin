@@ -1,4 +1,4 @@
-import { adminAuth } from '$lib/server/firebase'
+import { adminAuth } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 
 /**

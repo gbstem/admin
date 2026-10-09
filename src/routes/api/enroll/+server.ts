@@ -1,15 +1,14 @@
-import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
-import { sendEmail } from '$lib/server/email'
-import { renderEmail } from '$lib/emails/render'
-import { formatTime24to12 } from '$lib/utils'
-import { registrationParentUid } from '$lib/data/docIds'
-import { resolveAccountEmail } from '$lib/server/accountEmail'
-import { json } from '@sveltejs/kit'
-import { isAllowedMeetingLink } from '$lib/helpers/meetingLink'
-import type { Enrollment } from '$lib/server/classEnrollments'
+import { handleApiError, verifyAdmin } from '#lib/server/apiHelpers.js'
+import { sendEmail } from '#lib/server/email.js'
+import { renderEmail } from '#lib/emails/render.js'
+import { formatTime24to12 } from '#lib/utils.js'
+import { registrationParentUid } from '#lib/data/docIds.js'
+import { resolveAccountEmail } from '#lib/server/accountEmail.js'
+import { isAllowedMeetingLink } from '#lib/helpers/meetingLink.js'
+import type { Enrollment } from '#lib/server/classEnrollments.js'
 import type { RequestHandler } from './$types'
 
-import { dropStudent, enrollStudent } from '$lib/server/classEnrollments'
+import { dropStudent, enrollStudent } from '#lib/server/classEnrollments.js'
 import { z } from 'zod'
 
 const docId = (message: string) =>
@@ -109,7 +108,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     )
     const enrollment = await enrollStudent(classId, registrationId)
     const emailSent = await sendEnrollmentEmail(registrationId, enrollment)
-    return json({ emailSent } satisfies EnrollResponse)
+    return Response.json({ emailSent } satisfies EnrollResponse)
   } catch (err) {
     throw handleApiError('/api/enroll', err)
   }
@@ -123,7 +122,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
       await request.json(),
     )
     await dropStudent(classId, registrationId)
-    return json({ message: 'Dropped.' })
+    return Response.json({ message: 'Dropped.' })
   } catch (err) {
     throw handleApiError('/api/enroll', err)
   }

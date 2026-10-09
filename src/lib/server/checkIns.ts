@@ -1,10 +1,10 @@
-import { toDate } from '$lib/shared/timestamps'
+import { toDate } from '#lib/shared/timestamps.js'
 import {
   checkInsCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import { retreatMealSchedule } from '$lib/data/retreatMealSchedule'
-import { adminDb } from '$lib/server/firebase'
+} from '#lib/data/collections.js'
+import { retreatMealSchedule } from '#lib/data/retreatMealSchedule.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 import { cloneDeep } from 'lodash-es'
 

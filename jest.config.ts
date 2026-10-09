@@ -33,7 +33,11 @@ const config: Config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
-    '^\\$lib/(.*)$': '<rootDir>/src/lib/$1',
+    // package.json's `imports` maps `#lib/*` to `./src/lib/*` verbatim, but
+    // imports name the compiled `.js` while the source is `.ts` - drop the
+    // extension so Jest's moduleFileExtensions search finds the source.
+    '^#lib/(.*)\\.js$': '<rootDir>/src/lib/$1',
+    '^#lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@/(.*)$': '<rootDir>/$1',
     // These packages publish an `exports` map with only a `svelte` condition
     // (no `import`/`require`/`default`), which Jest's resolver can't read - it
@@ -41,9 +45,8 @@ const config: Config = {
     // the entry those conditions name. Needed since the form components moved
     // to formsnap/superforms and a `.svelte.test.ts` now mounts one.
     // SvelteKit's `$app/*` virtual modules - see __mocks__/sveltekit/README.md.
-    '^\\$app/stores$': '<rootDir>/__mocks__/sveltekit/stores.cjs',
     '^\\$app/state$': '<rootDir>/__mocks__/sveltekit/state.cjs',
-    '^\\$app/environment$': '<rootDir>/__mocks__/sveltekit/environment.cjs',
+    '^\\$app/env$': '<rootDir>/__mocks__/sveltekit/env.cjs',
     '^\\$app/navigation$': '<rootDir>/__mocks__/sveltekit/navigation.cjs',
     '^\\$app/forms$': '<rootDir>/__mocks__/sveltekit/forms.cjs',
     '^formsnap$': '<rootDir>/node_modules/formsnap/dist/index.js',

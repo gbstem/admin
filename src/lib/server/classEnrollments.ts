@@ -1,8 +1,8 @@
 import {
   classesCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import { adminDb } from '$lib/server/firebase'
+} from '#lib/data/collections.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 
 /** A registration with the enrollment fields its type doesn't declare. */

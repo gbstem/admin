@@ -2,7 +2,7 @@ const mockListUsers = jest.fn()
 const mockUpdateUser = jest.fn()
 const mockRevokeRefreshTokens = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminAuth: {
     listUsers: (...args: any[]) => mockListUsers(...args),
     updateUser: (...args: any[]) => mockUpdateUser(...args),
@@ -16,7 +16,7 @@ import {
   isIdle,
   lastActiveMs,
   resetIdleVerification,
-} from '$lib/server/idleAccounts'
+} from '#lib/server/idleAccounts.js'
 
 const NOW = new Date('2026-10-07T12:00:00Z')
 const daysAgo = (days: number) =>

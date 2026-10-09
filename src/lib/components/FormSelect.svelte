@@ -1,7 +1,7 @@
 <script lang="ts">
   import { constraintAt, constraintsStore } from './fieldConstraints'
   import { fromStore } from 'svelte/store'
-  import Select from '$lib/components/Select.svelte'
+  import Select from '#lib/components/Select.svelte'
   import { Control, Field, FieldErrors } from 'formsnap'
 
   interface Props {

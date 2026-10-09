@@ -1,15 +1,15 @@
 import {
   CREATE_TOKEN_FORM_ID,
   tokenSchema,
-} from '$lib/components/forms/schemas'
-import { verifyAdmin } from '$lib/server/apiHelpers'
+} from '#lib/components/forms/schemas.js'
+import { verifyAdmin } from '#lib/server/apiHelpers.js'
 import { error, fail } from '@sveltejs/kit'
 import { superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
 import type { Actions, PageServerLoad } from './$types'
-import { tokenService } from '$lib/server/tokenService'
+import { tokenService } from '#lib/server/tokenService.js'
 
-import { parsePagination } from '$lib/utils'
+import { parsePagination } from '#lib/utils.js'
 
 export const load = (async ({ depends, locals, url }) => {
   if (locals.user && locals.user.role === 'admin') {
@@ -26,12 +26,14 @@ export const load = (async ({ depends, locals, url }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] tokens page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching tokens. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching tokens. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     throw error(400, 'You do not have permission to view this page.')

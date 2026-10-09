@@ -1,8 +1,8 @@
-import { toDateOrNull } from '$lib/shared/timestamps'
-import { semesterDates, subRequestsCollection } from '$lib/data/collections'
-import { resolveAccountEmails } from '$lib/server/accountEmails'
-import { adminDb } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
+import { toDateOrNull } from '#lib/shared/timestamps.js'
+import { semesterDates, subRequestsCollection } from '#lib/data/collections.js'
+import { resolveAccountEmails } from '#lib/server/accountEmails.js'
+import { adminDb } from '#lib/server/firebase.js'
+import { searchIndex } from '#lib/server/search.js'
 import type { DocumentData, Query } from 'firebase-admin/firestore'
 
 /** A sub request as the admin sub-requests log shows it. */

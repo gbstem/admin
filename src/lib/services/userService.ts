@@ -1,5 +1,5 @@
-import { errorMessage } from '$lib/shared/apiErrors'
-import { db } from '$lib/client/firebase'
+import { errorMessage } from '#lib/shared/apiErrors.js'
+import { db } from '#lib/client/firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 export interface AccountDeletionEligibility {

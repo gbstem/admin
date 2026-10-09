@@ -1,4 +1,4 @@
-// The component derives its signed-in state from `$lib/client/firebase`'s
+// The component derives its signed-in state from `#lib/client/firebase`'s
 // `user` store. Driving that store for real would mean faking a chain of
 // Firebase SDK calls (getApps/initializeApp/getAuth/onAuthStateChanged)
 // that's timing-sensitive and, since `user` is a
@@ -13,10 +13,10 @@
 // compilation with no jest-hoist step - so `jest.mock()` calls here are NOT
 // hoisted above imports the way they are elsewhere in this repo (see the
 // comment at the top of that file). Placed after the imports, this would
-// register too late: '$lib/client/firebase' would already have been
+// register too late: '#lib/client/firebase.js' would already have been
 // `require()`d (transitively, via the component and interviewService
 // imports) using the real module.
-jest.mock('$lib/client/firebase', () => {
+jest.mock('#lib/client/firebase.js', () => {
   const { writable } = require('svelte/store')
   return {
     user: writable(undefined),
@@ -29,10 +29,10 @@ jest.mock('$lib/client/firebase', () => {
 import { mount, unmount, flushSync } from 'svelte'
 import { fireEvent, waitFor, within } from '@testing-library/dom'
 import { page } from '$app/state'
-import { user as mockUserStore } from '$lib/client/firebase'
-import SetInterviewTimesForm from '$lib/components/forms/SetInterviewTimesForm.svelte'
-import { interviewService } from '$lib/services/interviewService'
-import { toLocalISOString } from '$lib/utils'
+import { user as mockUserStore } from '#lib/client/firebase.js'
+import SetInterviewTimesForm from '#lib/components/forms/SetInterviewTimesForm.svelte'
+import { interviewService } from '#lib/services/interviewService.js'
+import { toLocalISOString } from '#lib/utils.js'
 
 const authUser = {
   object: {

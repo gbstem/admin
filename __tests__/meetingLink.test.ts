@@ -1,7 +1,7 @@
 import {
   isAllowedMeetingLink,
   openableMeetingLink,
-} from '$lib/helpers/meetingLink'
+} from '#lib/helpers/meetingLink.js'
 
 describe('isAllowedMeetingLink', () => {
   // One of each shape found across every stored class link, Fall24-Fall26.

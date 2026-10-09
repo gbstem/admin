@@ -1,14 +1,14 @@
-import { errorMessage } from '$lib/shared/apiErrors'
-import { db } from '$lib/client/firebase'
-import { studentService } from '$lib/services/studentService'
+import { errorMessage } from '#lib/shared/apiErrors.js'
+import { db } from '#lib/client/firebase.js'
+import { studentService } from '#lib/services/studentService.js'
 import {
   classesCollection,
   instructorFeedbackCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import type ClassData from '$lib/data/types/ClassData'
-import type Student from '$lib/data/types/Student'
-import { normalizeCapitals, timestampToDate } from '$lib/utils'
+} from '#lib/data/collections.js'
+import type ClassData from '#lib/data/types/ClassData.js'
+import type Student from '#lib/data/types/Student.js'
+import { normalizeCapitals, timestampToDate } from '#lib/utils.js'
 import { doc, getDoc } from 'firebase/firestore'
 import type {
   ClassStatusesRequestBody,

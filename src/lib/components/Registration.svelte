@@ -1,13 +1,13 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte'
-  import { registrationsCollection } from '$lib/data/collections'
-  import { registrationService } from '$lib/services/registrationService'
-  import { alert } from '$lib/stores'
+  import Card from '#lib/components/Card.svelte'
+  import { registrationsCollection } from '#lib/data/collections.js'
+  import { registrationService } from '#lib/services/registrationService.js'
+  import { alert } from '#lib/stores.js'
   import { cloneDeep } from 'lodash-es'
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
   import EditRegistrationForm from './forms/EditRegistrationForm.svelte'
-  import { createDefaultRegistrationValues } from '$lib/helpers/editRegistrationForm'
+  import { createDefaultRegistrationValues } from '#lib/helpers/editRegistrationForm.js'
 
   interface Props {
     open?: boolean

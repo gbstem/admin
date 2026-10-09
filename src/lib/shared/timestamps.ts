@@ -1,5 +1,5 @@
 // timestamps.ts - Turning a stored date into a `Date`. Kept byte-identical in
-// admin and portal, and free of `$lib` and Firebase imports so server code,
+// admin and portal, and free of `#lib` and Firebase imports so server code,
 // browser code, scripts and Cypress specs can all use it.
 //
 // A date read from Firestore arrives in several shapes depending on who read

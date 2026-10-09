@@ -1,23 +1,26 @@
 <script lang="ts">
   import { invalidate } from '$app/navigation'
-  import Card from '$lib/components/Card.svelte'
-  import CheckboxInput from '$lib/components/CheckboxInput.svelte'
-  import DateTimeInput from '$lib/components/DateTimeInput.svelte'
-  import Form from '$lib/components/Form.svelte'
-  import NumberInput from '$lib/components/NumberInput.svelte'
-  import Select from '$lib/components/Select.svelte'
-  import Textarea from '$lib/components/Textarea.svelte'
-  import TextInput from '$lib/components/TextInput.svelte'
-  import { interviewAttendanceJson } from '$lib/data'
-  import { applicationsCollection, semesterDates } from '$lib/data/collections'
+  import Card from '#lib/components/Card.svelte'
+  import CheckboxInput from '#lib/components/CheckboxInput.svelte'
+  import DateTimeInput from '#lib/components/DateTimeInput.svelte'
+  import Form from '#lib/components/Form.svelte'
+  import NumberInput from '#lib/components/NumberInput.svelte'
+  import Select from '#lib/components/Select.svelte'
+  import Textarea from '#lib/components/Textarea.svelte'
+  import TextInput from '#lib/components/TextInput.svelte'
+  import { interviewAttendanceJson } from '#lib/data/index.js'
+  import {
+    applicationsCollection,
+    semesterDates,
+  } from '#lib/data/collections.js'
   import {
     createDefaultApplicationValues,
     createDefaultInterviewValues,
     resolveViewedSemester,
-  } from '$lib/helpers/application'
-  import { applicationService } from '$lib/services/applicationService'
-  import { alert } from '$lib/stores'
-  import { formatDateShort } from '$lib/utils'
+  } from '#lib/helpers/application.js'
+  import { applicationService } from '#lib/services/applicationService.js'
+  import { alert } from '#lib/stores.js'
+  import { formatDateShort } from '#lib/utils.js'
   import { cloneDeep } from 'lodash-es'
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
@@ -29,7 +32,7 @@
     PlusCircle,
     XCircle,
   } from '@steeze-ui/heroicons'
-  import PersonIcon from '$lib/components/icons/PersonIcon.svelte'
+  import PersonIcon from '#lib/components/icons/PersonIcon.svelte'
 
   interface Props {
     open?: boolean

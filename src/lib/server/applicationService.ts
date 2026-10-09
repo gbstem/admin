@@ -1,9 +1,9 @@
-import type { applicationSchema } from '$lib/components/forms/schemas'
-import { semesterCollectionPath, withSemester } from '$lib/data/collections'
-import { applicationEditedFields } from '$lib/helpers/editApplicationForm'
-import { resolveAccountEmails } from '$lib/server/accountEmails'
-import { adminDb, toDateSafe } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
+import type { applicationSchema } from '#lib/components/forms/schemas.js'
+import { semesterCollectionPath, withSemester } from '#lib/data/collections.js'
+import { applicationEditedFields } from '#lib/helpers/editApplicationForm.js'
+import { resolveAccountEmails } from '#lib/server/accountEmails.js'
+import { adminDb, toDateSafe } from '#lib/server/firebase.js'
+import { searchIndex } from '#lib/server/search.js'
 import { error } from '@sveltejs/kit'
 import type {
   DocumentSnapshot,

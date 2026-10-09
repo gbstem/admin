@@ -1,14 +1,14 @@
 const mockResolveAccountEmail = jest.fn()
 const mockSendEmail = jest.fn()
 
-jest.mock('$lib/server/accountEmail', () => ({
+jest.mock('#lib/server/accountEmail.js', () => ({
   resolveAccountEmail: (...args: any[]) => mockResolveAccountEmail(...args),
 }))
-jest.mock('$lib/server/email', () => ({
+jest.mock('#lib/server/email.js', () => ({
   sendEmail: (...args: any[]) => mockSendEmail(...args),
 }))
 
-import { sendDecisionEmail } from '$lib/server/decisionEmails'
+import { sendDecisionEmail } from '#lib/server/decisionEmails.js'
 
 const applicant = { applicationId: 'uid-1', firstName: 'Ada' }
 

@@ -11,8 +11,8 @@ jest.mock('$app/navigation', () => ({
 import { mount, unmount, flushSync } from 'svelte'
 import { beforeNavigate } from '$app/navigation'
 import { updated } from '$app/state'
-import { shouldHardLoad } from '$lib/client/staleClient'
-import StaleClientBanner from '$lib/components/StaleClientBanner.svelte'
+import { shouldHardLoad } from '#lib/client/staleClient.js'
+import StaleClientBanner from '#lib/components/StaleClientBanner.svelte'
 
 const beforeNavigateMock = beforeNavigate as unknown as jest.Mock
 

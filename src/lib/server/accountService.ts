@@ -1,8 +1,8 @@
-import { toDate } from '$lib/shared/timestamps'
-import { interviewTimesCollection } from '$lib/data/collections'
-import { planAdminAccountDeletion } from '$lib/helpers/accountDeletion'
-import { tokenRejection } from '$lib/helpers/signupTokens'
-import { adminAuth, adminDb } from '$lib/server/firebase'
+import { toDate } from '#lib/shared/timestamps.js'
+import { interviewTimesCollection } from '#lib/data/collections.js'
+import { planAdminAccountDeletion } from '#lib/helpers/accountDeletion.js'
+import { tokenRejection } from '#lib/helpers/signupTokens.js'
+import { adminAuth, adminDb } from '#lib/server/firebase.js'
 import { error } from '@sveltejs/kit'
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 

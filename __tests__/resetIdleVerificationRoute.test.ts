@@ -1,11 +1,19 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockReset = jest.fn()
 const mockEnv: Record<string, string | undefined> = {}
 
-jest.mock('$env/dynamic/private', () => ({ env: mockEnv }))
-jest.mock('$lib/server/idleAccounts', () => ({
+jest.mock('$app/env/private', () => ({
+  get CRON_SECRET() {
+    return mockEnv.CRON_SECRET
+  },
+}))
+jest.mock('#lib/server/idleAccounts.js', () => ({
   resetIdleVerification: (...args: any[]) => mockReset(...args),
 }))
-jest.mock('$lib/server/firebase', () => ({ adminAuth: {} }))
+jest.mock('#lib/server/firebase.js', () => ({ adminAuth: {} }))
 
 import { GET } from '../src/routes/api/cron/resetIdleVerification/+server'
 
@@ -36,7 +44,7 @@ describe('GET /api/cron/resetIdleVerification', () => {
   test('runs the reset for the cron secret and returns its summary', async () => {
     const res: any = await call('Bearer s3cret')
     expect(mockReset).toHaveBeenCalledWith({ dryRun: false })
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
   })
 
   test('passes ?dryRun=1 through', async () => {

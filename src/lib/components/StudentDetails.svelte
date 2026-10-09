@@ -1,18 +1,18 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte'
-  import Select from '$lib/components/Select.svelte'
-  import sendClassReminder from '$lib/data/helpers/sendClassReminders'
-  import type ClassData from '$lib/data/types/ClassData'
-  import type Student from '$lib/data/types/Student'
-  import { formatClassName } from '$lib/helpers/studentDetails'
-  import { openableMeetingLink } from '$lib/helpers/meetingLink'
-  import { studentService } from '$lib/services/studentService'
-  import { alert } from '$lib/stores'
+  import Card from '#lib/components/Card.svelte'
+  import Select from '#lib/components/Select.svelte'
+  import sendClassReminder from '#lib/data/helpers/sendClassReminders.js'
+  import type ClassData from '#lib/data/types/ClassData.js'
+  import type Student from '#lib/data/types/Student.js'
+  import { formatClassName } from '#lib/helpers/studentDetails.js'
+  import { openableMeetingLink } from '#lib/helpers/meetingLink.js'
+  import { studentService } from '#lib/services/studentService.js'
+  import { alert } from '#lib/stores.js'
   import {
     copyEmails,
     formatClassTimes,
     getNearestFutureClass,
-  } from '$lib/utils'
+  } from '#lib/utils.js'
   import { format } from 'date-fns'
   import { tick } from 'svelte'
   import Button from './Button.svelte'

@@ -1,5 +1,5 @@
-import { studentFeedbackService } from '$lib/server/studentFeedbackService'
-import { parsePagination } from '$lib/utils'
+import { studentFeedbackService } from '#lib/server/studentFeedbackService.js'
+import { parsePagination } from '#lib/utils.js'
 import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
 
@@ -24,12 +24,14 @@ export const load = (async ({ url, depends, locals }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] student-feedback page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching student feedback. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching student feedback. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     try {
@@ -39,8 +41,7 @@ export const load = (async ({ url, depends, locals }) => {
       }
     } catch (err: any) {
       console.error('[Search Error] student-feedback search load:', err)
-      throw error(500, {
-        message: 'The search failed. Please try again later.',
+      throw error(500, 'The search failed. Please try again later.', {
         details: err.message || err.toString(),
         code: err.code || 'UNKNOWN',
       })

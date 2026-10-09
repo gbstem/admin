@@ -1,14 +1,9 @@
 import { jest } from '@jest/globals'
 
 // Mock environment variables
-jest.mock('$env/dynamic/private', () => ({
-  env: {
-    USE_LOCAL_SEARCH: 'false',
-    VITE_USE_LOCAL_SEARCH: 'false',
-  },
-}))
-
-jest.mock('$env/static/private', () => ({
+jest.mock('$app/env/private', () => ({
+  USE_LOCAL_SEARCH: 'false',
+  VITE_USE_LOCAL_SEARCH: 'false',
   ALGOLIA_APP_ID: 'real-app-id',
   ALGOLIA_PRIVATE_KEY: 'real-private-key',
 }))
@@ -40,7 +35,7 @@ const mockCollection = {
   get: mockGet,
 }
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: jest.fn().mockReturnValue(mockCollection),
   },

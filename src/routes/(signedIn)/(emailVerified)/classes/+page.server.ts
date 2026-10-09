@@ -1,11 +1,11 @@
 import {
   EDIT_CLASS_FORM_ID,
   editClassFormSchema,
-} from '$lib/components/forms/schemas'
-import { verifyAdminOrReviewer } from '$lib/server/apiHelpers'
-import { classService } from '$lib/server/classService'
-import { editTarget } from '$lib/server/editTarget'
-import { parsePagination } from '$lib/utils'
+} from '#lib/components/forms/schemas.js'
+import { verifyAdminOrReviewer } from '#lib/server/apiHelpers.js'
+import { classService } from '#lib/server/classService.js'
+import { editTarget } from '#lib/server/editTarget.js'
+import { parsePagination } from '#lib/utils.js'
 import { error, fail } from '@sveltejs/kit'
 import { message, superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
@@ -29,12 +29,14 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] classes page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching classes. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching classes. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     try {
@@ -44,8 +46,7 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Search Error] classes search load:', err)
-      throw error(500, {
-        message: 'The search failed. Please try again later.',
+      throw error(500, 'The search failed. Please try again later.', {
         details: err.message || err.toString(),
         code: err.code || 'UNKNOWN',
       })

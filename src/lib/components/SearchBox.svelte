@@ -6,7 +6,7 @@
   import TextInput from './TextInput.svelte'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { MagnifyingGlass } from '@steeze-ui/heroicons'
-  import SpinnerIcon from '$lib/components/icons/SpinnerIcon.svelte'
+  import SpinnerIcon from '#lib/components/icons/SpinnerIcon.svelte'
 
   interface Props {
     basePath?: string
@@ -35,22 +35,20 @@
     }
   })
 
-  // Each search keeps focus where it is (keepFocus - see PerPageControl).
+  // Each search keeps focus where it is (reset: false - see PerPageControl).
   async function handleSearch() {
     searching = true
-    const base = new URLSearchParams(page.url.searchParams)
+    const base = new URLSearchParams(page.url.search)
     if (search === '') {
       base.delete('query')
       base.delete('updated')
-      goto(`${basePath}?${base.toString()}`, { keepFocus: true }).finally(
-        () => {
-          searching = false
-        },
-      )
+      goto(`${basePath}?${base.toString()}`, { reset: false }).finally(() => {
+        searching = false
+      })
     } else {
       base.set('query', search)
       base.delete('updated')
-      goto(`?${base.toString()}`, { keepFocus: true }).finally(() => {
+      goto(`?${base.toString()}`, { reset: false }).finally(() => {
         searching = false
       })
     }
@@ -59,10 +57,10 @@
   async function handleClear() {
     searching = true
     search = ''
-    const base = new URLSearchParams(page.url.searchParams)
+    const base = new URLSearchParams(page.url.search)
     base.delete('query')
     base.delete('updated')
-    goto(`${basePath}?${base.toString()}`, { keepFocus: true }).finally(() => {
+    goto(`${basePath}?${base.toString()}`, { reset: false }).finally(() => {
       searching = false
     })
   }

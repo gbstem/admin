@@ -1,4 +1,4 @@
-import { MEETING_LINK_ERROR } from '$lib/helpers/meetingLink'
+import { MEETING_LINK_ERROR } from '#lib/helpers/meetingLink.js'
 import { z } from 'zod'
 import {
   applicationSchema,

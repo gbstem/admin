@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { browser } from '$app/environment'
+  import { browser } from '$app/env'
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import CollectionFilter from '$lib/components/CollectionFilter.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import Registration from '$lib/components/Registration.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import StatusFilter from '$lib/components/StatusFilter.svelte'
-  import Table from '$lib/components/Table.svelte'
+  import Button from '#lib/components/Button.svelte'
+  import CollectionFilter from '#lib/components/CollectionFilter.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import Registration from '#lib/components/Registration.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import StatusFilter from '#lib/components/StatusFilter.svelte'
+  import Table from '#lib/components/Table.svelte'
   import {
     resolveSemester,
     semesterCollectionPath,
-  } from '$lib/data/collections'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { registrationService } from '$lib/services/registrationService'
-  import { studentService } from '$lib/services/studentService'
-  import { alert } from '$lib/stores'
-  import { generateCSV, normalizeCapitals } from '$lib/utils'
+  } from '#lib/data/collections.js'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { registrationService } from '#lib/services/registrationService.js'
+  import { studentService } from '#lib/services/studentService.js'
+  import { alert } from '#lib/stores.js'
+  import { generateCSV, normalizeCapitals } from '#lib/utils.js'
   import { format } from 'date-fns'
   import { kebabCase } from 'lodash-es'
   import type { PageData } from './$types'
@@ -127,7 +127,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -136,7 +136,7 @@
   let nextHref = $derived(
     (() => {
       if (data.registrations.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

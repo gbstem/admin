@@ -1,4 +1,4 @@
-import { adminAuth, adminDb } from '$lib/server/firebase'
+import { adminAuth, adminDb } from '#lib/server/firebase.js'
 
 /**
  * An account's full name: `users/{uid}`'s `firstName`/`lastName`, the

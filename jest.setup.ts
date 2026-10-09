@@ -65,9 +65,9 @@ afterAll(() => {
   }
 })
 
-// Global mock for SvelteKit Public Env
+// Global mock for SvelteKit's public env (src/env.ts)
 jest.mock(
-  '$env/static/public',
+  '$app/env/public',
   () => ({
     PUBLIC_FIREBASE_API_KEY: 'apiKey',
     PUBLIC_FIREBASE_AUTH_DOMAIN: 'authDomain',
@@ -80,9 +80,9 @@ jest.mock(
   { virtual: true },
 )
 
-// Global mock for SvelteKit Private Env
+// Global mock for SvelteKit's private env (src/env.ts)
 jest.mock(
-  '$env/static/private',
+  '$app/env/private',
   () => ({
     FIREBASE_PROJECT_ID: 'projectIdPrivate',
     FIREBASE_CLIENT_EMAIL: 'clientEmail',
@@ -90,27 +90,16 @@ jest.mock(
     SENDGRID_API_TOKEN: 'sgToken',
     ALGOLIA_APP_ID: 'algoliaApp',
     ALGOLIA_PRIVATE_KEY: 'algoliaKey',
-  }),
-  { virtual: true },
-)
-
-// Global mock for SvelteKit Dynamic Private Env
-jest.mock(
-  '$env/dynamic/private',
-  () => ({
-    env: {
-      FIREBASE_AUTH_EMULATOR_HOST:
-        process.env.FIREBASE_AUTH_EMULATOR_HOST || '',
-      FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST || '',
-      STORAGE_EMULATOR_HOST: process.env.STORAGE_EMULATOR_HOST || '',
-    },
+    FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST,
+    FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
+    STORAGE_EMULATOR_HOST: process.env.STORAGE_EMULATOR_HOST,
   }),
   { virtual: true },
 )
 
 // Global mock for SvelteKit Environment Module
 jest.mock(
-  '$app/environment',
+  '$app/env',
   () => ({
     building: false,
     browser: false,
@@ -241,11 +230,6 @@ jest.mock(
         throw new Redirect(status, location)
       },
       isRedirect: (err: any): boolean => err instanceof Redirect,
-      json: (body: any, init?: any) => ({
-        body,
-        init,
-        __isSvelteKitJson: true,
-      }),
       fail: (status: number, data: any) => ({
         status,
         data,

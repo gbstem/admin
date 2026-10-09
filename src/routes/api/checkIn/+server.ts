@@ -1,11 +1,13 @@
-import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
+import {
+  handleApiError,
+  verifyAdminOrReviewer,
+} from '#lib/server/apiHelpers.js'
 import {
   checkInStudent,
   setMealServed,
   type CheckIn,
-} from '$lib/server/checkIns'
-import { isDocId } from '$lib/server/editTarget'
-import { json } from '@sveltejs/kit'
+} from '#lib/server/checkIns.js'
+import { isDocId } from '#lib/server/editTarget.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -36,7 +38,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     verifyAdminOrReviewer(locals)
     const body = checkInSchema.parse(await request.json())
-    return json(
+    return Response.json(
       (await checkInStudent(body.registrationId)) satisfies CheckInResponse,
     )
   } catch (err) {
@@ -50,7 +52,7 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
     verifyAdminOrReviewer(locals)
     const body = mealSchema.parse(await request.json())
     await setMealServed(body.registrationId, body.date, body.meal, body.served)
-    return json({ success: true })
+    return Response.json({ success: true })
   } catch (err) {
     throw handleApiError('/api/checkIn', err)
   }

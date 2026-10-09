@@ -7,7 +7,7 @@ const mockTransaction = {
   update: jest.fn(),
 }
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     doc: (path: string) => ({ path }),
     runTransaction: (fn: (t: typeof mockTransaction) => unknown) =>
@@ -18,8 +18,8 @@ jest.mock('$lib/server/firebase', () => ({
 import {
   classesCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import { dropStudent, enrollStudent } from '$lib/server/classEnrollments'
+} from '#lib/data/collections.js'
+import { dropStudent, enrollStudent } from '#lib/server/classEnrollments.js'
 
 const CLASS = `${classesCollection}/c-1`
 const REG = `${registrationsCollection}/p-1`

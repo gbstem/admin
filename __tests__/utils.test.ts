@@ -1,13 +1,13 @@
 // Set timezone to America/New_York so that date formatting tests are deterministic
 process.env.TZ = 'America/New_York'
 
-jest.mock('$lib/stores', () => ({
+jest.mock('#lib/stores.js', () => ({
   alert: {
     trigger: jest.fn(),
   },
 }))
 
-import { alert } from '$lib/stores'
+import { alert } from '#lib/stores.js'
 import {
   classHeldToday,
   cleanEnvVar,

@@ -1,6 +1,6 @@
 // docIds.ts - Builders and parsers for the document ids that encode who (or
 // what) a document belongs to. Kept byte-identical in admin and portal, and
-// free of `$lib` imports so scripts and Cypress specs can use it too.
+// free of `#lib` imports so scripts and Cypress specs can use it too.
 //
 // Several collections key their documents by an account uid plus a suffix,
 // and code sometimes has to recover one part from the id. Build and parse

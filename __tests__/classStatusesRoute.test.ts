@@ -1,6 +1,10 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockRefreshClassStatuses = jest.fn()
 
-jest.mock('$lib/server/classService', () => ({
+jest.mock('#lib/server/classService.js', () => ({
   classService: {
     refreshClassStatuses: (...args: any[]) => mockRefreshClassStatuses(...args),
   },
@@ -40,7 +44,7 @@ describe('POST /api/classStatuses', () => {
   ])("refreshes and returns the class's statuses for %s", async (_, user) => {
     const res = await call(user, { classId: 'inst-uid-1' })
 
-    expect(res.body).toEqual({ classStatuses: ['ClassNotHeld'] })
+    expect(await res.json()).toEqual({ classStatuses: ['ClassNotHeld'] })
     expect(mockRefreshClassStatuses).toHaveBeenCalledWith('inst-uid-1')
   })
 

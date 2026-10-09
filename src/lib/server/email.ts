@@ -1,4 +1,4 @@
-import { SENDGRID_API_TOKEN } from '$env/static/private'
+import { SENDGRID_API_TOKEN } from '$app/env/private'
 import MailService, { type MailDataRequired } from '@sendgrid/mail'
 
 export interface EmailOptions {

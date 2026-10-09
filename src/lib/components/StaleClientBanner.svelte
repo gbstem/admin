@@ -1,8 +1,8 @@
 <!--
   Tells a browser session that it is running older code than the server.
 
-  SvelteKit polls `_app/version.json` (interval set by kit.version.pollInterval
-  in svelte.config.js) and flips `updated.current` once the deployed build no
+  SvelteKit polls `_app/version.json` (interval set by version.pollInterval in
+  vite.config.js) and flips `updated.current` once the deployed build no
   longer matches the one this tab loaded. Without that signal a tab left open
   across a deploy keeps posting the old request shapes indefinitely, which is
   exactly what forces a migration that changes an API payload to sit behind a
@@ -16,9 +16,10 @@
 <script lang="ts">
   import { beforeNavigate } from '$app/navigation'
   import { updated } from '$app/state'
-  import { shouldHardLoad } from '$lib/client/staleClient'
+  import { shouldHardLoad } from '#lib/client/staleClient.js'
 
   beforeNavigate((nav) => {
+    if (nav.shallow && nav.type === 'goto') return
     if (shouldHardLoad(updated.current, nav)) {
       location.href = nav.to!.url.href
     }

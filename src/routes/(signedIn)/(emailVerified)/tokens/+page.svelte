@@ -1,16 +1,16 @@
 <script lang="ts">
-  import Table from '$lib/components/Table.svelte'
+  import Table from '#lib/components/Table.svelte'
   import { format } from 'date-fns'
   import type { PageData } from './$types'
-  import Button from '$lib/components/Button.svelte'
-  import { tokenService } from '$lib/services/tokenService'
-  import { alert } from '$lib/stores'
-  import { actionsState } from '$lib/stores.svelte'
-  import Token from '$lib/components/Token.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
+  import Button from '#lib/components/Button.svelte'
+  import { tokenService } from '#lib/services/tokenService.js'
+  import { alert } from '#lib/stores.js'
+  import { actionsState } from '#lib/stores.svelte.js'
+  import Token from '#lib/components/Token.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
-  import { writeToClipboard } from '$lib/utils'
+  import { writeToClipboard } from '#lib/utils.js'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { Check, Plus, XMark } from '@steeze-ui/heroicons'
 
@@ -32,7 +32,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -41,7 +41,7 @@
   let nextHref = $derived(
     (() => {
       if (data.tokens.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

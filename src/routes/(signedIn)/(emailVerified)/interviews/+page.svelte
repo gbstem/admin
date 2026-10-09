@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SetInterviewTimesForm from '$lib/components/forms/SetInterviewTimesForm.svelte'
+  import SetInterviewTimesForm from '#lib/components/forms/SetInterviewTimesForm.svelte'
 </script>
 
 <svelte:head>

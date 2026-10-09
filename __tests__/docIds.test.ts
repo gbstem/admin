@@ -11,7 +11,7 @@ import {
   slotRequestDocId,
   slotRequestUid,
   subRequestDocId,
-} from '$lib/data/docIds'
+} from '#lib/data/docIds.js'
 
 // A generated uid, and a seeded one containing `-` - the case that breaks any
 // parser that splits on the first `-`.
