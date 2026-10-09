@@ -1,14 +1,14 @@
-import { errorMessage } from '$lib/shared/apiErrors'
-import { toDateOrNull } from '$lib/shared/timestamps'
-import { db } from '$lib/client/firebase'
+import { errorMessage } from '#lib/shared/apiErrors.js'
+import { toDateOrNull } from '#lib/shared/timestamps.js'
+import { db } from '#lib/client/firebase.js'
 import {
   checkInsCollection,
   classesCollection,
   instructorFeedbackCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import type ClassData from '$lib/data/types/ClassData'
-import type Student from '$lib/data/types/Student'
+} from '#lib/data/collections.js'
+import type ClassData from '#lib/data/types/ClassData.js'
+import type Student from '#lib/data/types/Student.js'
 import type {
   EnrollRequestBody,
   EnrollResponse,
@@ -21,9 +21,9 @@ import type {
 import {
   parseAttendanceRecords,
   parseStudentProfileData,
-} from '$lib/helpers/studentDetails'
-import { registrationParentUid } from '$lib/data/docIds'
-import { accountEmailService } from '$lib/services/accountEmailService'
+} from '#lib/helpers/studentDetails.js'
+import { registrationParentUid } from '#lib/data/docIds.js'
+import { accountEmailService } from '#lib/services/accountEmailService.js'
 import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore'
 
 /**

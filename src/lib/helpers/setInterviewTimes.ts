@@ -1,5 +1,5 @@
-import { getInterviewSlotDefaults } from '$lib/components/forms/schemas'
-import { toLocalISOString } from '$lib/utils'
+import { getInterviewSlotDefaults } from '#lib/components/forms/schemas.js'
+import { toLocalISOString } from '#lib/utils.js'
 import type {} from '../../data.d.ts'
 
 type ApplicationMeta = Partial<Data.Application<'pojo'>['meta']>

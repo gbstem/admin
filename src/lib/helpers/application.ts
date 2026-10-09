@@ -2,8 +2,8 @@ import {
   currentSemester,
   semesterCollectionPath,
   semesterIdFromPath,
-} from '$lib/data/collections'
-import { formatDateShort, toLocalISOString } from '$lib/utils'
+} from '#lib/data/collections.js'
+import { formatDateShort, toLocalISOString } from '#lib/utils.js'
 import type { Timestamp } from 'firebase/firestore'
 import { serverTimestamp } from 'firebase/firestore'
 

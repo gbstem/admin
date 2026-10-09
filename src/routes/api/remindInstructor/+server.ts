@@ -1,9 +1,8 @@
-import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
-import { sendEmail } from '$lib/server/email'
-import { resolveCoInstructorEmails } from '$lib/server/instructorDirectory'
-import { resolveAccountEmail } from '$lib/server/accountEmail'
-import { renderEmail } from '$lib/emails/render'
-import { json } from '@sveltejs/kit'
+import { handleApiError, verifyAdmin } from '#lib/server/apiHelpers.js'
+import { sendEmail } from '#lib/server/email.js'
+import { resolveCoInstructorEmails } from '#lib/server/instructorDirectory.js'
+import { resolveAccountEmail } from '#lib/server/accountEmail.js'
+import { renderEmail } from '#lib/emails/render.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -59,13 +58,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         html: htmlBody,
       })
     } catch (mailError) {
-      return json(
+      return Response.json(
         { error: 'Failed to send email. Please try again later.' },
         { status: 500 },
       )
     }
 
-    return json({ message: 'Email sent successfully.' })
+    return Response.json({ message: 'Email sent successfully.' })
   } catch (err) {
     throw handleApiError('/api/remindInstructor', err)
   }

@@ -25,20 +25,20 @@ const mockAccountName = jest.fn()
 const mockResolveAccountEmail = jest.fn()
 const mockSendEmail = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     doc: (path: string) => ({ path, id: path.split('/').at(-1) }),
     runTransaction: (fn: (t: typeof mockTransaction) => unknown) =>
       fn(mockTransaction),
   },
 }))
-jest.mock('$lib/server/userProfile', () => ({
+jest.mock('#lib/server/userProfile.js', () => ({
   accountName: (...args: any[]) => mockAccountName(...args),
 }))
-jest.mock('$lib/server/accountEmail', () => ({
+jest.mock('#lib/server/accountEmail.js', () => ({
   resolveAccountEmail: (...args: any[]) => mockResolveAccountEmail(...args),
 }))
-jest.mock('$lib/server/email', () => ({
+jest.mock('#lib/server/email.js', () => ({
   sendEmail: (...args: any[]) => mockSendEmail(...args),
 }))
 
@@ -46,7 +46,7 @@ import {
   applicationsCollection,
   currentSemester,
   interviewTimesCollection,
-} from '$lib/data/collections'
+} from '#lib/data/collections.js'
 import {
   createInterviewSlot,
   deleteInterviewSlot,
@@ -56,7 +56,7 @@ import {
   sendInterviewMissedEmail,
   sendInterviewRescheduledEmail,
   updateInterviewSlot,
-} from '$lib/server/interviewSlots'
+} from '#lib/server/interviewSlots.js'
 
 const DATE = new Date('2026-10-05T18:00:00.000Z')
 const LINK = 'https://mit.zoom.us/j/1'

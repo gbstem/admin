@@ -1,21 +1,26 @@
 <script lang="ts">
-  import { alert } from '$lib/stores'
+  import { alert } from '#lib/stores.js'
   import { invalidate } from '$app/navigation'
-  import Card from '$lib/components/Card.svelte'
-  import { coursesJson, gendersJson, raceJson, reasonsJson } from '$lib/data'
+  import Card from '#lib/components/Card.svelte'
+  import {
+    coursesJson,
+    gendersJson,
+    raceJson,
+    reasonsJson,
+  } from '#lib/data/index.js'
   import {
     applicationsCollection,
     currentSemester,
     semesterIdFromPath,
-  } from '$lib/data/collections'
-  import { applicationService } from '$lib/services/applicationService'
+  } from '#lib/data/collections.js'
+  import { applicationService } from '#lib/services/applicationService.js'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { EDIT_APPLICATION_FORM_ID, applicationSchema } from './schemas'
   import {
     applicationDisplayValues,
     toApplicationFormValues as toFormValues,
-  } from '$lib/helpers/editApplicationForm'
+  } from '#lib/helpers/editApplicationForm.js'
   import { cloneDeep } from 'lodash-es'
   import FormInput from '../FormInput.svelte'
   import FormSelect from '../FormSelect.svelte'

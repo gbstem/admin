@@ -1,4 +1,4 @@
-import { accountEmailService } from '$lib/services/accountEmailService'
+import { accountEmailService } from '#lib/services/accountEmailService.js'
 
 /** Answers each request with an address for every uid it names. */
 function everyUidHasAnAccount() {

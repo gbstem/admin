@@ -1,19 +1,12 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "verbatimModuleSyntax": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "rootDir": ".",
-    // With moduleResolution "bundler" (set by the base config below),
+    // With moduleResolution "bundler" (set by the base config above),
     // TypeScript doesn't reliably auto-acquire ambient ("global") types from
     // node_modules/@types for packages that are never explicitly imported -
     // Jest's globals (describe/it/expect/jest/...) and Node's globals
@@ -24,14 +17,14 @@
     // register expect(...).toBeInTheDocument() etc.) only from jest.setup.ts,
     // which lives outside every glob in "include" below, so the TS program
     // never sees that import and never picks up the ambient Matchers
-    // augmentation unless it's listed here too.
-    "types": ["jest", "node", "@testing-library/jest-dom"]
+    // augmentation unless it's listed here too. Listing "types" replaces the
+    // base config's list, so its "$app/types" is repeated here.
+    "types": ["$app/types", "jest", "node", "@testing-library/jest-dom"]
   },
-  // SvelteKit's generated .svelte-kit/tsconfig.json only "include"s src/,
-  // test/, and tests/ - since specifying "include" here fully replaces
-  // (rather than merges with) the base config's list, this repeats that
-  // list verbatim and adds __tests__/**, the directory our Jest suite
-  // actually lives in, so `yarn run check` (svelte-check) covers it too.
+  // $app/tsconfig sets no "include", so this lists SvelteKit's usual set -
+  // src/, test/ and tests/ plus its generated types - and adds __tests__/**,
+  // the directory our Jest suite actually lives in, so `yarn run check`
+  // (svelte-check) covers it too.
   "include": [
     ".svelte-kit/ambient.d.ts",
     ".svelte-kit/env.d.ts",

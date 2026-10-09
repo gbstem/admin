@@ -1,5 +1,5 @@
 import { handle, handleError } from '../src/hooks.server'
-import { adminAuth } from '$lib/server/firebase'
+import { adminAuth } from '#lib/server/firebase.js'
 
 function createEvent(sessionCookie?: string) {
   return {
@@ -120,32 +120,24 @@ describe('hooks.server handleError', () => {
 
   const admin = { uid: 'uid-1', email: 'admin@example.com', role: 'admin' }
 
-  const shape = (
-    error: unknown,
-    {
-      user = null,
-      status = 500,
-      message = 'Internal Error',
-    }: { user?: unknown; status?: number; message?: string } = {},
-  ) =>
+  const shape = (error: unknown, { user = null }: { user?: unknown } = {}) =>
     handleError({
+      kind: 'unknown',
       error,
       event: { locals: { user } },
-      status,
-      message,
     } as any) as App.Error
 
   // Unauthenticated callers reach this (a malformed POST to /api/auth is
   // enough), so nothing about the server may leave in the response.
-  it('gives a signed-out caller only the generic message and an id, never the stack or raw message', () => {
+  it('gives a signed-out caller only an id, never the stack or raw message', () => {
     const err = new Error(
       'ENOENT: /var/task/.svelte-kit/output/server/secret.js',
     )
 
     const result = shape(err)
 
+    // SvelteKit fills in the omitted status and message: 500, "Internal Error".
     expect(result).toEqual({
-      message: 'Internal Error',
       errorId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     })
     expect(JSON.stringify(result)).not.toContain('ENOENT')
@@ -154,16 +146,12 @@ describe('hooks.server handleError', () => {
 
   it('treats a request with no locals at all as signed out', () => {
     const result = handleError({
+      kind: 'unknown',
       error: new Error('boom'),
       event: {},
-      status: 500,
-      message: 'Internal Error',
     } as any) as App.Error
 
-    expect(result).toEqual({
-      message: 'Internal Error',
-      errorId: expect.any(String),
-    })
+    expect(result).toEqual({ errorId: expect.any(String) })
   })
 
   // Admins and reviewers are trusted, and often this site's developers.
@@ -181,11 +169,11 @@ describe('hooks.server handleError', () => {
     })
   })
 
-  it('falls back to the generic message and code for a signed-in user when the error has none', () => {
+  it("leaves SvelteKit's generic message, with a fallback code, for a signed-in user when the error has none", () => {
     const result = shape('a thrown string', { user: admin })
 
+    expect(result).not.toHaveProperty('message')
     expect(result).toMatchObject({
-      message: 'Internal Error',
       code: 'INTERNAL_ERROR',
       details: 'a thrown string',
     })
@@ -208,13 +196,25 @@ describe('hooks.server handleError', () => {
     )
   })
 
-  it("passes a 404's message through without logging it", () => {
-    const result = shape(new Error('Not found: /nope'), {
-      status: 404,
-      message: 'Not Found',
-    })
+  it('leaves a framework error such as a 404 as it is, without logging it', () => {
+    const result = handleError({
+      kind: 'framework',
+      error: { status: 404, message: 'Not Found' },
+      event: { locals: { user: admin } },
+    } as any)
 
-    expect(result.message).toBe('Not Found')
+    expect(result).toBeUndefined()
+    expect(errorSpy).not.toHaveBeenCalled()
+  })
+
+  it('leaves an error() thrown by the app as it is, without logging it', () => {
+    const result = handleError({
+      kind: 'app',
+      error: { status: 403, message: 'Admins only.' },
+      event: { locals: { user: admin } },
+    } as any)
+
+    expect(result).toBeUndefined()
     expect(errorSpy).not.toHaveBeenCalled()
   })
 })

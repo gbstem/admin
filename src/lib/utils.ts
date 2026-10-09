@@ -1,5 +1,5 @@
-import { toDate } from '$lib/shared/timestamps'
-import { alert } from '$lib/stores'
+import { toDate } from '#lib/shared/timestamps.js'
+import { alert } from '#lib/stores.js'
 import type { ClassValue } from 'clsx'
 import clsx from 'clsx'
 import { twMerge } from 'tailwind-merge'

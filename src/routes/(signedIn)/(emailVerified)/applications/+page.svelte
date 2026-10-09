@@ -1,22 +1,22 @@
 <script lang="ts">
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
-  import Application from '$lib/components/Application.svelte'
-  import Button from '$lib/components/Button.svelte'
-  import CollectionFilter from '$lib/components/CollectionFilter.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import StatusFilter from '$lib/components/StatusFilter.svelte'
-  import Table from '$lib/components/Table.svelte'
+  import Application from '#lib/components/Application.svelte'
+  import Button from '#lib/components/Button.svelte'
+  import CollectionFilter from '#lib/components/CollectionFilter.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import StatusFilter from '#lib/components/StatusFilter.svelte'
+  import Table from '#lib/components/Table.svelte'
   import {
     resolveSemester,
     semesterCollectionPath,
-  } from '$lib/data/collections'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { alert } from '$lib/stores'
-  import { actionsState } from '$lib/stores.svelte'
-  import { applicationService } from '$lib/services/applicationService'
-  import { generateCSV } from '$lib/utils'
+  } from '#lib/data/collections.js'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { alert } from '#lib/stores.js'
+  import { actionsState } from '#lib/stores.svelte.js'
+  import { applicationService } from '#lib/services/applicationService.js'
+  import { generateCSV } from '#lib/utils.js'
   import { format } from 'date-fns'
   import type { PageData } from './$types'
   import { Icon } from '@steeze-ui/svelte-icon'
@@ -226,7 +226,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -234,7 +234,7 @@
   let nextHref = $derived(
     (() => {
       if (data.applications.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

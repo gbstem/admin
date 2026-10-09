@@ -138,8 +138,8 @@ jest.mock('lodash-es', () => ({
   lowerCase: (str: string) => str.replace(/[-_]/g, ' ').toLowerCase(),
 }))
 
-// Mock $lib/stores
-jest.mock('$lib/stores', () => ({
+// Mock #lib/stores
+jest.mock('#lib/stores.js', () => ({
   alert: {
     trigger: jest.fn(),
   },
@@ -149,7 +149,7 @@ import { user } from '../src/lib/client/firebase'
 import { verifyToken } from '../src/lib/server/firebase'
 import { SubRequestStatus } from '../src/lib/data/helpers/SubRequestStatus'
 import sendClassReminder from '../src/lib/data/helpers/sendClassReminders'
-import { alert } from '$lib/stores'
+import { alert } from '#lib/stores.js'
 
 // Import email templates to cover
 import { acceptEmailTemplate } from '../src/lib/data/emailTemplates/acceptEmailTemplate'

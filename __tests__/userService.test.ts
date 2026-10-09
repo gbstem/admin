@@ -1,4 +1,4 @@
-import { userService } from '$lib/services/userService'
+import { userService } from '#lib/services/userService.js'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 

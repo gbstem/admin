@@ -1,4 +1,4 @@
-import { interviewService } from '$lib/services/interviewService'
+import { interviewService } from '#lib/services/interviewService.js'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 

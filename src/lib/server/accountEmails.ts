@@ -1,5 +1,5 @@
-import { registrationParentUid } from '$lib/data/docIds'
-import { adminAuth } from '$lib/server/firebase'
+import { registrationParentUid } from '#lib/data/docIds.js'
+import { adminAuth } from '#lib/server/firebase.js'
 
 /** `auth.getUsers()` accepts at most this many identifiers per call. */
 const AUTH_LOOKUP_LIMIT = 100

@@ -1,5 +1,5 @@
-import { currentSemester } from '$lib/data/collections'
-import { editTarget } from '$lib/server/editTarget'
+import { currentSemester } from '#lib/data/collections.js'
+import { editTarget } from '#lib/server/editTarget.js'
 
 const target = (query: string) =>
   editTarget(new URL(`http://localhost/applications?/saveApplication${query}`))

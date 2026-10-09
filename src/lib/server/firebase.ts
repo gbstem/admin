@@ -1,22 +1,24 @@
-import { building } from '$app/environment'
-import { env } from '$env/dynamic/private'
+import { building } from '$app/env'
 import {
+  FIREBASE_AUTH_EMULATOR_HOST,
+  FIRESTORE_EMULATOR_HOST,
+  STORAGE_EMULATOR_HOST,
   FIREBASE_CLIENT_EMAIL,
   FIREBASE_PRIVATE_KEY,
   FIREBASE_PROJECT_ID,
-} from '$env/static/private'
-import { tokenRejection } from '$lib/helpers/signupTokens'
-import { cleanEnvVar } from '$lib/utils'
+} from '$app/env/private'
+import { tokenRejection } from '#lib/helpers/signupTokens.js'
+import { cleanEnvVar } from '#lib/utils.js'
 
 // Copy and clean emulator environment variables to process.env so firebase-admin can detect them
 const authHost = cleanEnvVar(
-  env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST,
+  FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST,
 )
 const firestoreHost = cleanEnvVar(
-  env.FIRESTORE_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST,
+  FIRESTORE_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST,
 )
 const storageHost = cleanEnvVar(
-  env.STORAGE_EMULATOR_HOST || process.env.STORAGE_EMULATOR_HOST,
+  STORAGE_EMULATOR_HOST || process.env.STORAGE_EMULATOR_HOST,
 )
 
 if (authHost) {

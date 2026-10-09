@@ -4,7 +4,7 @@ import { z } from 'zod'
 import {
   isAllowedMeetingLink,
   MEETING_LINK_ERROR,
-} from '$lib/helpers/meetingLink'
+} from '#lib/helpers/meetingLink.js'
 
 const phoneRegex = /^[\d\s\-+]+$/
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -14,7 +14,7 @@ export const classSchema = z.object({
   gradeRecommendation: z.string().optional().default(''),
   classCap: z.coerce.number().min(0, 'Capacity must be at least 0'),
   // Empty means "none yet": the form books a Teams link on save, and an
-  // in-person class has none. See $lib/helpers/meetingLink.
+  // in-person class has none. See #lib/helpers/meetingLink.
   meetingLink: z
     .string()
     .trim()

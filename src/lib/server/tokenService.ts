@@ -1,5 +1,5 @@
-import type { tokenSchema } from '$lib/components/forms/schemas'
-import { adminDb } from '$lib/server/firebase'
+import type { tokenSchema } from '#lib/components/forms/schemas.js'
+import { adminDb } from '#lib/server/firebase.js'
 import { addHours } from 'date-fns'
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import type { z } from 'zod'

@@ -1,13 +1,13 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import ClassFeedbackDetails from '$lib/components/ClassFeedbackDetails.svelte'
-  import CourseFilter from '$lib/components/CourseFilter.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import Table from '$lib/components/Table.svelte'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { generateCSV } from '$lib/utils'
+  import Button from '#lib/components/Button.svelte'
+  import ClassFeedbackDetails from '#lib/components/ClassFeedbackDetails.svelte'
+  import CourseFilter from '#lib/components/CourseFilter.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import Table from '#lib/components/Table.svelte'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { generateCSV } from '#lib/utils.js'
   import type { PageData } from './$types'
 
   interface Props {
@@ -33,7 +33,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -42,7 +42,7 @@
   let nextHref = $derived(
     (() => {
       if (data.feedback.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

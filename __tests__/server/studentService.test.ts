@@ -20,7 +20,7 @@ mockToDateSafe.mockImplementation((ts: any) =>
 
 const mockGetUsers = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
   },
@@ -30,15 +30,15 @@ jest.mock('$lib/server/firebase', () => ({
   toDateSafe: (...args: any[]) => mockToDateSafe(...args),
 }))
 
-jest.mock('$lib/server/search', () => ({
+jest.mock('#lib/server/search.js', () => ({
   searchIndex: (...args: any[]) => mockSearchIndex(...args),
 }))
 
 import {
   registrationsCollection,
   classesCollection,
-} from '$lib/data/collections'
-import { studentService } from '$lib/server/studentService'
+} from '#lib/data/collections.js'
+import { studentService } from '#lib/server/studentService.js'
 
 const storedRegistration = (overrides: Record<string, unknown> = {}) => ({
   personal: { studentFirstName: 'Ada', studentLastName: 'Lovelace' },

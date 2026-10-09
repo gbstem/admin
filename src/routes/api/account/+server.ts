@@ -1,9 +1,8 @@
 import {
   checkAdminAccountDeletionEligibility,
   deleteAdminAccount,
-} from '$lib/server/accountService'
-import { handleApiError, verifyAuthenticated } from '$lib/server/apiHelpers'
-import { json } from '@sveltejs/kit'
+} from '#lib/server/accountService.js'
+import { handleApiError, verifyAuthenticated } from '#lib/server/apiHelpers.js'
 import type { RequestHandler } from './$types'
 
 /** Pre-flight check for the "Delete account" button - see DELETE below. */
@@ -11,7 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   try {
     const user = verifyAuthenticated(locals)
     const result = await checkAdminAccountDeletionEligibility(user.uid)
-    return json(result)
+    return Response.json(result)
   } catch (err) {
     throw handleApiError('/api/account', err)
   }
@@ -28,7 +27,7 @@ export const DELETE: RequestHandler = async ({ locals }) => {
   try {
     const user = verifyAuthenticated(locals)
     await deleteAdminAccount(user.uid)
-    return json({ deleted: true })
+    return Response.json({ deleted: true })
   } catch (err) {
     throw handleApiError('/api/account', err)
   }

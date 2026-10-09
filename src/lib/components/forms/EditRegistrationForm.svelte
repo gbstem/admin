@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { alert } from '$lib/stores'
+  import { alert } from '#lib/stores.js'
   import { invalidate } from '$app/navigation'
   import {
     currentSemester,
     registrationsCollection,
     semesterIdFromPath,
-  } from '$lib/data/collections'
-  import { studentService } from '$lib/services/studentService'
+  } from '#lib/data/collections.js'
+  import { studentService } from '#lib/services/studentService.js'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { EDIT_REGISTRATION_FORM_ID, registrationSchema } from './schemas'
   import {
     registrationDisplayValues,
     toRegistrationFormValues as toFormValues,
-  } from '$lib/helpers/editRegistrationForm'
+  } from '#lib/helpers/editRegistrationForm.js'
   import { cloneDeep } from 'lodash-es'
   import {
     gendersJson,
@@ -26,7 +26,7 @@
     engineeringCoursesJson,
     scienceCoursesJson,
     gradesJson,
-  } from '$lib/data'
+  } from '#lib/data/index.js'
   import FormInput from '../FormInput.svelte'
   import FormSelect from '../FormSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'

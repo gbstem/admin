@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals'
 
-jest.mock('$lib/utils', () => ({
+jest.mock('#lib/utils.js', () => ({
   cleanEnvVar: (val: any) => (typeof val === 'string' ? val.trim() : val),
 }))
 
@@ -248,12 +248,10 @@ describe('firebase.ts server setup', () => {
   describe('initialization branches', () => {
     it('sets emulator environment variables', () => {
       jest.resetModules()
-      jest.mock('$env/dynamic/private', () => ({
-        env: {
-          FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099',
-          FIRESTORE_EMULATOR_HOST: 'localhost:8080',
-          STORAGE_EMULATOR_HOST: 'localhost:9199',
-        },
+      jest.mock('$app/env/private', () => ({
+        FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099',
+        FIRESTORE_EMULATOR_HOST: 'localhost:8080',
+        STORAGE_EMULATOR_HOST: 'localhost:9199',
       }))
 
       require('../src/lib/server/firebase')
@@ -264,7 +262,7 @@ describe('firebase.ts server setup', () => {
 
     it('initializes with a valid private key certificate', () => {
       jest.resetModules()
-      jest.mock('$env/static/private', () => ({
+      jest.mock('$app/env/private', () => ({
         FIREBASE_PROJECT_ID: 'proj123',
         FIREBASE_CLIENT_EMAIL: 'email123',
         FIREBASE_PRIVATE_KEY:
@@ -283,7 +281,7 @@ describe('firebase.ts server setup', () => {
 
     it('handles initialization error "already exists" silently', () => {
       jest.resetModules()
-      jest.mock('$env/static/private', () => ({
+      jest.mock('$app/env/private', () => ({
         FIREBASE_PROJECT_ID: 'proj123',
         FIREBASE_CLIENT_EMAIL: 'email123',
         FIREBASE_PRIVATE_KEY:
@@ -303,7 +301,7 @@ describe('firebase.ts server setup', () => {
 
     it('logs other initialization errors', () => {
       jest.resetModules()
-      jest.mock('$env/static/private', () => ({
+      jest.mock('$app/env/private', () => ({
         FIREBASE_PROJECT_ID: 'proj123',
         FIREBASE_CLIENT_EMAIL: 'email123',
         FIREBASE_PRIVATE_KEY:
@@ -326,7 +324,7 @@ describe('firebase.ts server setup', () => {
 
     it('does not initialize app when building is true', () => {
       jest.resetModules()
-      jest.mock('$app/environment', () => ({
+      jest.mock('$app/env', () => ({
         building: true,
       }))
 

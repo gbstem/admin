@@ -1,14 +1,14 @@
-import semesterDatesJson from '$lib/data/semesterDates.json'
-import { renderEmail } from '$lib/emails/render'
-import { calculateInterviewDeadline } from '$lib/helpers/application'
-import { resolveAccountEmail } from '$lib/server/accountEmail'
-import type { DecidedApplicant } from '$lib/server/applicationDecisions'
-import { sendEmail } from '$lib/server/email'
+import semesterDatesJson from '#lib/data/semesterDates.json'
+import { renderEmail } from '#lib/emails/render.js'
+import { calculateInterviewDeadline } from '#lib/helpers/application.js'
+import { resolveAccountEmail } from '#lib/server/accountEmail.js'
+import type { DecidedApplicant } from '#lib/server/applicationDecisions.js'
+import { sendEmail } from '#lib/server/email.js'
 import {
   GBSTEM_TIME_ZONE,
   formatDateInGbstemTime,
   parseGbstemDateTime,
-} from '$lib/utils'
+} from '#lib/utils.js'
 
 const ROUTE = '/api/decision'
 

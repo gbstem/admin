@@ -1,7 +1,7 @@
 import {
   constraintAt,
   constraintsStore,
-} from '$lib/components/fieldConstraints'
+} from '#lib/components/fieldConstraints.js'
 import { get, writable } from 'svelte/store'
 
 describe('constraintsStore', () => {

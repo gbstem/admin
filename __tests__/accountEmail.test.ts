@@ -1,12 +1,12 @@
 const mockGetUser = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminAuth: {
     getUser: (...args: any[]) => mockGetUser(...args),
   },
 }))
 
-import { resolveAccountEmail } from '$lib/server/accountEmail'
+import { resolveAccountEmail } from '#lib/server/accountEmail.js'
 
 describe('resolveAccountEmail', () => {
   beforeEach(() => {

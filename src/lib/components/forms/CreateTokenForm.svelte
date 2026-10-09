@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state'
   import Button from '../Button.svelte'
-  import { alert } from '$lib/stores'
+  import { alert } from '#lib/stores.js'
   import { invalidate } from '$app/navigation'
   import DialogActions from '../DialogActions.svelte'
-  import { writeToClipboard } from '$lib/utils'
+  import { writeToClipboard } from '#lib/utils.js'
   import { superForm, defaults } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import {

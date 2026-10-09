@@ -1,6 +1,6 @@
-import { classFeedbackCollection } from '$lib/data/collections'
-import { adminDb } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
+import { classFeedbackCollection } from '#lib/data/collections.js'
+import { adminDb } from '#lib/server/firebase.js'
+import { searchIndex } from '#lib/server/search.js'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 interface StoredStudentFeedback {

@@ -1,5 +1,5 @@
-import { ClassStatus } from '$lib/data/types/ClassStatus'
-import { computeUpdatedClassStatuses } from '$lib/helpers/classStatuses'
+import { ClassStatus } from '#lib/data/types/ClassStatus.js'
+import { computeUpdatedClassStatuses } from '#lib/helpers/classStatuses.js'
 
 describe('computeUpdatedClassStatuses', () => {
   const now = new Date('2026-05-10T12:00:00Z')

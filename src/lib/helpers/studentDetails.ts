@@ -1,6 +1,6 @@
 import type {} from '../../data.d.ts'
-import type ClassData from '$lib/data/types/ClassData'
-import type Student from '$lib/data/types/Student'
+import type ClassData from '#lib/data/types/ClassData.js'
+import type Student from '#lib/data/types/Student.js'
 
 /**
  * Formats a human-readable display string for a class option.

@@ -1,5 +1,5 @@
 import type {} from '../src/data.d.ts'
-import { classEditedFields } from '$lib/helpers/editClassForm'
+import { classEditedFields } from '#lib/helpers/editClassForm.js'
 
 describe('classEditedFields', () => {
   it('keeps only the fields the edit form owns', () => {

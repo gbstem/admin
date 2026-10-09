@@ -2,7 +2,7 @@
   import { constraintAt, constraintsStore } from './fieldConstraints'
   import { fromStore } from 'svelte/store'
   import { Field, Control, Label, FieldErrors } from 'formsnap'
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
 
   interface Props {
     class?: string

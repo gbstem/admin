@@ -1,4 +1,4 @@
-import { planAdminAccountDeletion } from '$lib/helpers/accountDeletion'
+import { planAdminAccountDeletion } from '#lib/helpers/accountDeletion.js'
 
 const now = new Date('2026-09-15T00:00:00Z')
 const future = new Date('2026-09-20T00:00:00Z')

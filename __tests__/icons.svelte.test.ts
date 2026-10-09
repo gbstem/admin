@@ -1,8 +1,8 @@
 import { mount, unmount } from 'svelte'
 import { Icon } from '@steeze-ui/svelte-icon'
 import { CheckCircle, XMark } from '@steeze-ui/heroicons'
-import SpinnerIcon from '$lib/components/icons/SpinnerIcon.svelte'
-import PersonIcon from '$lib/components/icons/PersonIcon.svelte'
+import SpinnerIcon from '#lib/components/icons/SpinnerIcon.svelte'
+import PersonIcon from '#lib/components/icons/PersonIcon.svelte'
 
 describe('icons', () => {
   let target: HTMLElement

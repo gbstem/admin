@@ -16,7 +16,7 @@ const mockRunTransaction = jest.fn(
   (fn: (t: typeof mockTransaction) => unknown) => fn(mockTransaction),
 )
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     doc: (path: string) => ({ path }),
     runTransaction: (fn: any) => mockRunTransaction(fn),
@@ -28,7 +28,7 @@ import {
   decideWithScorecard,
   saveInterviewNotes,
   saveLikelyDecision,
-} from '$lib/server/applicationDecisions'
+} from '#lib/server/applicationDecisions.js'
 
 const APP = (id: string) => `semesters/Spring26/applications/${id}`
 const DECISION = (id: string) => `semesters/Spring26/decisions/${id}`

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
   import { uniqueId, kebabCase } from 'lodash-es'
   import { onDestroy } from 'svelte'
   import { fade } from 'svelte/transition'

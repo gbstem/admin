@@ -1,15 +1,15 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import Card from '$lib/components/Card.svelte'
-  import CourseFilter from '$lib/components/CourseFilter.svelte'
-  import Dialog from '$lib/components/Dialog.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import Table from '$lib/components/Table.svelte'
-  import { SubRequestStatus } from '$lib/data/helpers/SubRequestStatus'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { formatDate, generateCSV } from '$lib/utils'
+  import Button from '#lib/components/Button.svelte'
+  import Card from '#lib/components/Card.svelte'
+  import CourseFilter from '#lib/components/CourseFilter.svelte'
+  import Dialog from '#lib/components/Dialog.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import Table from '#lib/components/Table.svelte'
+  import { SubRequestStatus } from '#lib/data/helpers/SubRequestStatus.js'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { formatDate, generateCSV } from '#lib/utils.js'
   import type { PageData } from './$types'
 
   interface Props {
@@ -35,7 +35,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -44,7 +44,7 @@
   let nextHref = $derived(
     (() => {
       if (data.subRequests.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

@@ -1,8 +1,8 @@
-import { handleApiError, verifyAuthenticated } from '$lib/server/apiHelpers'
-import { sendEmail } from '$lib/server/email'
-import { adminAuth } from '$lib/server/firebase'
-import { renderEmail } from '$lib/emails/render'
-import { error, json } from '@sveltejs/kit'
+import { handleApiError, verifyAuthenticated } from '#lib/server/apiHelpers.js'
+import { sendEmail } from '#lib/server/email.js'
+import { adminAuth } from '#lib/server/firebase.js'
+import { renderEmail } from '#lib/emails/render.js'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
 import { z } from 'zod'
@@ -69,7 +69,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             code === 'auth/email-not-found' ||
             code === 'auth/user-not-found'
           ) {
-            return json({ message: 'Email sent successfully.' })
+            return Response.json({ message: 'Email sent successfully.' })
           }
           throw err
         }
@@ -110,13 +110,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         html: htmlBody,
       })
     } catch (mailError) {
-      return json(
+      return Response.json(
         { error: 'Failed to send email. Please try again later.' },
         { status: 500 },
       )
     }
 
-    return json({ message: 'Email sent successfully.' })
+    return Response.json({ message: 'Email sent successfully.' })
   } catch (err) {
     throw handleApiError('/api/action', err)
   }

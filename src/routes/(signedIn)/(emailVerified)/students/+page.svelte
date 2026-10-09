@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { browser } from '$app/environment'
+  import { browser } from '$app/env'
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import CourseFilter from '$lib/components/CourseFilter.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import StatusFilter from '$lib/components/StatusFilter.svelte'
-  import StudentDetails from '$lib/components/StudentDetails.svelte'
-  import Table from '$lib/components/Table.svelte'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { studentService } from '$lib/services/studentService'
-  import { generateCSV, normalizeCapitals } from '$lib/utils'
+  import Button from '#lib/components/Button.svelte'
+  import CourseFilter from '#lib/components/CourseFilter.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import StatusFilter from '#lib/components/StatusFilter.svelte'
+  import StudentDetails from '#lib/components/StudentDetails.svelte'
+  import Table from '#lib/components/Table.svelte'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { studentService } from '#lib/services/studentService.js'
+  import { generateCSV, normalizeCapitals } from '#lib/utils.js'
   import { kebabCase } from 'lodash-es'
   import type { PageData } from './$types'
 
@@ -89,7 +89,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -98,7 +98,7 @@
   let nextHref = $derived(
     (() => {
       if (data.registrations.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

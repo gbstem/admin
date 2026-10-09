@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { user } from '$lib/client/firebase'
+  import { user } from '#lib/client/firebase.js'
   import { onMount } from 'svelte'
   interface Props {
     children?: import('svelte').Snippet

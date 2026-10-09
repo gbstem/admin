@@ -1,12 +1,12 @@
 import {
   EDIT_REGISTRATION_FORM_ID,
   registrationSchema,
-} from '$lib/components/forms/schemas'
-import { resolveSemester } from '$lib/data/collections'
-import { verifyAdmin } from '$lib/server/apiHelpers'
-import { editTarget } from '$lib/server/editTarget'
-import { registrationService } from '$lib/server/registrationService'
-import { parsePagination } from '$lib/utils'
+} from '#lib/components/forms/schemas.js'
+import { resolveSemester } from '#lib/data/collections.js'
+import { verifyAdmin } from '#lib/server/apiHelpers.js'
+import { editTarget } from '#lib/server/editTarget.js'
+import { registrationService } from '#lib/server/registrationService.js'
+import { parsePagination } from '#lib/utils.js'
 import { error, fail } from '@sveltejs/kit'
 import { message, superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
@@ -32,12 +32,14 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] registrations page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching registrations. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching registrations. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     try {
@@ -50,8 +52,7 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Search Error] registrations search load:', err)
-      throw error(500, {
-        message: 'The search failed. Please try again later.',
+      throw error(500, 'The search failed. Please try again later.', {
         details: err.message || err.toString(),
         code: err.code || 'UNKNOWN',
       })

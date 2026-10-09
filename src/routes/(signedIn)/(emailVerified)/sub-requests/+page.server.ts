@@ -1,5 +1,5 @@
-import { subRequestService } from '$lib/server/subRequestService'
-import { parsePagination } from '$lib/utils'
+import { subRequestService } from '#lib/server/subRequestService.js'
+import { parsePagination } from '#lib/utils.js'
 import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
 
@@ -21,12 +21,14 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] sub-requests page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching sub requests. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching sub requests. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     try {
@@ -36,8 +38,7 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Search Error] sub-requests search load:', err)
-      throw error(500, {
-        message: 'The search failed. Please try again later.',
+      throw error(500, 'The search failed. Please try again later.', {
         details: err.message || err.toString(),
         code: err.code || 'UNKNOWN',
       })

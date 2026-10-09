@@ -1,7 +1,6 @@
-import { handleApiError, verifyAdmin } from '$lib/server/apiHelpers'
-import { isDocId } from '$lib/server/editTarget'
-import { tokenService } from '$lib/server/tokenService'
-import { json } from '@sveltejs/kit'
+import { handleApiError, verifyAdmin } from '#lib/server/apiHelpers.js'
+import { isDocId } from '#lib/server/editTarget.js'
+import { tokenService } from '#lib/server/tokenService.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -26,7 +25,7 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
     verifyAdmin(locals)
     const { tokenIds } = deleteTokensSchema.parse(await request.json())
     await tokenService.deleteTokens(tokenIds)
-    return json({ success: true })
+    return Response.json({ success: true })
   } catch (err) {
     throw handleApiError('/api/tokens', err)
   }

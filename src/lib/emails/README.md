@@ -33,7 +33,7 @@ sources; run it in CI so a stale commit can't ship.
 ## Sending
 
 ```ts
-import { renderEmail } from '$lib/emails/render'
+import { renderEmail } from '#lib/emails/render.js'
 
 const html = renderEmail('rejectionEmailTemplate', {
   app: { firstName, name: 'Portal', link: 'https://portal.gbstem.org' },

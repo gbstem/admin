@@ -1,17 +1,17 @@
 <script lang="ts">
   import { enhance } from '$app/forms'
   import { goto } from '$app/navigation'
-  import { auth } from '$lib/client/firebase'
-  import Brand from '$lib/components/Brand.svelte'
-  import Button from '$lib/components/Button.svelte'
-  import Dialog from '$lib/components/Dialog.svelte'
-  import DialogActions from '$lib/components/DialogActions.svelte'
-  import EmailInput from '$lib/components/EmailInput.svelte'
-  import Link from '$lib/components/Link.svelte'
-  import Loading from '$lib/components/Loading.svelte'
-  import PasswordInput from '$lib/components/PasswordInput.svelte'
-  import TextInput from '$lib/components/TextInput.svelte'
-  import { alert } from '$lib/stores'
+  import { auth } from '#lib/client/firebase.js'
+  import Brand from '#lib/components/Brand.svelte'
+  import Button from '#lib/components/Button.svelte'
+  import Dialog from '#lib/components/Dialog.svelte'
+  import DialogActions from '#lib/components/DialogActions.svelte'
+  import EmailInput from '#lib/components/EmailInput.svelte'
+  import Link from '#lib/components/Link.svelte'
+  import Loading from '#lib/components/Loading.svelte'
+  import PasswordInput from '#lib/components/PasswordInput.svelte'
+  import TextInput from '#lib/components/TextInput.svelte'
+  import { alert } from '#lib/stores.js'
   import { signInWithEmailAndPassword } from 'firebase/auth'
   import { onMount } from 'svelte'
   import type { ActionData, PageData } from './$types'
@@ -123,7 +123,11 @@
             break
           }
         }
-        update()
+        // navigate: false - the result's location is the action URL, plain
+        // `/signup`, and following it would drop the `?token=` this page was
+        // opened with, so `load` would bounce to /signin instead of showing
+        // the error dialog armed above.
+        update({ navigate: false })
       }
     }}
   >

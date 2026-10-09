@@ -21,7 +21,7 @@
     // still picking from. PerPageControl has guarded this from the start.
     if (!newValue) return
 
-    const base = new URLSearchParams(page.url.searchParams)
+    const base = new URLSearchParams(page.url.search)
     if (newValue === defaultFilter) {
       base.delete('filter')
     } else {
@@ -29,8 +29,8 @@
     }
     base.delete('updated') // Reset pagination
     base.delete('page') // Reset page parameter
-    // keepFocus: see PerPageControl.
-    goto(`?${base.toString()}`, { keepFocus: true })
+    // reset: false - see PerPageControl.
+    goto(`?${base.toString()}`, { reset: false })
   }
 
   const optionsMap = {

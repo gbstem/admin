@@ -1,4 +1,4 @@
-import { resolveSemester } from '$lib/data/collections'
+import { resolveSemester } from '#lib/data/collections.js'
 import { error } from '@sveltejs/kit'
 
 /**

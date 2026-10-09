@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { user } from '$lib/client/firebase'
-  import Button from '$lib/components/Button.svelte'
-  import Card from '$lib/components/Card.svelte'
-  import sendClassReminder from '$lib/data/helpers/sendClassReminders'
-  import { ClassStatus } from '$lib/data/types/ClassStatus'
+  import { user } from '#lib/client/firebase.js'
+  import Button from '#lib/components/Button.svelte'
+  import Card from '#lib/components/Card.svelte'
+  import sendClassReminder from '#lib/data/helpers/sendClassReminders.js'
+  import { ClassStatus } from '#lib/data/types/ClassStatus.js'
   import {
     dashboardService,
     type ClassToday,
     type DashboardData,
-  } from '$lib/services/dashboardService'
-  import { alert } from '$lib/stores'
-  import { formatDate, timestampToDate, copyEmails } from '$lib/utils'
+  } from '#lib/services/dashboardService.js'
+  import { alert } from '#lib/stores.js'
+  import { formatDate, timestampToDate, copyEmails } from '#lib/utils.js'
   import { fade } from 'svelte/transition'
   import type { PageData } from './$types'
-  import SpinnerIcon from '$lib/components/icons/SpinnerIcon.svelte'
+  import SpinnerIcon from '#lib/components/icons/SpinnerIcon.svelte'
 
   interface Props {
     data: PageData

@@ -5,7 +5,7 @@ const mockTransaction = {
 }
 const mockAdminDoc = jest.fn((path: string) => ({ path }))
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     doc: (path: string) => mockAdminDoc(path),
     runTransaction: (run: (transaction: unknown) => unknown) =>
@@ -14,7 +14,7 @@ jest.mock('$lib/server/firebase', () => ({
 }))
 
 const mockSchedule: Record<string, Record<string, boolean>> = {}
-jest.mock('$lib/data/retreatMealSchedule', () => ({
+jest.mock('#lib/data/retreatMealSchedule.js', () => ({
   get retreatMealSchedule() {
     return mockSchedule
   },
@@ -23,8 +23,8 @@ jest.mock('$lib/data/retreatMealSchedule', () => ({
 import {
   checkInsCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import { checkInStudent, setMealServed } from '$lib/server/checkIns'
+} from '#lib/data/collections.js'
+import { checkInStudent, setMealServed } from '#lib/server/checkIns.js'
 
 const now = new Date('2026-10-17T13:00:00Z')
 const CHECK_IN = { path: `${checkInsCollection}/reg-1` }

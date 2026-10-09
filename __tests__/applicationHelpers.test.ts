@@ -10,8 +10,11 @@ import {
   buildLikelyDecisionPayload,
   buildFullDecisionPayload,
   calculateInterviewDeadline,
-} from '$lib/helpers/application'
-import { currentSemester, semesterCollectionPath } from '$lib/data/collections'
+} from '#lib/helpers/application.js'
+import {
+  currentSemester,
+  semesterCollectionPath,
+} from '#lib/data/collections.js'
 
 describe('Application Helper Functions', () => {
   describe('Semester Resolvers', () => {

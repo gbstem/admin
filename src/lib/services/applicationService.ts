@@ -1,15 +1,15 @@
-import { errorMessage } from '$lib/shared/apiErrors'
-import { db } from '$lib/client/firebase'
-import { accountEmailService } from '$lib/services/accountEmailService'
+import { errorMessage } from '#lib/shared/apiErrors.js'
+import { db } from '#lib/client/firebase.js'
+import { accountEmailService } from '#lib/services/accountEmailService.js'
 import {
   decisionsCollection,
   semesterCollectionPath,
   semesterIdFromPath,
-} from '$lib/data/collections'
+} from '#lib/data/collections.js'
 import {
   createDefaultInterviewValues,
   normalizeInterviewData,
-} from '$lib/helpers/application'
+} from '#lib/helpers/application.js'
 import type {
   DecisionRequestBody,
   DecisionResponse,

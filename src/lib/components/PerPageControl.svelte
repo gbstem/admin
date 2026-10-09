@@ -2,7 +2,7 @@
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import Select from './Select.svelte'
-  import { parseLimit } from '$lib/utils'
+  import { parseLimit } from '#lib/utils.js'
 
   let limitValue = $derived(
     String(parseLimit(page.url.searchParams.get('limit'))),
@@ -11,13 +11,13 @@
   function handleLimitChange(newLimit: string) {
     if (!newLimit || newLimit === limitValue) return
 
-    const base = new URLSearchParams(page.url.searchParams)
+    const base = new URLSearchParams(page.url.search)
     base.set('limit', newLimit)
     base.set('page', '1') // Reset to page 1
-    // keepFocus: when the results land, SvelteKit would otherwise move focus
-    // back to the page - away from this control, or from a dialog field the
-    // person has gone on to in the meantime.
-    goto(`?${base.toString()}`, { keepFocus: true })
+    // reset: false - when the results land, SvelteKit would otherwise move
+    // focus back to the page - away from this control, or from a dialog field
+    // the person has gone on to in the meantime - and scroll to the top.
+    goto(`?${base.toString()}`, { reset: false })
   }
 
   const limitOptions = [

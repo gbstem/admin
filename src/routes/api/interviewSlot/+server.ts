@@ -1,10 +1,10 @@
-import { interviewSlotSchema } from '$lib/components/forms/schemas'
+import { interviewSlotSchema } from '#lib/components/forms/schemas.js'
 import {
   handleApiError,
   verifyAdmin,
   verifyAdminOrReviewer,
-} from '$lib/server/apiHelpers'
-import { isDocId } from '$lib/server/editTarget'
+} from '#lib/server/apiHelpers.js'
+import { isDocId } from '#lib/server/editTarget.js'
 import {
   createInterviewSlot,
   deleteInterviewSlot,
@@ -14,8 +14,7 @@ import {
   sendInterviewMissedEmail,
   sendInterviewRescheduledEmail,
   updateInterviewSlot,
-} from '$lib/server/interviewSlots'
-import { json } from '@sveltejs/kit'
+} from '#lib/server/interviewSlots.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -78,7 +77,7 @@ async function changed<T>(
 ): Promise<Response> {
   const body: ChangeSlotResponse = { message }
   if (booked) body.emailSent = await send(booked)
-  return json(body)
+  return Response.json(body)
 }
 
 /**
@@ -99,7 +98,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const emailSent = body.applicationId
       ? await sendInterviewAssignedEmail(slot)
       : true
-    return json({ id: slot.id, emailSent } satisfies CreateSlotResponse)
+    return Response.json({
+      id: slot.id,
+      emailSent,
+    } satisfies CreateSlotResponse)
   } catch (err) {
     throw handleApiError('/api/interviewSlot', err)
   }

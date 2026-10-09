@@ -137,7 +137,7 @@ await studentService.enrollStudent(classId, registrationId)
 
 instead of constructing a raw Firestore call or `fetch('/api/enroll', ...)` inline, mixed in with template markup and UI state. These browser-side services may _read_ Firestore directly, but they never write it: a write is a request to the server, as the next section explains.
 
-Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`, `applicationService.ts`, `registrationService.ts`, `classService.ts`, `studentService.ts`, `tokenService.ts`, `announcementService.ts`, `instructorFeedbackService.ts`, `studentFeedbackService.ts`). Anything under `$lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `$lib/server/firebase` rather than `firebase/firestore` and live under `__tests__/server/` — a flat `__tests__/<name>Service.test.ts` would collide with the client DAL's test of the same base name (e.g. `applicationService.ts` exists in both `src/lib/services/` and `src/lib/server/`); `subRequestService.test.ts` predates that convention and is the one exception still at the top level.
+Server-side loads (`+page.server.ts`) read with the Admin SDK instead, so their queries go in `src/lib/server/<name>Service.ts` (e.g. `subRequestService.ts`, `applicationService.ts`, `registrationService.ts`, `classService.ts`, `studentService.ts`, `tokenService.ts`, `announcementService.ts`, `instructorFeedbackService.ts`, `studentFeedbackService.ts`). Anything under `#lib/server` can't be imported into client code, which keeps the Admin SDK, and the credentials behind it, out of the browser. Their tests mock `#lib/server/firebase` rather than `firebase/firestore` and live under `__tests__/server/` — a flat `__tests__/<name>Service.test.ts` would collide with the client DAL's test of the same base name (e.g. `applicationService.ts` exists in both `src/lib/services/` and `src/lib/server/`); `subRequestService.test.ts` predates that convention and is the one exception still at the top level.
 
 **Why this matters, especially for a small, rotating volunteer team:**
 
@@ -444,7 +444,7 @@ Below is an alphabetical list of the top-level directories and significant confi
 - **`.husky/`**: Configuration for Husky, managing Git hooks like pre-commit formatting and linting.
 - **`.svelte-kit/`**: Automatically generated directory containing SvelteKit configuration, generated routes, and typings.
 - **`.vscode/`**: Contains Visual Studio Code workspace configuration settings, recommended extensions, and tasks.
-- **`__mocks__/`**: Contains mock implementations for unit testing (e.g., mock SvelteKit modules like `$app/environment`, `$app/navigation`).
+- **`__mocks__/`**: Contains mock implementations for unit testing (e.g., mock SvelteKit modules like `$app/env`, `$app/navigation`).
 - **`__tests__/`**: Contains all of our Jest unit tests (such as utility tests and form validation schema scenario tests). The one exception is **`__tests__/rules/`**, which evaluates `firestore.rules` against a running Firestore emulator rather than mocking it — run those with `yarn test:rules`, not `yarn test`. See [Roles and Authorization](#roles-and-authorization).
 - **`cypress/`**: Contains the Cypress e2e test suite, test configurations, fixtures, and page object/support configurations.
 - **`node_modules/`**: Automatically generated directory containing the project's dependencies.
@@ -487,8 +487,7 @@ Below is an alphabetical list of the top-level directories and significant confi
 - **`postcss.config.js`**: Configuration for PostCSS, typically used for transforming CSS with plugins.
 - **`prettier.config.js`**: Configuration rules for Prettier, ensuring consistent code formatting across the project.
 - **`README.md`**: You are reading this file! It contains the project's onboarding documentation.
-- **`svelte.config.js`**: SvelteKit-specific configuration (like adapter configurations and compiler options).
 - **`TEST_PLAN.md`**: A comprehensive test plan outlining testing strategies, test scenarios, coverage, and instructions for running Jest and Cypress tests.
 - **`tsconfig.json`**: Configuration settings for the TypeScript compiler.
-- **`vite.config.js`**: Vite configuration file for compiling, bundling, and configuring build plugins.
+- **`vite.config.js`**: Vite configuration file for compiling, bundling, and configuring build plugins, including SvelteKit's own configuration (adapter, compiler options) passed to the `sveltekit()` plugin.
 - **`yarn.lock`**: An automatically generated file that locks down the exact versions of dependencies used, ensuring that all developers have identical, reproducible environments.

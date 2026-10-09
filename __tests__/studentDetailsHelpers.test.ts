@@ -3,8 +3,8 @@ import {
   formatClassName,
   parseStudentProfileData,
   parseAttendanceRecords,
-} from '$lib/helpers/studentDetails'
-import type ClassData from '$lib/data/types/ClassData'
+} from '#lib/helpers/studentDetails.js'
+import type ClassData from '#lib/data/types/ClassData.js'
 
 describe('StudentDetails Helpers', () => {
   describe('formatClassName', () => {

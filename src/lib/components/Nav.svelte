@@ -1,14 +1,14 @@
 <script lang="ts">
   import ProfileMenu from './ProfileMenu.svelte'
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
   import { page, navigating } from '$app/state'
   import { onMount } from 'svelte'
   import Brand from './Brand.svelte'
   import { fade } from 'svelte/transition'
   import { cubicInOut } from 'svelte/easing'
-  import { actionsState } from '$lib/stores.svelte'
+  import { actionsState } from '#lib/stores.svelte.js'
   import Button from './Button.svelte'
-  import progress from '$lib/client/progress'
+  import progress from '#lib/client/progress.js'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { Bars2, XMark } from '@steeze-ui/heroicons'
 

@@ -7,7 +7,7 @@
  * goldens fail every January.
  */
 import { FIXTURE_YEAR, fixtureFor, type Case } from './fixtures'
-import { renderEmail } from '$lib/emails/render'
+import { renderEmail } from '#lib/emails/render.js'
 
 export function renderFixture(template: string, testCase: Case): string {
   const { data } = fixtureFor(template, testCase)

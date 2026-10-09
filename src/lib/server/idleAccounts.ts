@@ -1,4 +1,4 @@
-import { adminAuth } from '$lib/server/firebase'
+import { adminAuth } from '#lib/server/firebase.js'
 import type { UserRecord } from 'firebase-admin/auth'
 
 const DAY_MS = 24 * 60 * 60 * 1000

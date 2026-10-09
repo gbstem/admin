@@ -9,18 +9,18 @@ const mockQuery = {
 const mockCollection = jest.fn()
 const mockSearchIndex = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
   },
 }))
 
-jest.mock('$lib/server/search', () => ({
+jest.mock('#lib/server/search.js', () => ({
   searchIndex: (...args: any[]) => mockSearchIndex(...args),
 }))
 
-import { classFeedbackCollection } from '$lib/data/collections'
-import { studentFeedbackService } from '$lib/server/studentFeedbackService'
+import { classFeedbackCollection } from '#lib/data/collections.js'
+import { studentFeedbackService } from '#lib/server/studentFeedbackService.js'
 
 const storedFeedback = (overrides: Record<string, unknown> = {}) => ({
   instructor: 'Grace Hopper',

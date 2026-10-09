@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
   import { fade } from 'svelte/transition'
-  import SpinnerIcon from '$lib/components/icons/SpinnerIcon.svelte'
+  import SpinnerIcon from '#lib/components/icons/SpinnerIcon.svelte'
 
   interface Props {
     class?: string

@@ -1,4 +1,4 @@
-import { adminAuth } from '$lib/server/firebase'
+import { adminAuth } from '#lib/server/firebase.js'
 
 const AUTH_LOOKUP_LIMIT = 100 // auth.getUsers() identifiers-per-call limit
 

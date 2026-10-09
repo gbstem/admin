@@ -1,12 +1,12 @@
 const mockDocGet = jest.fn()
 const mockGetUser = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: { doc: (path: string) => ({ get: () => mockDocGet(path) }) },
   adminAuth: { getUser: (uid: string) => mockGetUser(uid) },
 }))
 
-import { accountName } from '$lib/server/userProfile'
+import { accountName } from '#lib/server/userProfile.js'
 
 describe('accountName', () => {
   beforeEach(() => {

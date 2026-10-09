@@ -1,13 +1,12 @@
-import { resolveAccountEmails } from '$lib/server/accountEmails'
-import { handleApiError, verifyAuthenticated } from '$lib/server/apiHelpers'
+import { resolveAccountEmails } from '#lib/server/accountEmails.js'
+import { handleApiError, verifyAuthenticated } from '#lib/server/apiHelpers.js'
 import {
   authorizeEmailResolution,
   resolveEmailsSchema,
-} from '$lib/server/emailIntents'
-import { json } from '@sveltejs/kit'
+} from '#lib/server/emailIntents.js'
 import type { RequestHandler } from './$types'
 
-export type { ResolveEmailsRequestBody } from '$lib/server/emailIntents'
+export type { ResolveEmailsRequestBody } from '#lib/server/emailIntents.js'
 
 export interface ResolveEmailsResponse {
   /** Every requested uid; null where it names no Auth account with an email. */
@@ -20,7 +19,7 @@ export interface ResolveEmailsResponse {
  * their account email, so these views look the address up by uid instead.
  *
  * What a caller may resolve depends on the request's intent and context, and
- * is decided in `$lib/server/emailIntents` - see there to add a use case. A
+ * is decided in `#lib/server/emailIntents.js` - see there to add a use case. A
  * refused request is refused whole, with no addresses. Kept byte-identical in
  * admin and portal.
  */
@@ -36,7 +35,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         body.uids.map((uid) => [uid, found.get(uid) ?? null]),
       ),
     }
-    return json(response)
+    return Response.json(response)
   } catch (err) {
     throw handleApiError('/api/resolveEmails', err)
   }

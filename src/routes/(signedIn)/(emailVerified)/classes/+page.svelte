@@ -1,15 +1,15 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import Button from '$lib/components/Button.svelte'
-  import ClassDetails from '$lib/components/ClassDetails.svelte'
-  import CourseFilter from '$lib/components/CourseFilter.svelte'
-  import PerPageControl from '$lib/components/PerPageControl.svelte'
-  import SearchBox from '$lib/components/SearchBox.svelte'
-  import Table from '$lib/components/Table.svelte'
-  import { ClassStatus } from '$lib/data/types/ClassStatus'
-  import { objectUrl } from '$lib/objectUrl.svelte'
-  import { openableMeetingLink } from '$lib/helpers/meetingLink'
-  import { copyEmails, generateCSV } from '$lib/utils'
+  import Button from '#lib/components/Button.svelte'
+  import ClassDetails from '#lib/components/ClassDetails.svelte'
+  import CourseFilter from '#lib/components/CourseFilter.svelte'
+  import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import SearchBox from '#lib/components/SearchBox.svelte'
+  import Table from '#lib/components/Table.svelte'
+  import { ClassStatus } from '#lib/data/types/ClassStatus.js'
+  import { objectUrl } from '#lib/objectUrl.svelte.js'
+  import { openableMeetingLink } from '#lib/helpers/meetingLink.js'
+  import { copyEmails, generateCSV } from '#lib/utils.js'
   import type { PageData } from './$types'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { DocumentDuplicate } from '@steeze-ui/heroicons'
@@ -27,7 +27,7 @@
   let prevHref = $derived(
     (() => {
       if (currentPage <= 1) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage - 1))
       return `?${base.toString()}`
     })(),
@@ -36,7 +36,7 @@
   let nextHref = $derived(
     (() => {
       if (data.classes && data.classes.length < currentLimit) return ''
-      const base = new URLSearchParams(page.url.searchParams)
+      const base = new URLSearchParams(page.url.search)
       base.set('page', String(currentPage + 1))
       return `?${base.toString()}`
     })(),

@@ -1,20 +1,24 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockSaveInterviewNotes = jest.fn()
 const mockSaveLikelyDecision = jest.fn()
 const mockDecideWithScorecard = jest.fn()
 const mockDecideInBulk = jest.fn()
 const mockSendDecisionEmail = jest.fn()
 
-jest.mock('$lib/server/applicationDecisions', () => ({
+jest.mock('#lib/server/applicationDecisions.js', () => ({
   saveInterviewNotes: (...args: any[]) => mockSaveInterviewNotes(...args),
   saveLikelyDecision: (...args: any[]) => mockSaveLikelyDecision(...args),
   decideWithScorecard: (...args: any[]) => mockDecideWithScorecard(...args),
   decideInBulk: (...args: any[]) => mockDecideInBulk(...args),
 }))
-jest.mock('$lib/server/decisionEmails', () => ({
+jest.mock('#lib/server/decisionEmails.js', () => ({
   sendDecisionEmail: (...args: any[]) => mockSendDecisionEmail(...args),
 }))
 
-import { currentSemester } from '$lib/data/collections'
+import { currentSemester } from '#lib/data/collections.js'
 import { POST } from '../src/routes/api/decision/+server'
 
 const admin = {
@@ -156,7 +160,7 @@ describe('POST /api/decision', () => {
       { applicationId: 'a1', firstName: 'Ada' },
       'accepted',
     )
-    expect(res.body).toEqual({ emailsFailed: 0 })
+    expect(await res.json()).toEqual({ emailsFailed: 0 })
   })
 
   it('decides several applicants without a scorecard and counts the emails that failed', async () => {
@@ -178,7 +182,7 @@ describe('POST /api/decision', () => {
     )
     expect(mockDecideWithScorecard).not.toHaveBeenCalled()
     expect(mockSendDecisionEmail).toHaveBeenCalledTimes(2)
-    expect(res.body).toEqual({ emailsFailed: 1 })
+    expect(await res.json()).toEqual({ emailsFailed: 1 })
   })
 
   it('emails nobody when the write is refused', async () => {

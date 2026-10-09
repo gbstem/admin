@@ -1,16 +1,16 @@
-import { toDate } from '$lib/shared/timestamps'
-import type { editClassFormSchema } from '$lib/components/forms/schemas'
+import { toDate } from '#lib/shared/timestamps.js'
+import type { editClassFormSchema } from '#lib/components/forms/schemas.js'
 import {
   classesCollection,
   semesterCollectionPath,
   withSemester,
-} from '$lib/data/collections'
-import { computeUpdatedClassStatuses } from '$lib/helpers/classStatuses'
-import { classEditedFields } from '$lib/helpers/editClassForm'
-import { resolveAccountEmails } from '$lib/server/accountEmails'
-import { adminDb } from '$lib/server/firebase'
-import { searchIndex } from '$lib/server/search'
-import { formatClassTimes } from '$lib/utils'
+} from '#lib/data/collections.js'
+import { computeUpdatedClassStatuses } from '#lib/helpers/classStatuses.js'
+import { classEditedFields } from '#lib/helpers/editClassForm.js'
+import { resolveAccountEmails } from '#lib/server/accountEmails.js'
+import { adminDb } from '#lib/server/firebase.js'
+import { searchIndex } from '#lib/server/search.js'
+import { formatClassTimes } from '#lib/utils.js'
 import { error } from '@sveltejs/kit'
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import type { z } from 'zod'

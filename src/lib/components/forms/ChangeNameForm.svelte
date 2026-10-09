@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { user } from '$lib/client/firebase'
-  import { userService } from '$lib/services/userService'
-  import { alert } from '$lib/stores'
+  import { user } from '#lib/client/firebase.js'
+  import { userService } from '#lib/services/userService.js'
+  import { alert } from '#lib/stores.js'
   import { updateProfile } from 'firebase/auth'
   import { onMount } from 'svelte'
   import { defaults, superForm } from 'sveltekit-superforms'

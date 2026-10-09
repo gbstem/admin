@@ -1,9 +1,9 @@
 <script lang="ts">
   import { fade } from 'svelte/transition'
-  import { clickOutside, cn } from '$lib/utils'
+  import { clickOutside, cn } from '#lib/utils.js'
   import { navigating } from '$app/state'
   import { signOut } from 'firebase/auth'
-  import { auth } from '$lib/client/firebase'
+  import { auth } from '#lib/client/firebase.js'
   import { goto } from '$app/navigation'
   import { circInOut } from 'svelte/easing'
   import { Icon } from '@steeze-ui/svelte-icon'

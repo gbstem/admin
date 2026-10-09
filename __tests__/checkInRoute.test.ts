@@ -1,7 +1,11 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 const mockCheckInStudent = jest.fn()
 const mockSetMealServed = jest.fn()
 
-jest.mock('$lib/server/checkIns', () => ({
+jest.mock('#lib/server/checkIns.js', () => ({
   checkInStudent: (...args: any[]) => mockCheckInStudent(...args),
   setMealServed: (...args: any[]) => mockSetMealServed(...args),
 }))
@@ -57,7 +61,7 @@ describe('POST /api/checkIn', () => {
   ])('checks the student in for %s', async (_, user) => {
     const res = await call(POST, user, { registrationId: 'reg-1' })
 
-    expect(res.body).toEqual(checkIn)
+    expect(await res.json()).toEqual(checkIn)
     expect(mockCheckInStudent).toHaveBeenCalledWith('reg-1')
   })
 
@@ -97,7 +101,7 @@ describe('PATCH /api/checkIn', () => {
   ])('records the meal for %s', async (_, user) => {
     const res = await call(PATCH, user, meal)
 
-    expect(res.body).toEqual({ success: true })
+    expect(await res.json()).toEqual({ success: true })
     expect(mockSetMealServed).toHaveBeenCalledWith(
       'reg-1',
       '2026-10-17',

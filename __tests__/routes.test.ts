@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+// The routes answer with Fetch API `Response`s, which jsdom does not provide.
 jest.mock(
   'svelte/store',
   () => ({
@@ -40,7 +44,6 @@ jest.mock(
       location,
       __isSvelteKitRedirect: true,
     }),
-    json: (body: any, init?: any) => ({ body, init, __isSvelteKitJson: true }),
     fail: (status: number, data: any) => ({
       status,
       data,
@@ -198,12 +201,12 @@ jest.mock('firebase-admin/firestore', () => ({
 }))
 
 // The token-consuming transaction has its own suite (accountService.test.ts).
-jest.mock('$lib/server/accountService', () => ({
+jest.mock('#lib/server/accountService.js', () => ({
   recordNewAccount: jest.fn().mockResolvedValue(undefined),
 }))
 
-// Mock verifyToken from $lib/server/firebase
-jest.mock('$lib/server/firebase', () => ({
+// Mock verifyToken from #lib/server/firebase
+jest.mock('#lib/server/firebase.js', () => ({
   adminAuth: mockAdminAuth,
   adminDb: mockAdminDb,
   verifyToken: jest.fn().mockResolvedValue({ role: 'admin' }),
@@ -246,8 +249,8 @@ jest.mock('firebase/firestore', () => ({
 jest.mock('firebase/storage', () => ({ getStorage: jest.fn() }))
 
 // Import routes
-import { recordNewAccount } from '$lib/server/accountService'
-import { verifyToken } from '$lib/server/firebase'
+import { recordNewAccount } from '#lib/server/accountService.js'
+import { verifyToken } from '#lib/server/firebase.js'
 import { handle } from '../src/hooks.server'
 import {
   currentSemester,
@@ -280,7 +283,7 @@ import { POST as actionPOST } from '../src/routes/api/action/+server'
 import { POST as remindInstructorPOST } from '../src/routes/api/remindInstructor/+server'
 import { POST as remindStudentsPOST } from '../src/routes/api/remindStudents/+server'
 import { POST as resolveEmailsPOST } from '../src/routes/api/resolveEmails/+server'
-import { EMAIL_LOOKUP_REFUSED } from '$lib/server/emailIntents'
+import { EMAIL_LOOKUP_REFUSED } from '#lib/server/emailIntents.js'
 
 describe('routes load tests', () => {
   beforeEach(() => {
@@ -1035,7 +1038,7 @@ describe('API routes POST endpoints', () => {
         user: { email: 'test@test.com', role: 'admin', emailVerified: false },
       },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
   })
 
   // The email change goes through the client SDK's verifyBeforeUpdateEmail,
@@ -1068,7 +1071,7 @@ describe('API routes POST endpoints', () => {
       request: mockRequest as any,
       locals: { user: null },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
     expect(mockAdminAuth.generatePasswordResetLink).toHaveBeenCalledWith(
       'test@test.com',
     )
@@ -1095,8 +1098,8 @@ describe('API routes POST endpoints', () => {
         locals: { user: null },
       } as any)
 
-      expect(res.body).toEqual({ message: 'Email sent successfully.' })
-      expect(res.init?.status ?? 200).toBe(200)
+      expect(await res.json()).toEqual({ message: 'Email sent successfully.' })
+      expect(res.status).toBe(200)
       expect(MailService.send).not.toHaveBeenCalled()
     },
   )
@@ -1142,7 +1145,7 @@ describe('API routes POST endpoints', () => {
         },
       },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
     expect(mockAdminAuth.generatePasswordResetLink).toHaveBeenCalledWith(
       'attacker@test.com',
     )
@@ -1188,7 +1191,7 @@ describe('API routes POST endpoints', () => {
         user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
       },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
     expect(mockAdminAuth.getUser).toHaveBeenCalledWith('inst-uid-1')
     expect(MailService.send).toHaveBeenCalledWith(
       expect.objectContaining({ to: ['resolved-inst@test.com'] }),
@@ -1215,7 +1218,7 @@ describe('API routes POST endpoints', () => {
         user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
       },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
     expect(MailService.send).toHaveBeenCalledWith(
       expect.objectContaining({ to: ['parent-current@test.com'] }),
     )
@@ -1242,7 +1245,7 @@ describe('API routes POST endpoints', () => {
         user: { email: 'admin@test.com', role: 'admin', emailVerified: true },
       },
     } as any)
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
     expect(mockAdminAuth.getUsers).toHaveBeenCalledWith([
       { uid: 'cohost-uid' },
       { uid: 'deleted-uid' },
@@ -1311,7 +1314,7 @@ describe('api/resolveEmails', () => {
 
       const res: any = await post({ user: { ...adminLocals.user, role } })
 
-      expect(res.body).toEqual({
+      expect(await res.json()).toEqual({
         emails: { 'owner-uid': 'owner@gbstem.org', 'cohost-uid': null },
       })
     },
@@ -1379,7 +1382,7 @@ describe('api/resolveEmails', () => {
 
       const res: any = await post()
 
-      expect(res.body).toEqual({
+      expect(await res.json()).toEqual({
         emails: { 'app-uid': 'app-uid@current.test' },
       })
     })
@@ -1397,7 +1400,7 @@ describe('api/resolveEmails', () => {
 
       const res: any = await post()
 
-      expect(res.body).toEqual({
+      expect(await res.json()).toEqual({
         emails: { 'parent-uid': 'parent-uid@current.test' },
       })
     })
@@ -1413,7 +1416,9 @@ describe('api/resolveEmails', () => {
 
       const res: any = await post()
 
-      expect(res.body.emails['parent-uid']).toBe('parent-uid@current.test')
+      expect((await res.json()).emails['parent-uid']).toBe(
+        'parent-uid@current.test',
+      )
     })
 
     it.each([
@@ -1496,7 +1501,7 @@ describe('api/resolveEmails', () => {
 
       const res: any = await post()
 
-      expect(res.body).toEqual({
+      expect(await res.json()).toEqual({
         emails: { 'applicant-uid': 'applicant@example.com' },
       })
     })
@@ -1659,7 +1664,7 @@ describe('api/auth', () => {
         path: '/',
       },
     )
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
   })
 
   it('POST throws 403 if user is a student', async () => {
@@ -1750,6 +1755,6 @@ describe('api/auth', () => {
       '__session',
       expect.any(Object),
     )
-    expect(res).toEqual(expect.objectContaining({ __isSvelteKitJson: true }))
+    expect(res).toBeInstanceOf(Response)
   })
 })

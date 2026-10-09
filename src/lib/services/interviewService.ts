@@ -1,11 +1,11 @@
-import { errorMessage } from '$lib/shared/apiErrors'
-import { db } from '$lib/client/firebase'
-import { accountEmailService } from '$lib/services/accountEmailService'
+import { errorMessage } from '#lib/shared/apiErrors.js'
+import { db } from '#lib/client/firebase.js'
+import { accountEmailService } from '#lib/services/accountEmailService.js'
 import {
   applicationsCollection,
   interviewTimeRequestsCollection,
   interviewTimesCollection,
-} from '$lib/data/collections'
+} from '#lib/data/collections.js'
 import type {
   ChangeSlotResponse,
   CreateSlotRequestBody,
@@ -20,7 +20,7 @@ import {
   parseInterviewSlotDoc,
   parseSlotRequestDoc,
   sortSlotRequestsByDate,
-} from '$lib/helpers/setInterviewTimes'
+} from '#lib/helpers/setInterviewTimes.js'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 
 /** Sends one slot write to `/api/interviewSlot`, throwing its refusal. */

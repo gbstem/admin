@@ -1,4 +1,4 @@
-import { registrationService } from '$lib/services/registrationService'
+import { registrationService } from '#lib/services/registrationService.js'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 

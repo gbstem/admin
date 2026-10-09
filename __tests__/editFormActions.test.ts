@@ -7,13 +7,13 @@ const mockSetBypassAgeLimits = jest.fn()
 const mockSaveClassEdits = jest.fn()
 const mockCreateToken = jest.fn()
 
-jest.mock('$lib/server/applicationService', () => ({
+jest.mock('#lib/server/applicationService.js', () => ({
   applicationService: {
     saveApplicationEdits: (...args: any[]) => mockSaveApplicationEdits(...args),
   },
 }))
 
-jest.mock('$lib/server/registrationService', () => ({
+jest.mock('#lib/server/registrationService.js', () => ({
   registrationService: {
     saveRegistrationEdits: (...args: any[]) =>
       mockSaveRegistrationEdits(...args),
@@ -21,13 +21,13 @@ jest.mock('$lib/server/registrationService', () => ({
   },
 }))
 
-jest.mock('$lib/server/classService', () => ({
+jest.mock('#lib/server/classService.js', () => ({
   classService: {
     saveClassEdits: (...args: any[]) => mockSaveClassEdits(...args),
   },
 }))
 
-jest.mock('$lib/server/tokenService', () => ({
+jest.mock('#lib/server/tokenService.js', () => ({
   tokenService: {
     createToken: (...args: any[]) => mockCreateToken(...args),
   },
@@ -38,8 +38,8 @@ import {
   EDIT_APPLICATION_FORM_ID,
   EDIT_CLASS_FORM_ID,
   EDIT_REGISTRATION_FORM_ID,
-} from '$lib/components/forms/schemas'
-import { currentSemester } from '$lib/data/collections'
+} from '#lib/components/forms/schemas.js'
+import { currentSemester } from '#lib/data/collections.js'
 import { actions as applicationsActions } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
 import { actions as classesActions } from '../src/routes/(signedIn)/(emailVerified)/classes/+page.server'
 import { actions as tokensActions } from '../src/routes/(signedIn)/(emailVerified)/tokens/+page.server'

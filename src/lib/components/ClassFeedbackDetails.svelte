@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte'
+  import Card from '#lib/components/Card.svelte'
   import {
     classService,
     type ClientInstructorFeedback,
-  } from '$lib/services/classService'
-  import { alert } from '$lib/stores'
+  } from '#lib/services/classService.js'
+  import { alert } from '#lib/stores.js'
   import Button from './Button.svelte'
   import Dialog from './Dialog.svelte'
 

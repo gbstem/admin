@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from '$lib/utils'
+  import { cn } from '#lib/utils.js'
   import { kebabCase, uniqueId } from 'lodash-es'
 
   type Validation = [boolean, string]

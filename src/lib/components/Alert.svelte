@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { alert } from '$lib/stores'
-  import { cn } from '$lib/utils'
+  import { alert } from '#lib/stores.js'
+  import { cn } from '#lib/utils.js'
   import { navigating } from '$app/state'
   import { fade } from 'svelte/transition'
   import { onDestroy, onMount } from 'svelte'
-  import { browser } from '$app/environment'
+  import { browser } from '$app/env'
   import { Icon } from '@steeze-ui/svelte-icon'
   import {
     CheckCircle,
@@ -54,7 +54,8 @@
   })
 </script>
 
-<svelte:document onkeydown={visible ? handleEscape : undefined} />
+<svelte:document onkeydown={visible ? handleEscape : undefined}
+></svelte:document>
 {#if visible}
   <div
     class="fixed bottom-3 left-1/2 z-50 w-full max-w-xl -translate-x-1/2 px-3"

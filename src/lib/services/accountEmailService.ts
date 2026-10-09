@@ -1,4 +1,4 @@
-import { errorMessage } from '$lib/shared/apiErrors'
+import { errorMessage } from '#lib/shared/apiErrors.js'
 import type {
   ResolveEmailsRequestBody,
   ResolveEmailsResponse,

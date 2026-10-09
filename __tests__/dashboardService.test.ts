@@ -1,4 +1,4 @@
-import { dashboardService } from '$lib/services/dashboardService'
+import { dashboardService } from '#lib/services/dashboardService.js'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
 

@@ -8,7 +8,7 @@ describe('email service', () => {
 
   it('sends email when token is set', async () => {
     jest.doMock(
-      '$env/static/private',
+      '$app/env/private',
       () => ({
         SENDGRID_API_TOKEN: 'test-token',
       }),
@@ -51,7 +51,7 @@ describe('email service', () => {
 
   it('sends email when to and cc are arrays', async () => {
     jest.doMock(
-      '$env/static/private',
+      '$app/env/private',
       () => ({
         SENDGRID_API_TOKEN: 'test-token',
       }),
@@ -93,7 +93,7 @@ describe('email service', () => {
 
   it('parses and trims comma-separated string emails into arrays', async () => {
     jest.doMock(
-      '$env/static/private',
+      '$app/env/private',
       () => ({
         SENDGRID_API_TOKEN: 'test-token',
       }),
@@ -135,7 +135,7 @@ describe('email service', () => {
 
   it('simulates email when token is not set', async () => {
     jest.doMock(
-      '$env/static/private',
+      '$app/env/private',
       () => ({
         SENDGRID_API_TOKEN: '',
       }),
@@ -173,7 +173,7 @@ describe('email service', () => {
 
   it('simulates email when token is set to the placeholder', async () => {
     jest.doMock(
-      '$env/static/private',
+      '$app/env/private',
       () => ({
         SENDGRID_API_TOKEN:
           'SG.abcdefghijklmnopqrstuvwxyz.1234567890abcdefghijklmnopqrstuvwxyz',

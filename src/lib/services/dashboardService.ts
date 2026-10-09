@@ -1,13 +1,13 @@
-import { db } from '$lib/client/firebase'
+import { db } from '#lib/client/firebase.js'
 import {
   applicationsCollection,
   classesCollection,
   registrationsCollection,
-} from '$lib/data/collections'
-import { registrationParentUid } from '$lib/data/docIds'
-import { applicationService } from '$lib/services/applicationService'
-import { studentService } from '$lib/services/studentService'
-import { timestampToDate } from '$lib/utils'
+} from '#lib/data/collections.js'
+import { registrationParentUid } from '#lib/data/docIds.js'
+import { applicationService } from '#lib/services/applicationService.js'
+import { studentService } from '#lib/services/studentService.js'
+import { timestampToDate } from '#lib/utils.js'
 import {
   collection,
   getCountFromServer,

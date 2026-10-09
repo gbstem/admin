@@ -1,7 +1,9 @@
-import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
-import { classService } from '$lib/server/classService'
-import { isDocId } from '$lib/server/editTarget'
-import { json } from '@sveltejs/kit'
+import {
+  handleApiError,
+  verifyAdminOrReviewer,
+} from '#lib/server/apiHelpers.js'
+import { classService } from '#lib/server/classService.js'
+import { isDocId } from '#lib/server/editTarget.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -25,7 +27,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     verifyAdminOrReviewer(locals)
     const { classId } = classStatusesSchema.parse(await request.json())
-    return json({
+    return Response.json({
       classStatuses: await classService.refreshClassStatuses(classId),
     } satisfies ClassStatusesResponse)
   } catch (err) {

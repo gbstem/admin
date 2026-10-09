@@ -17,7 +17,7 @@
 </script>
 
 <script lang="ts">
-  import { clickOutside, cn } from '$lib/utils'
+  import { clickOutside, cn } from '#lib/utils.js'
   import { debounce, kebabCase, uniqueId } from 'lodash-es'
   import { fade } from 'svelte/transition'
   import { untrack } from 'svelte'

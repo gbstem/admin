@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { user } from '$lib/client/firebase'
-  import CheckboxInput from '$lib/components/CheckboxInput.svelte'
+  import { user } from '#lib/client/firebase.js'
+  import CheckboxInput from '#lib/components/CheckboxInput.svelte'
   import {
     canMarkSlotMissed,
     canUserModifySlot,
@@ -11,10 +11,15 @@
     resetInterviewSlotToAdd,
     toInterviewSlotFormValues,
     type EligibleInterviewee,
-  } from '$lib/helpers/setInterviewTimes'
-  import { interviewService } from '$lib/services/interviewService'
-  import { alert } from '$lib/stores'
-  import { cn, formatDate, formatDateLocal, toLocalISOString } from '$lib/utils'
+  } from '#lib/helpers/setInterviewTimes.js'
+  import { interviewService } from '#lib/services/interviewService.js'
+  import { alert } from '#lib/stores.js'
+  import {
+    cn,
+    formatDate,
+    formatDateLocal,
+    toLocalISOString,
+  } from '#lib/utils.js'
   import { onMount } from 'svelte'
   import { defaults, superForm } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
@@ -23,7 +28,7 @@
   import FormInput from '../FormInput.svelte'
   import Loading from '../Loading.svelte'
   import Select from '../Select.svelte'
-  import { openableMeetingLink } from '$lib/helpers/meetingLink'
+  import { openableMeetingLink } from '#lib/helpers/meetingLink.js'
   import { getInterviewSlotDefaults, interviewSlotSchema } from './schemas'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { Trash } from '@steeze-ui/heroicons'

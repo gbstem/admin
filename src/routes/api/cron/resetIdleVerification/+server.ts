@@ -1,7 +1,7 @@
-import { env } from '$env/dynamic/private'
-import { handleApiError } from '$lib/server/apiHelpers'
-import { resetIdleVerification } from '$lib/server/idleAccounts'
-import { error, json } from '@sveltejs/kit'
+import { CRON_SECRET } from '$app/env/private'
+import { handleApiError } from '#lib/server/apiHelpers.js'
+import { resetIdleVerification } from '#lib/server/idleAccounts.js'
+import { error } from '@sveltejs/kit'
 import { timingSafeEqual } from 'node:crypto'
 import type { RequestHandler } from './$types'
 
@@ -26,7 +26,7 @@ function isAuthorized(header: string | null, secret: string): boolean {
  */
 export const GET: RequestHandler = async ({ request, url }) => {
   try {
-    const secret = env.CRON_SECRET
+    const secret = CRON_SECRET
     if (!secret) {
       throw error(500, 'CRON_SECRET is not configured.')
     }
@@ -36,7 +36,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
     const summary = await resetIdleVerification({
       dryRun: url.searchParams.get('dryRun') === '1',
     })
-    return json(summary)
+    return Response.json(summary)
   } catch (err) {
     throw handleApiError('/api/cron/resetIdleVerification', err)
   }

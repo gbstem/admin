@@ -3,8 +3,8 @@
   import { zod } from 'sveltekit-superforms/adapters'
   import { z } from 'zod'
   import { Field, Control, Label, FieldErrors } from 'formsnap'
-  import { user } from '$lib/client/firebase'
-  import { alert } from '$lib/stores'
+  import { user } from '#lib/client/firebase.js'
+  import { alert } from '#lib/stores.js'
   import {
     EmailAuthProvider,
     reauthenticateWithCredential,

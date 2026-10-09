@@ -1,12 +1,12 @@
 import {
   EDIT_APPLICATION_FORM_ID,
   applicationSchema,
-} from '$lib/components/forms/schemas'
-import { resolveSemester } from '$lib/data/collections'
-import { verifyAdminOrReviewer } from '$lib/server/apiHelpers'
-import { applicationService } from '$lib/server/applicationService'
-import { editTarget } from '$lib/server/editTarget'
-import { parsePagination } from '$lib/utils'
+} from '#lib/components/forms/schemas.js'
+import { resolveSemester } from '#lib/data/collections.js'
+import { verifyAdminOrReviewer } from '#lib/server/apiHelpers.js'
+import { applicationService } from '#lib/server/applicationService.js'
+import { editTarget } from '#lib/server/editTarget.js'
+import { parsePagination } from '#lib/utils.js'
 import { error, fail } from '@sveltejs/kit'
 import { message, superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
@@ -32,12 +32,14 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Load Error] applications page load:', err)
-      throw error(500, {
-        message:
-          'Something went wrong while fetching applications. Please try again later.',
-        details: err.message || err.toString(),
-        code: err.code || 'UNKNOWN',
-      })
+      throw error(
+        500,
+        'Something went wrong while fetching applications. Please try again later.',
+        {
+          details: err.message || err.toString(),
+          code: err.code || 'UNKNOWN',
+        },
+      )
     }
   } else {
     try {
@@ -50,8 +52,7 @@ export const load = (async ({ url, depends }) => {
       }
     } catch (err: any) {
       console.error('[Search Error] applications search load:', err)
-      throw error(500, {
-        message: 'The search failed. Please try again later.',
+      throw error(500, 'The search failed. Please try again later.', {
         details: err.message || err.toString(),
         code: err.code || 'UNKNOWN',
       })

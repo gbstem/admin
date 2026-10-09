@@ -1,5 +1,5 @@
 // backfill-interview-scheduling.ts - Brings Fall 2026's data up to the
-// interview scheduling rule in $lib/helpers/setInterviewTimes
+// interview scheduling rule in #lib/helpers/setInterviewTimes
 // (interviewIneligibility): an applicant can be given an interview only while
 // submitted, with no interview booked, and not finally decided.
 //

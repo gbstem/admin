@@ -21,7 +21,7 @@ function makeQuery(collection: string, field: string, value: unknown) {
   return { ...q, get: async () => ({ docs: queryDocs(q) }) }
 }
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (name: string) => ({
       doc: (id: string) => ({ path: `${name}/${id}` }),
@@ -40,7 +40,7 @@ import {
   checkAdminAccountDeletionEligibility,
   deleteAdminAccount,
   recordNewAccount,
-} from '$lib/server/accountService'
+} from '#lib/server/accountService.js'
 
 const ACCOUNT = {
   uid: 'new-uid',

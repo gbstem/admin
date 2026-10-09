@@ -1,5 +1,5 @@
-import { clearSentEmails, getSentEmails } from '$lib/server/email'
-import { error, json } from '@sveltejs/kit'
+import { clearSentEmails, getSentEmails } from '#lib/server/email.js'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 
 function assertTestEnvironment() {
@@ -10,11 +10,11 @@ function assertTestEnvironment() {
 
 export const GET: RequestHandler = async () => {
   assertTestEnvironment()
-  return json(getSentEmails())
+  return Response.json(getSentEmails())
 }
 
 export const DELETE: RequestHandler = async () => {
   assertTestEnvironment()
   clearSentEmails()
-  return json({ message: 'Sent emails cleared.' })
+  return Response.json({ message: 'Sent emails cleared.' })
 }

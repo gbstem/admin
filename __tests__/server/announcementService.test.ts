@@ -7,13 +7,13 @@ const mockQuery = {
 }
 const mockCollection = jest.fn()
 
-jest.mock('$lib/server/firebase', () => ({
+jest.mock('#lib/server/firebase.js', () => ({
   adminDb: {
     collection: (...args: any[]) => mockCollection(...args),
   },
 }))
 
-import { announcementService } from '$lib/server/announcementService'
+import { announcementService } from '#lib/server/announcementService.js'
 
 describe('announcementService (server Data Access Layer)', () => {
   beforeEach(() => {

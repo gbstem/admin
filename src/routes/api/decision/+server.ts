@@ -1,13 +1,15 @@
-import { handleApiError, verifyAdminOrReviewer } from '$lib/server/apiHelpers'
+import {
+  handleApiError,
+  verifyAdminOrReviewer,
+} from '#lib/server/apiHelpers.js'
 import {
   decideInBulk,
   decideWithScorecard,
   saveInterviewNotes,
   saveLikelyDecision,
-} from '$lib/server/applicationDecisions'
-import { sendDecisionEmail } from '$lib/server/decisionEmails'
-import { isDocId, requireKnownSemester } from '$lib/server/editTarget'
-import { json } from '@sveltejs/kit'
+} from '#lib/server/applicationDecisions.js'
+import { sendDecisionEmail } from '#lib/server/decisionEmails.js'
+import { isDocId, requireKnownSemester } from '#lib/server/editTarget.js'
 import { z } from 'zod'
 import type { RequestHandler } from './$types'
 
@@ -119,7 +121,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         body.applicationId,
         body.interview as Data.Interview,
       )
-      return json({ emailsFailed: 0 } satisfies DecisionResponse)
+      return Response.json({ emailsFailed: 0 } satisfies DecisionResponse)
     }
     if (body.action === 'setLikelyDecision') {
       await saveLikelyDecision(
@@ -127,7 +129,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         body.applicationId,
         body.likelyDecision,
       )
-      return json({ emailsFailed: 0 } satisfies DecisionResponse)
+      return Response.json({ emailsFailed: 0 } satisfies DecisionResponse)
     }
 
     const decided = body.interview
@@ -143,7 +145,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const sent = await Promise.all(
       decided.map((applicant) => sendDecisionEmail(applicant, body.decision)),
     )
-    return json({
+    return Response.json({
       emailsFailed: sent.filter((ok) => !ok).length,
     } satisfies DecisionResponse)
   } catch (err) {
