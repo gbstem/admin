@@ -308,7 +308,7 @@ The cron needs `CRON_SECRET` set in the Vercel project (see `.env.example`) and 
 curl -H "Authorization: Bearer $CRON_SECRET" "https://admin.gbstem.org/api/cron/resetIdleVerification?dryRun=1"
 ```
 
-The first run after deploying resets every account already past its window, so expect a burst of people re-verifying. Someone whose mailbox no longer exists can be verified by hand with [`scripts/force-verify-email.ts`](scripts/force-verify-email.ts), once you've confirmed who they are another way.
+Each run resets at most 100 accounts (`MAX_RESETS_PER_RUN`), longest idle first, and reports the rest as `deferred` for later runs: every reset is an Auth account modification, and resetting the whole backlog in one run exhausted the project's Auth modification quota. A backlog therefore clears over a few weekly runs, with a smaller burst of people re-verifying after each. Someone whose mailbox no longer exists can be verified by hand with [`scripts/force-verify-email.ts`](scripts/force-verify-email.ts), once you've confirmed who they are another way.
 
 ## API Routes (`+server.ts`)
 

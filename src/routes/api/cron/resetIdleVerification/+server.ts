@@ -5,7 +5,7 @@ import { error, json } from '@sveltejs/kit'
 import { timingSafeEqual } from 'node:crypto'
 import type { RequestHandler } from './$types'
 
-// A first run may reset many accounts at once.
+// A run may reset up to MAX_RESETS_PER_RUN accounts.
 export const config = { maxDuration: 60 }
 
 /** Whether `header` is exactly `Bearer <CRON_SECRET>`, compared in constant time. */

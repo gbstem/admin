@@ -22,6 +22,14 @@ export const IDLE_LIMIT_DAYS: Record<string, number> = {
 const CONCURRENCY = 10
 
 /**
+ * Most accounts one run resets. Each reset is an Auth account modification,
+ * and the first production run, which reset the whole backlog at once,
+ * exhausted the project's Auth modification quota. The rest wait for later
+ * runs, longest idle first, so a weekly run clears a backlog in a few weeks.
+ */
+export const MAX_RESETS_PER_RUN = 100
+
+/**
  * When the account was last in use, in epoch milliseconds: the latest of its
  * last ID-token refresh, last sign-in and creation.
  *
@@ -56,6 +64,8 @@ export type IdleResetSummary = {
   idle: number
   reset: number
   failed: number
+  /** Idle accounts left for a later run by MAX_RESETS_PER_RUN. */
+  deferred: number
   dryRun: boolean
 }
 
@@ -68,8 +78,10 @@ export type IdleResetSummary = {
  * saying `true` for up to an hour, and a revoked token also ends any
  * session cookie (hooks.server.ts checks for revocation).
  *
- * One account failing doesn't stop the rest; it is counted, logged by uid
- * (never email), and retried by the next run since it is still idle.
+ * At most MAX_RESETS_PER_RUN accounts are attempted, longest idle first; the
+ * rest are counted as deferred and picked up by later runs. One account
+ * failing doesn't stop the rest; it is counted, logged by uid (never email),
+ * and retried by the next run since it is still idle.
  */
 export async function resetIdleVerification({
   now = new Date(),
@@ -80,33 +92,40 @@ export async function resetIdleVerification({
     idle: 0,
     reset: 0,
     failed: 0,
+    deferred: 0,
     dryRun,
   }
 
+  const idle: UserRecord[] = []
   let pageToken: string | undefined
   do {
     const page = await adminAuth.listUsers(1000, pageToken)
     pageToken = page.pageToken
     summary.scanned += page.users.length
-    const idle = page.users.filter((user) => isIdle(user, now))
-    summary.idle += idle.length
-    if (dryRun) continue
-
-    for (let i = 0; i < idle.length; i += CONCURRENCY) {
-      await Promise.all(
-        idle.slice(i, i + CONCURRENCY).map(async ({ uid }) => {
-          try {
-            await adminAuth.updateUser(uid, { emailVerified: false })
-            await adminAuth.revokeRefreshTokens(uid)
-            summary.reset++
-          } catch (err) {
-            summary.failed++
-            console.error(`[idleAccounts] could not reset ${uid}:`, err)
-          }
-        }),
-      )
-    }
+    idle.push(...page.users.filter((user) => isIdle(user, now)))
   } while (pageToken)
+  summary.idle = idle.length
+
+  const batch = idle
+    .sort((a, b) => lastActiveMs(a) - lastActiveMs(b))
+    .slice(0, MAX_RESETS_PER_RUN)
+  summary.deferred = idle.length - batch.length
+  if (dryRun) return summary
+
+  for (let i = 0; i < batch.length; i += CONCURRENCY) {
+    await Promise.all(
+      batch.slice(i, i + CONCURRENCY).map(async ({ uid }) => {
+        try {
+          await adminAuth.updateUser(uid, { emailVerified: false })
+          await adminAuth.revokeRefreshTokens(uid)
+          summary.reset++
+        } catch (err) {
+          summary.failed++
+          console.error(`[idleAccounts] could not reset ${uid}:`, err)
+        }
+      }),
+    )
+  }
 
   return summary
 }
