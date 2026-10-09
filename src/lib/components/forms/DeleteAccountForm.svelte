@@ -52,6 +52,10 @@
   const formResult = superForm(
     defaults({ password: '' }, zod(schema as any) as any) as any,
     {
+      // Superforms otherwise derives the id from the schema, which matches
+      // ReauthenticateForm's and triggers its duplicate-form-id warning on
+      // /profile.
+      id: 'delete-account',
       SPA: true,
       validators: zod(schema as any) as any,
       async onUpdate({ form: formVal }) {
