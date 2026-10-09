@@ -166,19 +166,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ark/schema@npm:0.56.2":
-  version: 0.56.2
-  resolution: "@ark/schema@npm:0.56.2"
+"@ark/schema@npm:0.56.7":
+  version: 0.56.7
+  resolution: "@ark/schema@npm:0.56.7"
   dependencies:
-    "@ark/util": "npm:0.56.2"
-  checksum: 10c0/0825c34969dcf3ff199a50b663eb792469f1c78b45f7dea565b2101fda9ab4e91eb5e088e0a5b6a667a05ddd1cc8b1bcbd6369ab2337655c40e680022fa00892
+    "@ark/util": "npm:0.56.7"
+  checksum: 10c0/44e19140c1fa5c08520fd5858a8966c94892f9dfc65839e003243b74e40d2d06bf3892d7f1b9805ae227ac8640c3cf790793192b8e91da025bdc96b79c7ab6b8
   languageName: node
   linkType: hard
 
-"@ark/util@npm:0.56.2":
-  version: 0.56.2
-  resolution: "@ark/util@npm:0.56.2"
-  checksum: 10c0/dc5757fa7281ec2f202c7b6df8ff3bb154ee6a027eb5c69e7bbc30596fe7385109347c6124bee1e9c3a30c8def3dee7aaaa963103abd4c91dfb4bb1433a537ca
+"@ark/util@npm:0.56.7":
+  version: 0.56.7
+  resolution: "@ark/util@npm:0.56.7"
+  checksum: 10c0/d8ada1ae223d0d2014d9d5d3079bd24839d5fb138563cd6f80a2f2c56601942f0e0fedcb1bd9690afa165f5d54947143d2433597e5b13a3a5a2b9d7b778aa10d
   languageName: node
   linkType: hard
 
@@ -2669,10 +2669,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@poppinss/macroable@npm:^1.0.4":
+"@poppinss/macroable@npm:^1.1.0":
   version: 1.1.2
   resolution: "@poppinss/macroable@npm:1.1.2"
   checksum: 10c0/70ff049095309c696660b6c2993c963a938fa3348bee83cf22659a5b34208ee02e24d6f18aff33af1b4c900dce7d8613bdb1abf188b26bc2775757cd03b1505a
+  languageName: node
+  linkType: hard
+
+"@poppinss/types@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "@poppinss/types@npm:1.2.1"
+  checksum: 10c0/63baf881052f4b9ed83f5fe50ed441c9e82b4f3abfd206e42576c1ed38b7dbe61482b7770bf4ebfa93b5e4c5a7e54187f7cd6d21ec3f47eaec9573dbbf535b9d
   languageName: node
   linkType: hard
 
@@ -3555,7 +3562,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/validator@npm:^13.12.2, @types/validator@npm:^13.15.3":
+"@types/validator@npm:^13.15.10, @types/validator@npm:^13.15.3":
   version: 13.15.10
   resolution: "@types/validator@npm:13.15.10"
   checksum: 10c0/3e2e65fcd37dd6961ca3fd0535293d0c42f5911dc3ca44b96f458835e6db2392b678ccbb0c9815d8c0a14e653439e6c62c7b8758a6cd1d6e390551c9e56618ac
@@ -3987,12 +3994,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@valibot/to-json-schema@npm:^1.7.1":
-  version: 1.7.1
-  resolution: "@valibot/to-json-schema@npm:1.7.1"
+"@valibot/to-json-schema@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "@valibot/to-json-schema@npm:1.8.0"
   peerDependencies:
-    valibot: ^1.4.0
-  checksum: 10c0/15ef472fae3229ab0dc6860325e5c6d21e724e4edbb1794ec603bc3881925bcaf5db44b30536925141758abea155b33b640129dcbb0ddfb47414cb967a6eeae1
+    valibot: ^1.5.0
+  checksum: 10c0/8206940f4b892a34c2d78448541de926234bd97741ad72f4b75ce22bbe56172e46492d02efaf71d75cfc71cec6fa0c55d2edbd977aa4fd2cb2dc236f87005c04
   languageName: node
   linkType: hard
 
@@ -4018,26 +4025,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vinejs/compiler@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@vinejs/compiler@npm:3.0.0"
-  checksum: 10c0/b39d34d8031f0d881548a03978fec01a094136813f9db8f7fcfd3428a29c14808ed619cb086cfeb761017b02352bfdd6997f4e12ea9d2efe1ca8b77cf258bbb3
+"@vinejs/compiler@npm:^4.1.3":
+  version: 4.1.3
+  resolution: "@vinejs/compiler@npm:4.1.3"
+  checksum: 10c0/0df4e92bbca5bea6a94135d78f886d0f5c1a5676d7e9965288b161d6857a43c656a0a17d862e6707c017b586085f7b81f9f62523f6028b067d7dc5bcc3890e72
   languageName: node
   linkType: hard
 
-"@vinejs/vine@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "@vinejs/vine@npm:3.0.1"
+"@vinejs/vine@npm:^4.0.0":
+  version: 4.4.0
+  resolution: "@vinejs/vine@npm:4.4.0"
   dependencies:
-    "@poppinss/macroable": "npm:^1.0.4"
-    "@types/validator": "npm:^13.12.2"
-    "@vinejs/compiler": "npm:^3.0.0"
-    camelcase: "npm:^8.0.0"
-    dayjs: "npm:^1.11.13"
+    "@poppinss/macroable": "npm:^1.1.0"
+    "@poppinss/types": "npm:^1.2.1"
+    "@standard-schema/spec": "npm:^1.1.0"
+    "@types/validator": "npm:^13.15.10"
+    "@vinejs/compiler": "npm:^4.1.3"
+    camelcase: "npm:^9.0.0"
+    dayjs: "npm:^1.11.19"
     dlv: "npm:^1.1.3"
-    normalize-url: "npm:^8.0.1"
-    validator: "npm:^13.12.0"
-  checksum: 10c0/70db4e18277de5888360f27ccd4a3d29cc984f14b1786f54761e5f0e98ebe53d34522632f28e98ce6ab3a883a2e00349f53113ce89204c6b805bf63ef8836925
+    normalize-url: "npm:^8.1.1"
+    validator: "npm:^13.15.26"
+  checksum: 10c0/f5e2e6714dfde50b957c6d889016de35a0e40597565c25fa0cec5c5ecc8a41fa08b31c8ad393fbb1ea3210300343ba48e4793624cff0cb9bbc99aec59b797fa7
   languageName: node
   linkType: hard
 
@@ -4147,7 +4156,7 @@ __metadata:
     prettier-plugin-tailwindcss: "npm:^0.8.1"
     svelte: "npm:^5.57.1"
     svelte-check: "npm:^4.7.6"
-    sveltekit-superforms: "npm:^2.30.2"
+    sveltekit-superforms: "npm:^3.0.0"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:^4.3.3"
     ts-jest: "npm:^29.4.14"
@@ -4345,23 +4354,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"arkregex@npm:0.0.8":
-  version: 0.0.8
-  resolution: "arkregex@npm:0.0.8"
+"arkregex@npm:0.0.13":
+  version: 0.0.13
+  resolution: "arkregex@npm:0.0.13"
   dependencies:
-    "@ark/util": "npm:0.56.2"
-  checksum: 10c0/ea1385599fded2e4153ce5cfb75f86e18f221b9c73ddd4071ffe3f63cfffcacd7a16748f1588de48658f7def2069e2a6b7235c3da7f1e11f12d1b05d2c892f9a
+    "@ark/util": "npm:0.56.7"
+  checksum: 10c0/c30567eb3ca7a60f3629b2a5e318109c4ae9895311901a05553d1890ba3e4d6cf63ae9a050f151f0bb8109ad08a149f081b089439aa84c94784ebae56ebc29b1
   languageName: node
   linkType: hard
 
-"arktype@npm:^2.2.2":
-  version: 2.2.3
-  resolution: "arktype@npm:2.2.3"
+"arktype@npm:^2.2.7":
+  version: 2.2.8
+  resolution: "arktype@npm:2.2.8"
   dependencies:
-    "@ark/schema": "npm:0.56.2"
-    "@ark/util": "npm:0.56.2"
-    arkregex: "npm:0.0.8"
-  checksum: 10c0/01d6cd9f1c84807772623ad8df5825df9646de1aca4b17869604d523942c92c297b654c930f405338065e18ab52691e00da3e7e2b581039e4aded62d1a9c9e0f
+    "@ark/schema": "npm:0.56.7"
+    "@ark/util": "npm:0.56.7"
+    arkregex: "npm:0.0.13"
+  checksum: 10c0/cc4c7fe03bcae55c5b6774ad898ede806636136d19be0f444f55c900d574888a6228a25980b9706fef45b31bb3f743cfc77a4d1e22bb0f12bd2d099526a2b0b2
   languageName: node
   linkType: hard
 
@@ -4782,10 +4791,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"camelcase@npm:^8.0.0":
-  version: 8.0.0
-  resolution: "camelcase@npm:8.0.0"
-  checksum: 10c0/56c5fe072f0523c9908cdaac21d4a3b3fb0f608fb2e9ba90a60e792b95dd3bb3d1f3523873ab17d86d146e94171305f73ef619e2f538bd759675bc4a14b4bff3
+"camelcase@npm:^9.0.0":
+  version: 9.0.0
+  resolution: "camelcase@npm:9.0.0"
+  checksum: 10c0/7171e1540b9b227cab9d59b7afa05174d14c10268171c18bdf2240eb1485ad6851592f1253ddc291f7ae34caad42c18206d339538965c67fb17fc995c0bb509b
   languageName: node
   linkType: hard
 
@@ -5460,14 +5469,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dayjs@npm:^1.11.13":
-  version: 1.11.21
-  resolution: "dayjs@npm:1.11.21"
-  checksum: 10c0/bd97dfdc4bfea3c66268635690313828b386faa040fbc1f829ff42a2bd748b72c9d9b3c8f9616ce9e61fcb78923f1461a462c969c54b1084458ae1b715898fb0
-  languageName: node
-  linkType: hard
-
-"dayjs@npm:^1.11.23":
+"dayjs@npm:^1.11.19, dayjs@npm:^1.11.23":
   version: 1.11.23
   resolution: "dayjs@npm:1.11.23"
   checksum: 10c0/69ab04bf19c676e44ab50cc2fca223d265f3dafd107151ef3b0f3ad74d360c37caa602abe62f87cb25d90bd9f6bee003698af47df5b0dbf10a998b7b5f3bb3f1
@@ -5563,7 +5565,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"devalue@npm:^5.8.1, devalue@npm:^5.9.2":
+"devalue@npm:^5.8.1, devalue@npm:^5.9.2, devalue@npm:^5.9.4":
   version: 5.9.4
   resolution: "devalue@npm:5.9.4"
   checksum: 10c0/d621083acce13d7812418ed07d99f027f83ee00ba591a2d2eab4c9436e1491ebce7bc1a92aa4c1fb7903c31c0e3c0a3cdf8662bf31644742202e003c04c17e33
@@ -5723,13 +5725,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"effect@npm:^3.21.4":
-  version: 3.22.1
-  resolution: "effect@npm:3.22.1"
+"effect@npm:^3.22.2":
+  version: 3.22.2
+  resolution: "effect@npm:3.22.2"
   dependencies:
     "@standard-schema/spec": "npm:^1.0.0"
     fast-check: "npm:^3.23.1"
-  checksum: 10c0/c384860f2a09508c445c6a181caf30858134ce4067eccf061770ae153ce303ffc82ef5335c6399c73c0741098dce796e8578a5346c78416c4c3f8095fc33693c
+  checksum: 10c0/4ada5ee284ec0eb058ec0713dc6ae5f6ca670cb995d08c0f4ae0f5eb2b27802d49cf3137c2e3d3469fac77b3910bef40fe17f933becf6ffc7aa234f735ba0e6e
   languageName: node
   linkType: hard
 
@@ -8154,16 +8156,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"joi@npm:^17.13.4":
-  version: 17.13.7
-  resolution: "joi@npm:17.13.7"
+"joi@npm:^17.13.8":
+  version: 17.13.8
+  resolution: "joi@npm:17.13.8"
   dependencies:
     "@hapi/hoek": "npm:^9.3.0"
     "@hapi/topo": "npm:^5.1.0"
     "@sideway/address": "npm:^4.1.5"
     "@sideway/formula": "npm:^3.0.1"
     "@sideway/pinpoint": "npm:^2.0.0"
-  checksum: 10c0/631b917001611631d4ed1007f307aabe36c0471617187f77298784c21264213b879c0f2ccd871fafbb0325c62012d4e3b77c60abbd67cc7a4f2d583f17f24568
+  checksum: 10c0/7fe2b38d26dfcbcf1836892384ba2f42f83058795f32dcb3733de4c3b97cac923a8b9053738f10701663872a994f77af351c71e1428117a20bbfc1f94768f648
   languageName: node
   linkType: hard
 
@@ -9764,7 +9766,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"normalize-url@npm:^8.0.1":
+"normalize-url@npm:^8.1.1":
   version: 8.1.1
   resolution: "normalize-url@npm:8.1.1"
   checksum: 10c0/1beb700ce42acb2288f39453cdf8001eead55bbf046d407936a40404af420b8c1c6be97a869884ae9e659d7b1c744e40e905c875ac9290644eec2e3e6fb0b370
@@ -11533,40 +11535,41 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sveltekit-superforms@npm:^2.30.2":
-  version: 2.30.2
-  resolution: "sveltekit-superforms@npm:2.30.2"
+"sveltekit-superforms@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "sveltekit-superforms@npm:3.0.0"
   dependencies:
     "@exodus/schemasafe": "npm:^1.3.0"
     "@standard-schema/spec": "npm:^1.1.0"
     "@typeschema/class-validator": "npm:^0.3.0"
-    "@valibot/to-json-schema": "npm:^1.7.1"
-    "@vinejs/vine": "npm:^3.0.1"
-    arktype: "npm:^2.2.2"
+    "@valibot/to-json-schema": "npm:^1.8.0"
+    "@vinejs/vine": "npm:^4.0.0"
+    arktype: "npm:^2.2.7"
     class-validator: "npm:^0.14.4"
-    devalue: "npm:^5.8.1"
-    effect: "npm:^3.21.4"
-    joi: "npm:^17.13.4"
+    devalue: "npm:^5.9.4"
+    effect: "npm:^3.22.2"
+    esm-env: "npm:^1.2.2"
+    joi: "npm:^17.13.8"
     json-schema-to-ts: "npm:^3.1.1"
     memoize-weak: "npm:^1.0.2"
     superstruct: "npm:^2.0.2"
     ts-deepmerge: "npm:^8.0.0"
-    typebox: "npm:^1.3.3"
-    valibot: "npm:^1.4.2"
+    typebox: "npm:^1.3.34"
+    valibot: "npm:^1.5.0"
     yup: "npm:^1.7.1"
-    zod: "npm:^4.4.3"
+    zod: "npm:^4.6.5"
     zod-v3-to-json-schema: "npm:^4.0.0"
   peerDependencies:
     "@exodus/schemasafe": ^1.3.0
-    "@sveltejs/kit": 1.x || 2.x
+    "@sveltejs/kit": ^2.12.0 || ^3.0.0
     "@typeschema/class-validator": ^0.3.0
-    "@vinejs/vine": ^1.8.0 || ^2.0.0 || ^3.0.0
-    arktype: ">=2.0.0-rc.23"
+    "@vinejs/vine": ^1.8.0 || ^2.0.0 || ^3.0.0 || ^4.0.0
+    arktype: ^2.0.0
     class-validator: ^0.14.1
     effect: ^3.21.0
     joi: ^17.13.1
     superstruct: ^2.0.2
-    svelte: 3.x || 4.x || >=5.0.0-next.51
+    svelte: ^5.56.4
     typebox: ^1.0.36
     valibot: ^1.2.0
     yup: ^1.4.0
@@ -11629,7 +11632,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10c0/f444fabe04be4ae6e3d90681e4e79862c7b0b048a676d712137634df20ba4effdafbf68aa8c13f54786f9d30210582b0823339a2c2ba9cbe1507a00ad1cfe673
+  checksum: 10c0/52a18f9ac08cbe55ef40d5373995a8997333494758df821944932f80715959366c4a1edac533ef9dba666c42f600a2b9d566215d003d343c546831a31d6a711c
   languageName: node
   linkType: hard
 
@@ -12017,10 +12020,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typebox@npm:^1.3.3":
-  version: 1.3.10
-  resolution: "typebox@npm:1.3.10"
-  checksum: 10c0/ee27c4ac153eecb5b7cc5913173f1cc620536c84fee45fb71c3095d8d7d6007bfd22ffdbfb80a52258221046b5322924744b60b87d5de9e05a2d0d2d2aa5b894
+"typebox@npm:^1.3.34":
+  version: 1.3.36
+  resolution: "typebox@npm:1.3.36"
+  checksum: 10c0/7ee8e974066c349eb87290c3c56ca35b6f2ea36c53b83d1088acd680183e4cfcb6fc2c07bc14d34356dc7178e4cd83d4cca5839d2e51ac0feee2e13640b324b5
   languageName: node
   linkType: hard
 
@@ -12271,15 +12274,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"valibot@npm:^1.4.2":
-  version: 1.4.2
-  resolution: "valibot@npm:1.4.2"
+"valibot@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "valibot@npm:1.5.0"
   peerDependencies:
     typescript: ">=5"
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/71b861de928fd5533b03fc4d84c619c07602f176d2bc6b12c5c80b2a6e889574c4126c843dd0771ce450bbb29566ca6df13d5b538ce5e4c39c2fccfb7623cf4e
+  checksum: 10c0/d49dab2b2fcbb477c894def73466de598b602859a47ab92b26d387c4d2a472cbfd4ef57b49eea91aeeff143c38f5a9523914dc5a73469ec93c7cfd4326eb5fbf
   languageName: node
   linkType: hard
 
@@ -12290,7 +12293,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"validator@npm:^13.12.0, validator@npm:^13.15.22":
+"validator@npm:^13.15.22, validator@npm:^13.15.26":
   version: 13.15.35
   resolution: "validator@npm:13.15.35"
   checksum: 10c0/1958ebcad578128d154853a2b9bf5b95e7738dcc7d1d065e50a969812272312ec379dcaf375b9d7545e04a71de6755f60f5a4b49c1405737a9c80e11da297eef
@@ -12771,9 +12774,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^4.4.3":
-  version: 4.4.3
-  resolution: "zod@npm:4.4.3"
-  checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3
+"zod@npm:^4.6.5":
+  version: 4.6.5
+  resolution: "zod@npm:4.6.5"
+  checksum: 10c0/32eb6c5e98becbe045675b2141c3611451c16ba567f9779231d79af41c4d651ca1c22f154aef7e6c6e77b929f23e43f1154ca05b82e119e922353725d6776af5
   languageName: node
   linkType: hard
