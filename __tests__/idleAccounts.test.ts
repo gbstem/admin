@@ -12,6 +12,7 @@ jest.mock('$lib/server/firebase', () => ({
 
 import {
   IDLE_LIMIT_DAYS,
+  MAX_RESETS_PER_RUN,
   isIdle,
   lastActiveMs,
   resetIdleVerification,
@@ -121,6 +122,7 @@ describe('resetIdleVerification', () => {
       idle: 2,
       reset: 2,
       failed: 0,
+      deferred: 0,
       dryRun: false,
     })
     expect(mockUpdateUser).toHaveBeenCalledWith('idle-1', {
@@ -146,6 +148,7 @@ describe('resetIdleVerification', () => {
       idle: 1,
       reset: 0,
       failed: 0,
+      deferred: 0,
       dryRun: true,
     })
     expect(mockUpdateUser).not.toHaveBeenCalled()
@@ -169,5 +172,62 @@ describe('resetIdleVerification', () => {
     expect(mockRevokeRefreshTokens).toHaveBeenCalledTimes(1)
     expect(mockRevokeRefreshTokens).toHaveBeenCalledWith('fine')
     expect((console.error as jest.Mock).mock.calls[0][0]).toContain('broken')
+  })
+
+  test(`resets at most ${MAX_RESETS_PER_RUN} accounts a run, longest idle first, and defers the rest`, async () => {
+    expect(MAX_RESETS_PER_RUN).toBe(100)
+    // 150 idle accounts, idle-0 the most recently active.
+    const idle = Array.from({ length: 150 }, (_, i) =>
+      account(`idle-${i}`, { refreshed: 200 + i }),
+    )
+    mockListUsers
+      .mockResolvedValueOnce({ users: idle.slice(0, 75), pageToken: 'next' })
+      .mockResolvedValueOnce({ users: idle.slice(75) })
+
+    const summary = await resetIdleVerification({ now: NOW })
+
+    expect(summary).toEqual({
+      scanned: 150,
+      idle: 150,
+      reset: 100,
+      failed: 0,
+      deferred: 50,
+      dryRun: false,
+    })
+    expect(mockUpdateUser).toHaveBeenCalledTimes(100)
+    expect(mockRevokeRefreshTokens).toHaveBeenCalledTimes(100)
+    expect(mockUpdateUser).toHaveBeenCalledWith('idle-149', expect.anything())
+    expect(mockUpdateUser).toHaveBeenCalledWith('idle-50', expect.anything())
+    expect(mockUpdateUser).not.toHaveBeenCalledWith(
+      'idle-49',
+      expect.anything(),
+    )
+  })
+
+  test('counts a failed attempt against the cap', async () => {
+    mockListUsers.mockResolvedValue({
+      users: Array.from({ length: 101 }, (_, i) =>
+        account(`idle-${i}`, { refreshed: 200 + i }),
+      ),
+    })
+    mockUpdateUser.mockRejectedValue(new Error('auth/quota-exceeded'))
+
+    const summary = await resetIdleVerification({ now: NOW })
+
+    expect(summary).toMatchObject({ reset: 0, failed: 100, deferred: 1 })
+    expect(mockUpdateUser).toHaveBeenCalledTimes(100)
+  })
+
+  test('reports on a dry run how many a real run would defer', async () => {
+    mockListUsers.mockResolvedValue({
+      users: Array.from({ length: 120 }, (_, i) =>
+        account(`idle-${i}`, { refreshed: 200 + i }),
+      ),
+    })
+
+    const summary = await resetIdleVerification({ now: NOW, dryRun: true })
+
+    expect(summary).toMatchObject({ idle: 120, reset: 0, deferred: 20 })
+    expect(mockUpdateUser).not.toHaveBeenCalled()
   })
 })

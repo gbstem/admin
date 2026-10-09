@@ -9,7 +9,14 @@ jest.mock('$lib/server/firebase', () => ({ adminAuth: {} }))
 
 import { GET } from '../src/routes/api/cron/resetIdleVerification/+server'
 
-const summary = { scanned: 3, idle: 1, reset: 1, failed: 0, dryRun: false }
+const summary = {
+  scanned: 3,
+  idle: 1,
+  reset: 1,
+  failed: 0,
+  deferred: 0,
+  dryRun: false,
+}
 
 function call(authorization: string | null, query = '') {
   return GET({
