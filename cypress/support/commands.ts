@@ -182,7 +182,7 @@ Cypress.Commands.add(
         // `tokensValidAfterTime` (a password change) makes
         // hooks.server.ts's `verifySessionCookie(..., true)` reject it. A
         // spec that mutates the signed-in account therefore poisoned its own
-        // retry - the restored session 301'd to /signin and reported it as
+        // retry - the restored session bounced to /signin and reported it as
         // `expected 'Sign in' to include 'Profile'` in a beforeEach hook,
         // which names neither the spec's real failure nor its cause.
         //

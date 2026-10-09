@@ -87,7 +87,7 @@ describe('hooks.server handle', () => {
     }
 
     expect(thrown).toBeDefined()
-    expect(thrown.status).toBe(301)
+    expect(thrown.status).toBe(303)
     expect(thrown.location).toBe('https://portal.gbstem.org')
     expect(event.locals.user).toBeNull()
     expect(resolve).not.toHaveBeenCalled()
