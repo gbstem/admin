@@ -18,6 +18,12 @@
 
   let { onReauthenticate, children }: Props = $props()
 
+  // Superforms otherwise derives the id from the schema, so the two instances
+  // on /profile (inside ChangeEmailForm and ChangePasswordForm) would share it
+  // and trigger the duplicate-form-id warning.
+  const instanceId = $props.id()
+  const formId = `reauthenticate-${instanceId}`
+
   const schema = z.object({
     password: z.string().min(1, 'Password is required'),
   })
@@ -25,6 +31,7 @@
   const formResult = superForm(
     defaults({ password: '' }, zod(schema as any) as any) as any,
     {
+      id: formId,
       SPA: true,
       validators: zod(schema as any) as any,
       // This dialog renders no server-loaded data, so it has nothing to
