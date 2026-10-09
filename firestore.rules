@@ -58,8 +58,9 @@ service cloud.firestore {
     //
     // semesters/{semesterId}/applications/{userId}, .../registrations/{userId}, etc.
     //
+    // No rule for the semester document itself: none exists, and none is
+    // read. Whoever adds one decides then who may read it.
     match /semesters/{semesterId} {
-      allow read: if isVerified(); // parent docs, if we ever materialize them
 
       // No client writes an application. Applicants create, save and submit
       // theirs through portal's /apply form actions and book an interview
@@ -110,8 +111,17 @@ service cloud.firestore {
       // the derived session state (classStatuses, feedbackCompleted) itself
       // rather than taking it from the client, and writes with the Admin SDK,
       // bypassing these rules.
+      //
+      // Only admins and reviewers read a class directly. A class carries its
+      // online meeting link and the registration ids on its roster, and a
+      // rule can't hide single fields, so portal users get theirs through
+      // routes that return only what the caller may see: /api/classes (the
+      // listing, with a meeting link only for a class the caller's own child
+      // is enrolled in), /api/studentClasses (one child's classes),
+      // /api/classDetails (an instructor's own classes) and
+      // /api/substituteSession (the link for a session the caller covers).
       match /classes/{classId} {
-        allow read: if isVerified();
+        allow read: if isAdminOrReviewer();
       }
 
       // Admins and reviewers manage interview slots through admin's
