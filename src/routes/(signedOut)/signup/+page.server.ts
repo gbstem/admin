@@ -41,7 +41,7 @@ export const load = (async ({ url }) => {
       // generic error boundary, which is exactly the "broken error
       // reporting" from the production report this fixes.
       if (state === 'fake') {
-        throw redirect(301, '/signin')
+        throw redirect(303, '/signin')
       }
       return {
         token: null,
@@ -49,7 +49,7 @@ export const load = (async ({ url }) => {
       }
     }
   }
-  throw redirect(301, '/signin')
+  throw redirect(303, '/signin')
 }) satisfies PageServerLoad
 
 export const actions = {

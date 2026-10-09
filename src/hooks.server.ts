@@ -35,7 +35,7 @@ export const handle = (async ({ event, resolve }) => {
   // catch(err), which just resets locals.user and silently drops the
   // redirect instead of letting it propagate.
   if (shouldRedirectToPortal) {
-    throw redirect(301, 'https://portal.gbstem.org')
+    throw redirect(303, 'https://portal.gbstem.org')
   }
   return resolve(event)
 }) satisfies Handle
