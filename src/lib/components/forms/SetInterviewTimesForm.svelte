@@ -15,11 +15,20 @@
   import { interviewService } from '#lib/services/interviewService.js'
   import { alert } from '#lib/stores.js'
   import {
+    GBSTEM_TIME_ZONE,
     cn,
     formatDate,
     formatDateLocal,
+    formatDateShort,
     toLocalISOString,
   } from '#lib/utils.js'
+  import { semesterDates } from '#lib/data/collections.js'
+  import { localTimeZoneLabel } from '#lib/shared/gbstemTime.js'
+  import {
+    INTERVIEW_DURATION_MINUTES,
+    interviewWindow,
+    isWithinInterviewWindow,
+  } from '#lib/shared/interviews.js'
   import { onMount } from 'svelte'
   import { defaults, superForm } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
@@ -54,6 +63,12 @@
 
   const schema = interviewSlotSchema
 
+  // Every time on this page is shown in the viewer's own zone; this names it.
+  const timeZone = localTimeZoneLabel()
+  // Applicants can book only inside the window; its days are gbSTEM's.
+  const bookingWindow = interviewWindow(semesterDates)
+  const windowDays = `${formatDateShort(bookingWindow.opens, GBSTEM_TIME_ZONE)} – ${formatDateShort(new Date(bookingWindow.closes.getTime() - 1), GBSTEM_TIME_ZONE)}`
+
   /**
    * The "Add A Time Slot" card.
    *
@@ -84,6 +99,17 @@
     enhance: addEnhance,
     delayed: addDelayed,
   } = addFormResult
+
+  // An open slot outside the window is one no applicant can book. Assigning
+  // one to an applicant directly is still fine, so this warns, not refuses.
+  let addDateOutsideWindow = $derived.by(() => {
+    if (!$addFormData.date) return false
+    const date = new Date($addFormData.date)
+    return (
+      !Number.isNaN(date.getTime()) &&
+      !isWithinInterviewWindow(date, bookingWindow)
+    )
+  })
 
   /**
    * The per-slot edit card. One superForm rather than one per slot: `editSlot`
@@ -456,6 +482,10 @@
     </div>
   {:else}
     <div class={cn('w-full', showValidation && 'show-validation', className)}>
+      <p class="mb-4 text-sm font-medium text-gray-700">
+        Times shown in your local time ({timeZone}). Interviews are
+        {INTERVIEW_DURATION_MINUTES} minutes. Applicants can book slots from {windowDays}.
+      </p>
       <div class="right-2 items-center">
         <Card class="mb-4">
           <h2 class="font-bold">Interview Time Requests</h2>
@@ -501,9 +531,18 @@
               name="date"
               inputName="set-date-your-local-time"
               type="datetime-local"
-              label="Set Date (your local time)"
+              label="Set Date (your local time, {timeZone})"
               bind:value={$addFormData.date}
             />
+            {#if addDateOutsideWindow}
+              <p
+                class="mt-1 text-sm font-medium text-yellow-800"
+                data-testid="outside-interview-window"
+              >
+                This is outside the interview window ({windowDays}), so
+                applicants won't be able to book it.
+              </p>
+            {/if}
             <FormInput
               form={addFormResult}
               name="meetingLink"
@@ -570,7 +609,7 @@
                     name="date"
                     inputName="edit-interview-meeting-time"
                     type="datetime-local"
-                    label="Edit Interview Meeting Time"
+                    label="Edit Interview Meeting Time (your local time, {timeZone})"
                     bind:value={$editFormData.date}
                   />
                   <FormInput

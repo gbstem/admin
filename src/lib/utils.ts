@@ -1,3 +1,4 @@
+import { GBSTEM_TIME_ZONE } from '#lib/shared/gbstemTime.js'
 import { toDate } from '#lib/shared/timestamps.js'
 import { alert } from '#lib/stores.js'
 import type { ClassValue } from 'clsx'
@@ -125,6 +126,11 @@ export function formatDateLocal(date: Date | string, timeZone?: string) {
   })
 }
 
+export {
+  GBSTEM_TIME_ZONE,
+  parseGbstemDateTime,
+} from '#lib/shared/gbstemTime.js'
+
 /** `timeZone` as for `formatDateLocal`. */
 export const formatDateShort = (date: Date, timeZone?: string) => {
   return date.toLocaleString('en-US', {
@@ -134,9 +140,6 @@ export const formatDateShort = (date: Date, timeZone?: string) => {
     timeZone,
   })
 }
-
-/** Where gbSTEM runs its classes and interviews. */
-export const GBSTEM_TIME_ZONE = 'America/New_York'
 
 /**
  * Formats a date in gbSTEM's time zone, naming the zone - for text built on
@@ -157,40 +160,6 @@ export function formatDateInGbstemTime(
     timeZone: GBSTEM_TIME_ZONE,
     timeZoneName: style,
   })
-}
-
-/**
- * Combines a semesterDates.json-style `MM/DD/YY` date and `HH:mm` (24-hour)
- * time - each a bare wall-clock value with no zone of its own - into the
- * instant they name in `GBSTEM_TIME_ZONE`. Resolving this on the server
- * matters: the server's own local time zone (e.g. UTC in production) isn't
- * gbSTEM's, and EST/EDT depends on the date, so neither can be assumed.
- */
-export function parseGbstemDateTime(
-  dateString: string,
-  timeString: string,
-): Date {
-  const [month, day, twoDigitYear] = dateString.split('/').map(Number)
-  const [hour, minute] = timeString.split(':').map(Number)
-  const year = 2000 + twoDigitYear
-
-  // Guess the instant as if the wall-clock time were UTC, then correct by
-  // the zone's actual offset at that instant.
-  const utcGuess = Date.UTC(year, month - 1, day, hour, minute)
-  const offsetName = new Intl.DateTimeFormat('en-US', {
-    timeZone: GBSTEM_TIME_ZONE,
-    timeZoneName: 'longOffset',
-  })
-    .formatToParts(utcGuess)
-    .find((part) => part.type === 'timeZoneName')?.value
-
-  const offsetMatch = offsetName?.match(/GMT([+-])(\d{2}):(\d{2})/)
-  const offsetMinutes = offsetMatch
-    ? (offsetMatch[1] === '-' ? -1 : 1) *
-      (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3]))
-    : 0
-
-  return new Date(utcGuess - offsetMinutes * 60 * 1000)
 }
 
 /** `toDate` under the name the components know it by. */

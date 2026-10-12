@@ -473,6 +473,7 @@ describe('sendInterviewAssignedEmail', () => {
     expect(html).toContain('October 5, 2026')
     expect(html).toContain('02:00 PM EDT')
     expect(html).toContain(LINK)
+    expect(html).toContain('usually take about 15 minutes')
   })
 
   it('reports false rather than throwing when an address cannot be resolved', async () => {

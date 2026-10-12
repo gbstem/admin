@@ -16,6 +16,7 @@ import { sendEmail } from '#lib/server/email.js'
 import { adminDb } from '#lib/server/firebase.js'
 import { accountName } from '#lib/server/userProfile.js'
 import { GBSTEM_TIME_ZONE, formatDateLocal } from '#lib/utils.js'
+import { INTERVIEW_DURATION_MINUTES } from '#lib/shared/interviews.js'
 import { toDate } from '#lib/shared/timestamps.js'
 import { error } from '@sveltejs/kit'
 
@@ -337,7 +338,7 @@ export function sendInterviewAssignedEmail(slot: StoredSlot): Promise<boolean> {
     slot,
     'interviewScheduledEmailTemplate',
     `${slot.intervieweeFirstName}, your interview with ${slot.interviewerName} has been scheduled`,
-    { link: slot.meetingLink },
+    { link: slot.meetingLink, duration: INTERVIEW_DURATION_MINUTES },
   )
 }
 

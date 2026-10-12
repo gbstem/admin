@@ -253,16 +253,19 @@ export function buildFullDecisionPayload(interview: Data.Interview) {
 }
 
 /**
- * Computes the interview scheduling deadline date string.
+ * The date an invited applicant is asked to schedule their interview by: a
+ * week from `today`, or the last day of interviews if that comes first.
+ * `lastInterviewDay` is any instant on that day.
  */
 export function calculateInterviewDeadline(
   today: Date,
-  instructorOrientationDate: string | Date,
+  lastInterviewDay: Date,
   timeZone?: string,
 ): string {
   const weekDeadline = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const orientationTime = new Date(instructorOrientationDate).getTime()
-
-  const targetTime = Math.min(weekDeadline.getTime(), orientationTime)
+  const targetTime = Math.min(
+    weekDeadline.getTime(),
+    lastInterviewDay.getTime(),
+  )
   return formatDateShort(new Date(targetTime), timeZone)
 }
