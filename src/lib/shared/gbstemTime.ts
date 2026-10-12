@@ -29,20 +29,21 @@ function gbstemOffsetMinutes(at: number): number {
 /**
  * The instant a `MM/DD/YY` date and `HH:mm` (24-hour) time name in
  * `GBSTEM_TIME_ZONE`, `daysAfter` days later. EST or EDT is decided by the
- * date, so neither can be assumed.
+ * date, so neither can be assumed. A four-digit year (`MM/DD/YYYY`, as the
+ * `E2E_*` overrides write it) is read as written.
  */
 export function parseGbstemDateTime(
   dateString: string,
   timeString = '00:00',
   daysAfter = 0,
 ): Date {
-  const [month, day, twoDigitYear] = dateString.split('/').map(Number)
+  const [month, day, year] = dateString.split('/').map(Number)
   const [hour, minute] = timeString.split(':').map(Number)
 
   // Guess the instant as if the wall-clock time were UTC, then correct by the
   // zone's actual offset at that instant.
   const utcGuess = Date.UTC(
-    2000 + twoDigitYear,
+    year < 100 ? 2000 + year : year,
     month - 1,
     day + daysAfter,
     hour,

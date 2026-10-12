@@ -17,6 +17,12 @@ describe('parseGbstemDateTime', () => {
     )
   })
 
+  it('reads a four-digit year as written', () => {
+    expect(parseGbstemDateTime('12/31/2099', '12:00').toISOString()).toBe(
+      '2099-12-31T17:00:00.000Z',
+    )
+  })
+
   it('defaults to midnight and rolls days over month ends', () => {
     expect(parseGbstemDateTime('09/30/26', undefined, 1).toISOString()).toBe(
       '2026-10-01T04:00:00.000Z',
