@@ -13,11 +13,20 @@ Candidate instructors who pass screening then see those slots on the portal as
 a flat two-column list of radio buttons. There is no sense of what day it is,
 no week structure, and no way to see "Tuesday afternoon" as a shape.
 
-This document proposes replacing both ends with a when2meet-style grid:
-interviewers **paint** the times they are free, candidates **pick** from a
-calendar. It describes the interviewer experience first, then the candidate
-experience, then the technical design, then the options we considered and set
-aside.
+When none of those slots work, the candidate's only recourse is **Request A
+Time**: a single date-and-time field, submitted once per time, each submission
+emailing the admin inbox. A candidate free most weekday evenings has to choose
+between filing a dozen requests and filing one and hoping. Interviewers then see
+those requests in the **Interview Time Requests** card on the admin
+`/interviews` page as a flat list per candidate, and fulfil one by hand.
+
+Scheduling runs in both directions, and today both directions are lists. This
+document proposes one when2meet-style grid used **symmetrically**: whichever
+side goes first **paints** the times they are free, and the other side
+**picks** one of them. Interviewers paint and candidates pick; when nothing
+offered works, candidates paint and interviewers pick. It describes the
+interviewer experience first, then the candidate experience, then the technical
+design, then the options we considered and set aside.
 
 The guiding constraint throughout: gbSTEM is maintained by a volunteer team with
 high turnover. We have deliberately chosen the design that adds the least
@@ -62,6 +71,27 @@ what currently exists:
 That distinction is the point. Bulk editing is only safe if bulk editing cannot
 quietly cancel somebody's interview.
 
+**Picking from a candidate's availability.** The **Interview Time Requests**
+card on `/interviews` stops being a list of datetimes. Each candidate who has
+painted their own availability (§2) gets the same week grid, read-only, with
+their free times shaded — the mirror image of what the candidate sees when
+picking from interviewers' times — and when they last updated it, so a
+three-week-old paint reads as one. Overlaid on it is the viewing interviewer's
+own calendar, so every shaded cell reads as one of:
+
+- **You have an open slot here** — one click assigns that existing slot to the
+  candidate.
+- **You are free here** — one click creates a slot at that time already
+  assigned to the candidate, with your meeting link.
+- **You are booked here** — shown, not selectable.
+
+Any interviewer can pick, admin or reviewer, for their own calendar: a
+candidate offering their week to interviewers should be answerable by whichever
+interviewer is free, just as any interviewer's open slot is bookable by any
+candidate. Either click sends the same "interview assigned" confirmation email
+that **Schedule this** sends today. Once a candidate is scheduled or decided their
+grid drops out of the card, exactly as their requests do now.
+
 ---
 
 ## 2. What candidates would see
@@ -83,11 +113,38 @@ the system assigns the interviewer — candidates are choosing a _time_, not
 shopping for a person, and showing several names per cell would clutter the grid
 without helping anyone. (See §7 — this is a decision worth confirming.)
 
-**"None of these work for me"** remains available. Candidates can still propose
-a time that isn't offered, which lands in the same interview-requests list
-interviewers already review. We expect this to become rare rather than
-disappear; it is currently a workaround for a thin slot list, and it should
-survive as a genuine escape hatch.
+**"None of these work for me"** switches the same grid into painting mode — the
+interviewer's tool from §1, pointed the other way. The candidate drags across
+the times they are free, within the same interview window, in the same
+15-minute rows, labeled with the same timezone. Times interviewers already offer
+stay visible as selectable cells, so a candidate who paints over one is nudged
+to just book it. Saving replaces whatever they painted before; returning to the
+page shows their painted availability for them to adjust, rather than a history
+of separate requests.
+
+That replaces today's one-datetime-per-submission request form. The candidate
+describes their week once, and interviewers pick from it (§1). We expect painting
+to become the rarer path once interviewers paint generously, but it is the same
+action as the interviewer's, not a lesser escape hatch.
+
+### Symmetry
+
+The two directions are deliberately the same experience with the roles swapped:
+
+|                    | Interviewer offers, candidate picks | Candidate offers, interviewer picks           |
+| ------------------ | ----------------------------------- | --------------------------------------------- |
+| Declare            | Paint on the admin grid             | Paint on the portal grid                      |
+| Bounded by         | The interview window                | The interview window                          |
+| Grid               | Week view, 15-minute rows           | The same component                            |
+| Timezone           | Viewer-local, labeled               | Viewer-local, labeled                         |
+| The other side     | Sees only the times offered         | Sees the times offered over their own slots   |
+| Select             | Candidate clicks a time and books   | Interviewer clicks a time and schedules       |
+| Confirmation email | Booked email, interviewer copied    | Assigned email, interviewer copied (as today) |
+
+Where the two differ, they differ on purpose: a candidate choosing from
+interviewers' times is shown a _time_ and the system picks the interviewer
+(§7, question 1), while an interviewer choosing from one candidate's times
+already knows who the candidate is.
 
 ---
 
@@ -103,6 +160,14 @@ Deliberately, quite a lot:
   drives it.
 - **Nothing about how slots are stored changes.** This is the core of the design
   and the reason the proposal is small. See §4.
+- **Fulfilling a candidate's proposed time still goes through the existing
+  slot route.** Creating a slot already assigned to a candidate is what
+  **Schedule this** does today; the grid only changes how an interviewer
+  reaches it.
+
+What _does_ change is how a candidate's proposed times are stored: one
+availability record per candidate instead of one request document per time
+(§4.8).
 
 ---
 
@@ -131,7 +196,9 @@ This is the difference between a large project and a moderate one. It means:
   all interviewers _is_ the collection.
 - No scheduled job and no cache invalidation. Expansion happens once,
   synchronously, when the interviewer clicks save.
-- No new server-side code path, and no change to `firestore.rules`.
+- No new server-side code path for interviewers, and no change to the slot
+  rules in `firestore.rules`. (The candidate side swaps one portal route and one
+  read rule for another — §4.8.)
 - No change to the `Data.InterviewSlot` shape, and no data migration.
 - No new booking race. A candidate still claims exactly one document.
 - **The "availability withdrawn after it was booked" problem does not exist.**
@@ -148,41 +215,49 @@ most worried about is free.
 
 ### 4.2 Expansion
 
-A pure function in `src/lib/helpers/`:
+Two pure functions in `src/lib/shared/`:
 
 ```
+expandGrid(selection, weekRange, durationMinutes) → Date[]
 expandGridToSlots(selection, weekRange, durationMinutes, interviewer, meetingLink)
   → Data.InterviewSlot[]
 ```
 
-No I/O, no framework coupling, unit-tested under `__tests__/` like the rest of
-`src/lib`. Times in the past are skipped. The result is written with a single
-`writeBatch`, chunked to Firestore's 500-operation limit — the example pattern
-over five weeks is 215 slots, but a full-window paint can exceed 500.
+`expandGrid` turns painted cells into instants and is the half both sides use:
+interviewers wrap each instant in a slot, candidates store the instants as they
+are (§4.8). No I/O, no framework coupling, unit-tested under `__tests__/` like
+the rest of `src/lib`. Times in the past are skipped. The interviewer's slots
+are written with a single `writeBatch`, chunked to Firestore's 500-operation
+limit — the example pattern over five weeks is 215 slots, but a full-window
+paint can exceed 500.
 
-### 4.3 Slot identity, and the sharpest hazard in this design
+The grid component and `expandGrid` live in `src/lib/shared/` in **both repos,
+file for file**, under the existing rule for that directory (nothing imported
+from `#lib`, changed in both repos together on branches of the same name). The
+symmetry in §2 is then not a matter of two teams keeping two grids in step: it
+is one component, mounted in two places.
+
+### 4.3 Slot identity
 
 Slot document ids are already `${epochMillis}${interviewerUid}` — deterministic
 on the pair (instant, interviewer). That is good: regenerating an overlapping
 range cannot create duplicates.
 
-It is also dangerous. Both current write paths use `setDoc` with no merge and no
-existence check, so regenerating over an existing range **overwrites** it. By
-hand this is nearly unreachable. With bulk generation, "I need to add Thursdays
-too" → repaint → regenerate is the _normal_ workflow, and it would silently
-reset booked slots to open — clearing the candidate's name after their
-confirmation email has already gone out.
-
-**Slot creation must therefore be create-if-absent, not overwrite.** This is
-non-negotiable for the grid, and it is the same transactional machinery needed
-to fix an existing booking race (§5).
+With bulk generation, "I need to add Thursdays too" → repaint → regenerate is
+the _normal_ workflow, so regenerating must never reset a booked slot to open.
+`createInterviewSlot` already guarantees this for one slot: it runs in a
+transaction and refuses to overwrite a booked one. **The bulk path must keep
+that guarantee**, checking each slot inside its write and skipping booked ones
+rather than failing the whole save.
 
 ### 4.4 Deletion
 
-Un-painting deletes only slots that are still open. Booked slots are refused by
-the same guard, surfaced in the UI as locked cells. A bulk-delete that could
-cancel real interviews is the most destructive thing this feature could ship, so
-the guard is a prerequisite rather than a follow-up.
+Un-painting deletes only slots that are still open; booked slots are skipped,
+and shown in the UI as locked cells. Deleting a booked slot on purpose already
+works one at a time — it frees the applicant to book again and emails them a
+cancellation — and stays the only way to withdraw a booked time. A bulk delete
+that could cancel real interviews is the most destructive thing this feature
+could ship, so the grid must never reach that path implicitly.
 
 ### 4.5 Time and timezone
 
@@ -232,13 +307,72 @@ download on a phone. Making that a bounded query (with the composite index it
 requires) is part of this work, and the explicit window is what makes it
 expressible.
 
+### 4.8 Candidate availability
+
+Candidate-painted availability is stored differently from interviewer-painted
+availability, and the reason is the same principle as §4.1 applied to a
+different shape of data.
+
+Slots are one document each because each is **claimed individually, by whoever
+gets there first** — that is what makes booking a single-document transaction.
+A candidate's availability is never claimed cell by cell: it belongs to one
+person, is read by interviewers, and is superseded as a whole whenever the
+candidate edits it or is scheduled. So we propose **one document per candidate**,
+`semesters/{semesterId}/interviewAvailability/{uid}`, holding the painted times
+as a list of absolute instants (the output of `expandGrid`) and when it was last
+saved.
+
+That gives the candidate side the same properties §4.1 gives the interviewer
+side:
+
+- **Still no stored rules.** The document holds instants, not "weekday
+  evenings", so nothing is resolved at read time and nothing needs coalescing.
+- **Saving is one atomic write.** Replacing a candidate's availability is a
+  single `set`, rather than diffing and batch-deleting dozens of per-time
+  request documents. No chunking: a full-window paint is a few hundred
+  timestamps in one small document.
+- **No withdrawal race worth designing for.** A candidate whose interview is
+  scheduled is shown that interview, not the grid, and the save route refuses
+  them by the same `interviewIneligibility` check `recordSlotRequest` uses now.
+  An interviewer who picks a time the candidate un-painted a moment earlier has
+  still picked a time the candidate offered; the confirmation email lets them
+  sort it out, as it would today.
+- **Writes stay server-side.** A portal API route replaces today's
+  `/api/slotRequest`: it checks the applicant is eligible, drops times outside
+  the interview window, writes the document, and emails admins **once per save**
+  with a summary, not once per time. `firestore.rules` keeps the read it grants
+  today on `interviewTimeRequests` (`isAdminOrReviewer()`), moved to the new
+  collection; the candidate reads their own back through portal's server.
+
+The document id is the candidate's uid, which also retires the oddity of
+today's request ids carrying the applicant's wall-clock `YYYY-MM-DDTHH:mm`.
+
+Picking from it (§1) needs one change on the server. Both selectable cells are
+the existing `/api/interviewSlot` create-with-assignee operation that **Schedule
+this** uses: slot ids are deterministic on (instant, interviewer), so creating
+at the time of one of your open slots takes that slot over, and the create path
+already refuses to overwrite a booked one (§4.3). That operation is admin-only
+today; it opens to reviewers, and stays limited to the caller's own slot, which
+it already is because a created slot is always the caller's. The overlay of the
+interviewer's own calendar is computed in the browser from slots the page
+already loads.
+
+Nothing expires a candidate's availability. It stands until they edit it or are
+scheduled, past times simply stop showing, and the saved time is shown as "last
+updated" on the admin grid so interviewers can judge a stale one themselves.
+
+`interviewTimeRequests` is retired rather than migrated: the grid lands at a
+semester boundary (§8), when there are no open requests to carry over. The
+admin card stops reading it at the same time; old semesters' documents can stay
+where they are.
+
 ---
 
 ## 5. Prerequisite work
 
-Four smaller fixes should land before the grid. Each stands on its own merits
-and improves the current system whether or not the grid is ever built; three are
-behavior-preserving and one is a bug fix, so they are safe to land during a live
+Two smaller changes should land before the grid. Each stands on its own merits
+and improves the current system whether or not the grid is ever built, and
+neither changes how slots are booked, so they are safe to land during a live
 interview cycle in a way the grid is not.
 
 1. **An explicit interview window** in the semester dates, replacing the current
@@ -246,17 +380,6 @@ interview cycle in a way the grid is not.
    deadline. Also fixes window boundaries shifting by up to three hours
    depending on the viewer's timezone.
 2. **Timezone labels and a duration constant** in both interfaces (§4.5, §4.6).
-3. **Booking integrity** — the portal currently checks a slot is free and then
-   claims it in two separate steps, so two candidates clicking the same slot
-   seconds apart can both pass the check. Fixing this also establishes the
-   create-if-absent machinery the grid requires (§4.3).
-4. **A status guard on editing and deleting slots** — an interviewer can
-   currently delete a slot a candidate has already booked, leaving that person
-   holding a confirmation email for an interview that no longer exists, with
-   nobody notified.
-
-Items 3 and 4 are pre-existing defects that the grid would amplify from rare to
-routine. They are worth fixing regardless.
 
 ---
 
@@ -312,7 +435,20 @@ withdrawn availability that has already been booked. §4.1 covers why expanding
 at save time gets the same interface for a fraction of the permanent complexity —
 and why the hardest edge case simply does not arise.
 
-### 6.3 Doing nothing
+The candidate side does not store rules either. §4.8 keeps a candidate's
+availability in one document, but as the expanded instants, not as a pattern.
+
+### 6.3 Keeping per-time requests for candidates
+
+The candidate grid could save each painted cell as its own
+`interviewTimeRequests` document, keeping today's collection and the admin
+card's existing grouping code. Set aside because every save would become a diff
+— delete the times no longer painted, create the new ones, chunked past 500 —
+for data that is only ever read and replaced as a whole, and because it keeps
+one notification email per time. The per-document shape earns its cost for
+slots, which are claimed one at a time; candidate availability never is.
+
+### 6.4 Doing nothing
 
 Worth stating: the current system works, and interviews are being scheduled with
 it right now. The cost is entirely in interviewers' time and candidates'
@@ -326,28 +462,31 @@ the semester boundary, rather than rushing.
 
 1. **Should candidates see interviewer names in the grid, or only on
    confirmation?** §2 proposes the latter for legibility; the current system
-   shows names.
+   shows names. **DECISION:** no interviewer names on the grid.
 2. **Should candidates be able to reschedule or cancel themselves?** There is no
    such path today — rescheduling means emailing someone. A calendar interface
    will make people expect self-service, so it is worth deciding deliberately
-   rather than by omission.
-3. **Should "request a different time" survive the grid?** We propose yes, as an
-   escape hatch rather than a workaround.
+   rather than by omission. **DECISION:** Yes.
 
 ---
 
 ## 8. Sequencing
 
-**During the current cycle:** the four prerequisite fixes (§5). Behavior-
-preserving or strictly corrective, and independently valuable.
+**During the current cycle:** the two prerequisite changes (§5). Neither
+touches booking, and both are independently valuable.
 
-**At the semester boundary:** the grid itself. Slot generation should land when
-the collection is empty, so a mistake in expansion cannot damage live bookings.
-Interviews are actively being scheduled right now, and no interface improvement
+**At the semester boundary:** the grid itself, on both sites at once, as
+paired admin and portal PRs on branches of the same name. Slot generation should
+land when the collection is empty, so a mistake in expansion cannot damage live
+bookings, and the candidate grid replaces `interviewTimeRequests` (§4.8), which
+mid-cycle would strand requests candidates have already filed. Shipping only the
+interviewer grid would leave the two directions asymmetric again, so they land
+together. Interviews are actively being scheduled right now, and no interface improvement
 justifies putting real appointments at risk.
 
 ---
 
 _Written for review by gbSTEM leadership and whoever maintains this next. If you
-are picking this up cold: §4.1 is the decision everything else follows from, and
-§4.3 is the part most likely to bite you._
+are picking this up cold: §4.1 is the decision everything else follows from,
+§4.8 is the same decision applied to candidates, and §4.3 is the guarantee bulk
+generation must not bypass._
