@@ -138,18 +138,28 @@ describe('Application Helper Functions', () => {
   })
 
   describe('API & Deadline Helpers', () => {
-    test('calculateInterviewDeadline chooses earlier of 7 days or orientation date', () => {
+    test('calculateInterviewDeadline chooses earlier of 7 days or the last interview day', () => {
       const today = new Date('2025-09-01T12:00:00Z')
 
-      // Case 1: Orientation is far away (e.g. Sept 30) -> deadline is 7 days from today (Sept 8)
-      const orientationFar = new Date('2025-09-30T12:00:00Z')
-      const deadlineFar = calculateInterviewDeadline(today, orientationFar)
-      expect(deadlineFar).toContain('Sep 8')
+      // Interviews run to Sept 30 -> deadline is 7 days from today (Sept 8)
+      const lastDayFar = new Date('2025-09-30T12:00:00Z')
+      expect(calculateInterviewDeadline(today, lastDayFar)).toContain('Sep 8')
 
-      // Case 2: Orientation is close (e.g. Sept 3) -> deadline is orientation date (Sept 3)
-      const orientationClose = new Date('2025-09-03T12:00:00Z')
-      const deadlineClose = calculateInterviewDeadline(today, orientationClose)
-      expect(deadlineClose).toContain('Sep 3')
+      // Interviews end Sept 3 -> deadline is that day
+      const lastDayClose = new Date('2025-09-03T12:00:00Z')
+      expect(calculateInterviewDeadline(today, lastDayClose)).toContain('Sep 3')
+    })
+
+    test('calculateInterviewDeadline names the last day in the zone given', () => {
+      // 11:59 PM Eastern on Sept 19 is already Sept 20 in UTC.
+      const lastInstant = new Date('2026-09-20T03:59:59.999Z')
+      expect(
+        calculateInterviewDeadline(
+          new Date('2026-09-15T12:00:00Z'),
+          lastInstant,
+          'America/New_York',
+        ),
+      ).toBe('Sat, Sep 19')
     })
   })
 })

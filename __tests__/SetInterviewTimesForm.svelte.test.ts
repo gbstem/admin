@@ -33,6 +33,12 @@ import { user as mockUserStore } from '#lib/client/firebase.js'
 import SetInterviewTimesForm from '#lib/components/forms/SetInterviewTimesForm.svelte'
 import { interviewService } from '#lib/services/interviewService.js'
 import { toLocalISOString } from '#lib/utils.js'
+import { semesterDates } from '#lib/data/collections.js'
+import {
+  localTimeZoneLabel,
+  parseGbstemDateTime,
+} from '#lib/shared/gbstemTime.js'
+import { INTERVIEW_DURATION_MINUTES } from '#lib/shared/interviews.js'
 
 const authUser = {
   object: {
@@ -402,7 +408,7 @@ describe('SetInterviewTimesForm Component', () => {
         ).toHaveValue('Ada Lovelace')
       })
       expect(
-        within(container).getByLabelText('Set Date (your local time)', {
+        within(container).getByLabelText('Set Date (your local time', {
           exact: false,
         }),
       ).toHaveValue(toLocalISOString(date))
@@ -452,6 +458,60 @@ describe('SetInterviewTimesForm Component', () => {
         expect(within(container).getByText('Ada Lovelace')).toBeInTheDocument()
       })
       expect(within(container).queryByText('Schedule this')).toBeNull()
+
+      unmount(app)
+    })
+  })
+
+  describe('times, duration and the interview window', () => {
+    const zone = localTimeZoneLabel()
+    const dateInput = () =>
+      within(container).getByLabelText('Set Date (your local time', {
+        exact: false,
+      }) as HTMLInputElement
+    const warning = () =>
+      within(container).queryByTestId('outside-interview-window')
+
+    it("names the viewer's time zone and the interview length", async () => {
+      const app = await mountAuthenticated()
+
+      expect(
+        within(container).getByText(
+          `Times shown in your local time (${zone})`,
+          {
+            exact: false,
+          },
+        ),
+      ).toHaveTextContent(
+        `Interviews are ${INTERVIEW_DURATION_MINUTES} minutes`,
+      )
+      expect(
+        within(container).getByLabelText(
+          `Set Date (your local time, ${zone})`,
+          {
+            exact: false,
+          },
+        ),
+      ).toBeInTheDocument()
+
+      unmount(app)
+    })
+
+    it('warns that a time outside the window cannot be booked, and not otherwise', async () => {
+      const app = await mountAuthenticated()
+
+      fireEvent.input(dateInput(), {
+        target: { value: '2020-01-01T10:00' },
+      })
+      flushSync()
+      expect(warning()).toHaveTextContent("applicants won't be able to book it")
+
+      const inside = toLocalISOString(
+        parseGbstemDateTime(semesterDates.interviewsStart, '12:00'),
+      )
+      fireEvent.input(dateInput(), { target: { value: inside } })
+      flushSync()
+      expect(warning()).toBeNull()
 
       unmount(app)
     })

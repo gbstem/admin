@@ -1,3 +1,4 @@
+import { gbstemMidnight } from '../src/lib/shared/gbstemTime'
 import {
   applicationsCollection,
   classFeedbackCollection,
@@ -68,6 +69,8 @@ describe('collections.ts', () => {
           'instructorOrientation',
           'instructorOrientationLink',
           'instructorOrientationTime',
+          'interviewsEnd',
+          'interviewsStart',
           'newInstructorAppsDue',
           'newInstructorAppsOpen',
           'parentOrientation',
@@ -99,6 +102,17 @@ describe('collections.ts', () => {
         expect(value.slice(-2)).toBe(expectedYear)
       },
     )
+
+    // The interview window replaced reading instructorOrientation as the
+    // last day to interview; a window that ends before it starts would
+    // offer applicants no slot at all.
+    it('interviewsStart is on or before interviewsEnd', () => {
+      expect(
+        gbstemMidnight(semesterDates.interviewsStart).getTime(),
+      ).toBeLessThanOrEqual(
+        gbstemMidnight(semesterDates.interviewsEnd).getTime(),
+      )
+    })
 
     it('instructorOrientationLink is an allowed meeting link', () => {
       expect(semesterDates.instructorOrientationLink).toMatch(/^https:\/\//)

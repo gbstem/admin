@@ -8,7 +8,10 @@ jest.mock('#lib/server/email.js', () => ({
   sendEmail: (...args: any[]) => mockSendEmail(...args),
 }))
 
+import { semesterDates } from '#lib/data/collections.js'
 import { sendDecisionEmail } from '#lib/server/decisionEmails.js'
+import { parseGbstemDateTime } from '#lib/shared/gbstemTime.js'
+import { GBSTEM_TIME_ZONE, formatDateShort } from '#lib/utils.js'
 
 const applicant = { applicationId: 'uid-1', firstName: 'Ada' }
 
@@ -40,6 +43,31 @@ describe('sendDecisionEmail', () => {
       }),
     )
     expect(mockSendEmail.mock.calls[0][0].html).toContain('Ada')
+  })
+
+  it('asks for scheduling by the last interview day when that is within a week', async () => {
+    // Late on the second-to-last day, in gbSTEM time: a week out is past the
+    // window, so the deadline is its last day - read in gbSTEM's zone, not
+    // the server's.
+    const now = parseGbstemDateTime(semesterDates.interviewsEnd, '23:00', -1)
+    await sendDecisionEmail(applicant, 'interview', now)
+
+    const lastDay = formatDateShort(
+      parseGbstemDateTime(semesterDates.interviewsEnd, '12:00'),
+      GBSTEM_TIME_ZONE,
+    )
+    expect(mockSendEmail.mock.calls[0][0].html).toContain(lastDay)
+  })
+
+  it('asks for scheduling within a week when the window runs longer', async () => {
+    const now = parseGbstemDateTime(semesterDates.interviewsEnd, '12:00', -30)
+    await sendDecisionEmail(applicant, 'interview', now)
+
+    const weekOut = formatDateShort(
+      parseGbstemDateTime(semesterDates.interviewsEnd, '12:00', -23),
+      GBSTEM_TIME_ZONE,
+    )
+    expect(mockSendEmail.mock.calls[0][0].html).toContain(weekOut)
   })
 
   it.each(['accepted', 'substitute', 'waitlisted', 'rejected'] as const)(

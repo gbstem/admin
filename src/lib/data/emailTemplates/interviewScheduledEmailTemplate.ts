@@ -248,6 +248,9 @@ export const interviewScheduledEmailTemplate = `<!doctype html>
             {{ interview.name }}, and your interview will be taking place on
             {{ interview.date }}. The meeting link is {{ interview.link }}.
           </p>
+          <p style="margin: 20px 0">
+            Interviews usually take about {{ interview.duration }} minutes.
+          </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can
             reach us at

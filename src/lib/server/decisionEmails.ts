@@ -4,6 +4,7 @@ import { calculateInterviewDeadline } from '#lib/helpers/application.js'
 import { resolveAccountEmail } from '#lib/server/accountEmail.js'
 import type { DecidedApplicant } from '#lib/server/applicationDecisions.js'
 import { sendEmail } from '#lib/server/email.js'
+import { interviewWindow } from '#lib/shared/interviews.js'
 import {
   GBSTEM_TIME_ZONE,
   formatDateInGbstemTime,
@@ -55,7 +56,8 @@ export async function sendDecisionEmail(
             ...app,
             deadline: calculateInterviewDeadline(
               now,
-              orientation,
+              // The window's last instant, on its last day in gbSTEM time.
+              new Date(interviewWindow(semesterDatesJson).closes.getTime() - 1),
               GBSTEM_TIME_ZONE,
             ),
           },
