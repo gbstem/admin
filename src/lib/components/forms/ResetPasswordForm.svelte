@@ -5,7 +5,7 @@
   import { defaults, superForm } from 'sveltekit-superforms'
   import { zod } from 'sveltekit-superforms/adapters'
   import { z } from 'zod'
-  import type { ActionRequestBody } from '../../../routes/api/action/+server'
+  import type { ResetPasswordRequestBody } from '../../../routes/api/resetPassword/+server'
   import Button from '../Button.svelte'
   import FormInput from '../FormInput.svelte'
 
@@ -20,12 +20,11 @@
       validators: zod(schema as any) as any,
       async onUpdate({ form: formVal }: { form: any }) {
         if (!formVal.valid) return
-        const payload: ActionRequestBody = {
-          type: 'resetPassword',
+        const payload: ResetPasswordRequestBody = {
           email: formVal.data.email,
         }
         try {
-          const res = await fetch('/api/action', {
+          const res = await fetch('/api/resetPassword', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

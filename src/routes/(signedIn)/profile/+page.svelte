@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { ActionRequestBody } from '../../api/action/+server'
   import ChangeEmailForm from '#lib/components/forms/ChangeEmailForm.svelte'
   import ChangePasswordForm from '#lib/components/forms/ChangePasswordForm.svelte'
   import DeleteAccountForm from '#lib/components/forms/DeleteAccountForm.svelte'
@@ -30,16 +29,7 @@
   async function handleVerificationEmail() {
     if ($user) {
       disabled = true
-      const payload: ActionRequestBody = {
-        type: 'verifyEmail',
-      }
-      fetch('/api/action', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      }).then(async (res) => {
+      fetch('/api/verifyEmail', { method: 'POST' }).then(async (res) => {
         if (res.ok) {
           alert.trigger('info', 'Verification email was sent.')
         } else {

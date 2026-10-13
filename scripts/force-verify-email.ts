@@ -1,7 +1,7 @@
 // force-verify-email.ts - Manually mark an account's email address as verified.
 //
-// Why this exists: signup sends a Firebase verification link (see the `verifyEmail`
-// case in src/routes/api/action/+server.ts), and some receiving mail systems file
+// Why this exists: signup sends a Firebase verification link (see
+// src/routes/api/verifyEmail/+server.ts), and some receiving mail systems file
 // that message somewhere the recipient never looks - not the spam folder, just a
 // tab/rule/quarantine they don't check. The account is then stuck: every route under
 // (signedIn)/(emailVerified) bounces them, because +layout.server.ts gates on
