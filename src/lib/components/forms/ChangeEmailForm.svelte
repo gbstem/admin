@@ -44,7 +44,7 @@
     if ($user) {
       showReauthDialog = false
       try {
-        // The client SDK on purpose, not an /api/action route: Firebase's own
+        // The client SDK on purpose, not an /api/* route: Firebase's own
         // servers refuse this with auth/requires-recent-login unless
         // ReauthenticateForm has just re-signed in, so the password prompt
         // can't be skipped by someone holding only a session cookie. The

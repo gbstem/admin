@@ -106,7 +106,7 @@ describe('Section A: Authentication and Navigation', () => {
     cy.get('input[type="email"]').should('be.visible')
     cy.waitForFormHydration()
 
-    cy.intercept('POST', '/api/action').as('resetPassword')
+    cy.intercept('POST', '/api/resetPassword').as('resetPassword')
     cy.fillInput('input[type="email"]', 'nobody-here@example.com')
     cy.get('button[type="submit"]').click()
 

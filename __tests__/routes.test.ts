@@ -279,7 +279,8 @@ import {
 } from '../src/routes/api/auth/+server'
 
 import MailService from '@sendgrid/mail'
-import { POST as actionPOST } from '../src/routes/api/action/+server'
+import { POST as verifyEmailPOST } from '../src/routes/api/verifyEmail/+server'
+import { POST as resetPasswordPOST } from '../src/routes/api/resetPassword/+server'
 import { POST as remindInstructorPOST } from '../src/routes/api/remindInstructor/+server'
 import { POST as remindStudentsPOST } from '../src/routes/api/remindStudents/+server'
 import { POST as resolveEmailsPOST } from '../src/routes/api/resolveEmails/+server'
@@ -1027,47 +1028,52 @@ describe('API routes POST endpoints', () => {
     }
   })
 
-  it('actionPOST verifyEmail successfully', async () => {
-    mockRequest.json.mockResolvedValue({
-      type: 'verifyEmail',
-      email: 'test@test.com',
-    })
-    const res = await actionPOST({
-      request: mockRequest as any,
+  it('verifyEmailPOST emails the signed-in caller, even unverified', async () => {
+    const res = await verifyEmailPOST({
       locals: {
         user: { email: 'test@test.com', role: 'admin', emailVerified: false },
       },
     } as any)
     expect(res).toBeInstanceOf(Response)
+    expect(mockAdminAuth.generateEmailVerificationLink).toHaveBeenCalledWith(
+      'test@test.com',
+    )
   })
 
   // The email change goes through the client SDK's verifyBeforeUpdateEmail,
   // which Firebase refuses without a recent sign-in. A server route that
   // issued the same link would accept any live session cookie, so none may.
-  it('actionPOST refuses changeEmail and issues no verify-and-change link', async () => {
+  it('verifyEmailPOST ignores a body asking for an email change', async () => {
     mockRequest.json.mockResolvedValue({
       type: 'changeEmail',
       newEmail: 'new@test.com',
     })
-    await expect(
-      actionPOST({
-        request: mockRequest as any,
-        locals: {
-          user: { email: 'old@test.com', role: 'admin', emailVerified: true },
-        },
-      } as any),
-    ).rejects.toMatchObject({ status: 400 })
+    await verifyEmailPOST({
+      request: mockRequest as any,
+      locals: {
+        user: { email: 'old@test.com', role: 'admin', emailVerified: true },
+      },
+    } as any)
+    expect(mockAdminAuth.generateEmailVerificationLink).toHaveBeenCalledWith(
+      'old@test.com',
+    )
     expect(
       mockAdminAuth.generateVerifyAndChangeEmailLink,
     ).not.toHaveBeenCalled()
   })
 
-  it('actionPOST resetPassword successfully', async () => {
+  it('verifyEmailPOST refuses a signed-out caller', async () => {
+    await expect(
+      verifyEmailPOST({ locals: { user: null } } as any),
+    ).rejects.toMatchObject({ status: 401 })
+    expect(mockAdminAuth.generateEmailVerificationLink).not.toHaveBeenCalled()
+  })
+
+  it('resetPasswordPOST successfully', async () => {
     mockRequest.json.mockResolvedValue({
-      type: 'resetPassword',
       email: 'test@test.com',
     })
-    const res = await actionPOST({
+    const res = await resetPasswordPOST({
       request: mockRequest as any,
       locals: { user: null },
     } as any)
@@ -1080,7 +1086,7 @@ describe('API routes POST endpoints', () => {
   // Firebase's "no user record" error used to reach the caller as a 400, so
   // a signed-out caller could tell which addresses have accounts.
   it.each(['auth/email-not-found', 'auth/user-not-found'])(
-    'actionPOST resetPassword answers an unknown address (%s) exactly like a known one, sending nothing',
+    'resetPasswordPOST answers an unknown address (%s) exactly like a known one, sending nothing',
     async (code) => {
       const notFound: any = new Error(
         'There is no user record corresponding to the provided email.',
@@ -1089,11 +1095,10 @@ describe('API routes POST endpoints', () => {
       mockAdminAuth.generatePasswordResetLink.mockRejectedValueOnce(notFound)
       ;(MailService.send as jest.Mock).mockClear()
       mockRequest.json.mockResolvedValue({
-        type: 'resetPassword',
         email: 'nobody@test.com',
       })
 
-      const res: any = await actionPOST({
+      const res: any = await resetPasswordPOST({
         request: mockRequest as any,
         locals: { user: null },
       } as any)
@@ -1104,17 +1109,16 @@ describe('API routes POST endpoints', () => {
     },
   )
 
-  it('actionPOST resetPassword still reports other Firebase errors', async () => {
+  it('resetPasswordPOST still reports other Firebase errors', async () => {
     const invalid: any = new Error('The email address is improperly formatted.')
     invalid.code = 'auth/invalid-email'
     mockAdminAuth.generatePasswordResetLink.mockRejectedValueOnce(invalid)
     mockRequest.json.mockResolvedValue({
-      type: 'resetPassword',
       email: 'someone@test.com',
     })
 
     await expect(
-      actionPOST({
+      resetPasswordPOST({
         request: mockRequest as any,
         locals: { user: null },
       } as any),
@@ -1126,16 +1130,15 @@ describe('API routes POST endpoints', () => {
     )
   })
 
-  it('actionPOST resetPassword ignores a signed-in caller-supplied email and uses their own', async () => {
+  it('resetPasswordPOST ignores a signed-in caller-supplied email and uses their own', async () => {
     // A signed-in caller can only reset their own password - otherwise a
     // logged-in attacker could target any other account by supplying its
     // email here, the same hole verifyEmail doesn't have because it reads
     // the email off the session rather than the request body.
     mockRequest.json.mockResolvedValue({
-      type: 'resetPassword',
       email: 'victim@test.com',
     })
-    const res = await actionPOST({
+    const res = await resetPasswordPOST({
       request: mockRequest as any,
       locals: {
         user: {
