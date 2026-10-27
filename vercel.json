@@ -1,4 +1,5 @@
 {
+  "installCommand": "COREPACK_HOME=/tmp/corepack yarn install --immutable",
   "crons": [
     {
       "path": "/api/cron/resetIdleVerification",
