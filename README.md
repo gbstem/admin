@@ -403,7 +403,7 @@ Once `ncu` is installed, follow this sequence of commands to update dependencies
 > [!IMPORTANT]
 > **Pin Zod to version 3 (`^3.x.x`)**: We currently restrict Zod to v3 because SvelteKit Superforms and Formsnap adapters have known type resolution and shape-generation compatibility issues with Zod v4 (refer to the public discussion at [ciscoheat/sveltekit-superforms #630](https://github.com/ciscoheat/sveltekit-superforms/issues/630)).
 >
-> **Pin TypeScript to version 6 (`^6.x.x`), `@types/node` to version 24 (`^24.x.x`) due to us configuring Vercel to use Node.js 24.x, and firebase/firebase-admin to their current versions**.
+> **Pin TypeScript to version 6 (`^6.x.x`), `@types/node` to version 26 (`^26.x.x`) due to us configuring Vercel to use Node.js 26.x, and firebase/firebase-admin to their current versions**.
 >
 > When executing `ncu -u`, ensure the avoided major upgrades aren't applied.
 

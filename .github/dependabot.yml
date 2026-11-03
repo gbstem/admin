@@ -8,7 +8,7 @@ updates:
     groups:
       minor-and-patch:
         update-types: ['minor', 'patch']
-    # Pinned per README's ncu instructions (Vercel Node 24.x, current firebase/zod
+    # Pinned per README's ncu instructions (Vercel Node 26.x, current firebase/zod
     # majors) - keep these on minor/patch only, bump majors by hand.
     ignore:
       - dependency-name: 'typescript'
