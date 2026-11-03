@@ -2815,14 +2815,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/adapter-vercel@npm:^7.0.1":
-  version: 7.0.1
-  resolution: "@sveltejs/adapter-vercel@npm:7.0.1"
+"@sveltejs/adapter-vercel@npm:^7.0.2":
+  version: 7.0.2
+  resolution: "@sveltejs/adapter-vercel@npm:7.0.2"
   dependencies:
     "@vercel/nft": "npm:^1.10.2"
   peerDependencies:
     "@sveltejs/kit": ^3.0.0-next.0
-  checksum: 10c0/83a717bae2562c1991c7d7c50f7ae195d8c6ca3cd63ebc9ad2369ff91eaccfb5cafa33f626f2af31a099bd80d6c9b2bc207d9b3243ad44d26b23c63f647b683d
+  checksum: 10c0/1d53793f83afaec7bae14dff1924ba92e0f1c5df0d375cad634b00d75c93f8a82a0199dc5458754cd7d84b5a0d462b54a90e5589fc233c1d454147584dbb5bc5
   languageName: node
   linkType: hard
 
@@ -3918,7 +3918,7 @@ __metadata:
     "@sendgrid/mail": "npm:^8.1.6"
     "@steeze-ui/heroicons": "npm:^2.4.2"
     "@steeze-ui/svelte-icon": "npm:^1.6.2"
-    "@sveltejs/adapter-vercel": "npm:^7.0.1"
+    "@sveltejs/adapter-vercel": "npm:^7.0.2"
     "@sveltejs/kit": "npm:^3.1.0"
     "@sveltejs/vite-plugin-svelte": "npm:^7.3.1"
     "@tailwindcss/vite": "npm:^4.3.3"
