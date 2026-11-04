@@ -1,6 +1,5 @@
 import {
   classesCollection,
-  interviewTimeRequestsCollection,
   resolveSemester,
   semesterCollectionPath,
 } from '#lib/data/collections.js'
@@ -71,15 +70,9 @@ export const resolveEmailsSchema = z.discriminatedUnion('intent', [
     uids,
     context: z.object({ classId: z.string().min(1) }),
   }),
-  // The "Interview Time Requests" list in SetInterviewTimesForm, where an
-  // applicant asks for a slot on a date none of the offered ones covers.
-  z.object({
-    intent: z.literal('slotRequestApplicants'),
-    uids,
-    context: z.object({ requestIds: documentIds }),
-  }),
   // An applicant's address wherever the browser shows one: an application's
-  // detail view and the dashboard's unfinished applications.
+  // detail view, the dashboard's unfinished applications, and the candidates
+  // whose availability the /interviews page lists.
   z.object({
     intent: z.literal('applicants'),
     uids,
@@ -125,20 +118,6 @@ const policies: { [I in Intent]: IntentPolicy<I> } = {
         classData.instructorUid,
         ...(classData.otherInstructorUids ?? []),
       ].filter((uid): uid is string => Boolean(uid))
-    },
-  },
-  slotRequestApplicants: {
-    roles: ['admin', 'reviewer'],
-    // The applicant who filed each request, from its `uid` field.
-    async resolvableUids(_caller, { requestIds }) {
-      const snaps = await adminDb.getAll(
-        ...requestIds.map((id) =>
-          adminDb.doc(`${interviewTimeRequestsCollection}/${id}`),
-        ),
-      )
-      return snaps
-        .map((snap) => (snap.exists ? snap.data()?.uid || '' : ''))
-        .filter(Boolean)
     },
   },
   applicants: {

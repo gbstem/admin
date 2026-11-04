@@ -56,7 +56,7 @@ describe('Section O: Reviewer Role Access Control', () => {
 
     cy.contains('a', 'Interviews').click()
     cy.url().should('include', '/interviews')
-    cy.contains('Interview Time Requests').should('be.visible')
+    cy.contains('Candidate Availability').should('be.visible')
 
     cy.contains('a', 'Applications').click()
     cy.url().should('include', '/applications')

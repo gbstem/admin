@@ -43,8 +43,8 @@ import {
   applicationsCollection,
   currentSemester,
   decisionsCollection,
-  interviewTimeRequestsCollection,
   interviewTimesCollection,
+  semesterCollectionPath,
   semesterDates,
 } from '../src/lib/data/collections'
 import { slotRequestUid } from '../src/lib/data/docIds'
@@ -53,6 +53,14 @@ import { toDate } from '../src/lib/shared/timestamps'
 
 /** Where requests lived before they were scoped to a semester. */
 const ROOT_REQUESTS = 'interviewTimeRequests'
+/**
+ * Where step 1 moved them. Candidates' painted `interviewAvailability` has
+ * since replaced requests, and nothing reads this collection any more.
+ */
+const interviewTimeRequestsCollection = semesterCollectionPath(
+  currentSemester,
+  'interviewTimeRequests',
+)
 const KNOWN_SLOT_STATUSES = new Set(['available', 'pending', 'missed'])
 
 const args = process.argv.slice(2)

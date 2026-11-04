@@ -134,11 +134,14 @@ service cloud.firestore {
         allow read: if isAdminOrReviewer();
       }
 
-      // Keyed `${uid}-${requestedDate}`. Applicants file a request through
-      // portal's /api/slotRequest, which writes it with the Admin SDK and
-      // notifies admins. Admins and reviewers list them (admin's
-      // interviewService.fetchSlotRequests); no client writes one.
-      match /interviewTimeRequests/{requestId} {
+      // Keyed by the candidate's uid: the times they painted as free when no
+      // offered slot worked. Portal's /api/availability writes it with the
+      // Admin SDK and notifies admins, and reads it back for the candidate.
+      // Admins and reviewers pick from it (admin's
+      // interviewService.fetchCandidateAvailability); no client writes one.
+      // Past semesters' interviewTimeRequests, which it replaced, are left
+      // where they are, unread.
+      match /interviewAvailability/{uid} {
         allow read: if isAdminOrReviewer();
       }
 

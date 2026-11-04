@@ -13,7 +13,7 @@ import {
   semesterDates,
   semesterIdFromPath,
   subRequestsCollection,
-  interviewTimeRequestsCollection,
+  interviewAvailabilityCollection,
   withSemester,
 } from '../src/lib/data/collections'
 import { isAllowedMeetingLink } from '../src/lib/helpers/meetingLink'
@@ -46,8 +46,8 @@ describe('collections.ts', () => {
     expect(registrationsCollection).toBe(
       `semesters/${currentSemester}/registrations`,
     )
-    expect(interviewTimeRequestsCollection).toBe(
-      `semesters/${currentSemester}/interviewTimeRequests`,
+    expect(interviewAvailabilityCollection).toBe(
+      `semesters/${currentSemester}/interviewAvailability`,
     )
   })
 

@@ -3,13 +3,18 @@ import { db } from '#lib/client/firebase.js'
 import { accountEmailService } from '#lib/services/accountEmailService.js'
 import {
   applicationsCollection,
-  interviewTimeRequestsCollection,
+  currentSemester,
+  interviewAvailabilityCollection,
   interviewTimesCollection,
 } from '#lib/data/collections.js'
 import type {
   ChangeSlotResponse,
+  CreateManySlotsRequestBody,
+  CreateManySlotsResponse,
   CreateSlotRequestBody,
   CreateSlotResponse,
+  DeleteManySlotsRequestBody,
+  DeleteManySlotsResponse,
   DeleteSlotRequestBody,
   MarkMissedRequestBody,
   UpdateSlotRequestBody,
@@ -17,9 +22,8 @@ import type {
 import {
   filterEligibleInterviewees,
   type EligibleInterviewee,
+  parseAvailabilityDoc,
   parseInterviewSlotDoc,
-  parseSlotRequestDoc,
-  sortSlotRequestsByDate,
 } from '#lib/helpers/setInterviewTimes.js'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 
@@ -37,7 +41,8 @@ async function slotRequest(method: string, body: unknown): Promise<Response> {
 }
 
 /**
- * Service providing Data Access Layer for Interview Slots and Slot Requests.
+ * Service providing Data Access Layer for Interview Slots and candidates'
+ * availability.
  */
 export const interviewService = {
   /**
@@ -57,35 +62,34 @@ export const interviewService = {
   },
 
   /**
-   * The current addresses of the applicants who filed `requests`, keyed by
-   * request id. A request whose applicant account is gone is absent, and the
-   * list shows no address - requests store none.
+   * The current addresses of `interviewees`, keyed by application id. One
+   * whose account is gone is absent, and the list shows no address.
    */
-  fetchSlotRequestEmails(
-    requests: Data.SlotRequest[],
+  fetchIntervieweeEmails(
+    interviewees: EligibleInterviewee[],
   ): Promise<Record<string, string>> {
     return accountEmailService.resolveEmailsByDocument(
-      requests,
+      interviewees.map(({ applicationId, uid }) => ({
+        id: applicationId,
+        uid,
+      })),
       ({ ids, uids }) => ({
-        intent: 'slotRequestApplicants',
+        intent: 'applicants',
         uids,
-        context: { requestIds: ids },
+        context: { applicationIds: ids, semesterId: currentSemester },
       }),
     )
   },
 
-  /** Fetches this semester's slot requests, sorted by date. */
-  async fetchSlotRequests(): Promise<Data.SlotRequest[]> {
-    const slotRequests: Data.SlotRequest[] = []
-    const q = query(collection(db, interviewTimeRequestsCollection))
-    const querySnapshot = await getDocs(q)
-    querySnapshot.forEach((docSnap) => {
-      const req = parseSlotRequestDoc(docSnap.id, docSnap.data())
-      if (req) {
-        slotRequests.push(req)
-      }
+  /** Every candidate's painted availability this semester. */
+  async fetchCandidateAvailability(): Promise<Data.InterviewAvailability[]> {
+    const snapshot = await getDocs(
+      query(collection(db, interviewAvailabilityCollection)),
+    )
+    return snapshot.docs.flatMap((docSnap) => {
+      const availability = parseAvailabilityDoc(docSnap.id, docSnap.data())
+      return availability ? [availability] : []
     })
-    return sortSlotRequestsByDate(slotRequests)
   },
 
   /**
@@ -116,6 +120,38 @@ export const interviewService = {
       meetingLink: slotToAdd.meetingLink,
       ...(applicationId ? { applicationId } : {}),
     } satisfies CreateSlotRequestBody)
+    return res.json()
+  },
+
+  /**
+   * Creates the signed-in interviewer's open slots at each of `dates`, all
+   * with `meetingLink`: the availability grid's save. Booked times, overlaps
+   * and times outside the window are skipped server-side, and counted.
+   */
+  async createOpenInterviewSlots(
+    dates: Date[],
+    meetingLink: string,
+  ): Promise<CreateManySlotsResponse> {
+    const res = await slotRequest('POST', {
+      action: 'createMany',
+      dates: dates.map((date) => date.toISOString()),
+      meetingLink,
+    } satisfies CreateManySlotsRequestBody)
+    return res.json()
+  },
+
+  /**
+   * Deletes the signed-in interviewer's open slots among `slotIds`:
+   * un-painting on the availability grid. Booked ones are skipped, never
+   * cancelled.
+   */
+  async deleteOpenInterviewSlots(
+    slotIds: string[],
+  ): Promise<DeleteManySlotsResponse> {
+    const res = await slotRequest('DELETE', {
+      action: 'deleteMany',
+      slotIds,
+    } satisfies DeleteManySlotsRequestBody)
     return res.json()
   },
 

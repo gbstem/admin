@@ -10,6 +10,8 @@ const mockSendInterviewAssignedEmail = jest.fn()
 const mockSendInterviewRescheduledEmail = jest.fn()
 const mockSendInterviewCanceledEmail = jest.fn()
 const mockSendInterviewMissedEmail = jest.fn()
+const mockCreateOpenInterviewSlots = jest.fn()
+const mockDeleteOpenInterviewSlots = jest.fn()
 
 jest.mock('#lib/server/interviewSlots.js', () => ({
   createInterviewSlot: (...args: any[]) => mockCreateInterviewSlot(...args),
@@ -25,7 +27,18 @@ jest.mock('#lib/server/interviewSlots.js', () => ({
     mockSendInterviewCanceledEmail(...args),
   sendInterviewMissedEmail: (...args: any[]) =>
     mockSendInterviewMissedEmail(...args),
+  createOpenInterviewSlots: (...args: any[]) =>
+    mockCreateOpenInterviewSlots(...args),
+  deleteOpenInterviewSlots: (...args: any[]) =>
+    mockDeleteOpenInterviewSlots(...args),
 }))
+jest.mock('#lib/server/interviewWindow.js', () => ({
+  interviewSchedulingWindow: () => WINDOW,
+}))
+const WINDOW = {
+  opens: new Date('2026-09-01T04:00:00.000Z'),
+  closes: new Date('2030-01-01T05:00:00.000Z'),
+}
 
 import { DELETE, PATCH, POST } from '../src/routes/api/interviewSlot/+server'
 
@@ -114,15 +127,97 @@ describe('POST /api/interviewSlot', () => {
     expect(await res.json()).toEqual({ id: 'slot-1', emailSent: false })
   })
 
-  it('refuses a reviewer assigning a slot', async () => {
+  // A slot made here is always the caller's own, so assigning one is open to
+  // any interviewer: whichever is free answers a candidate's availability.
+  it('lets a reviewer assign their own slot to an applicant', async () => {
+    await call(POST, reviewer, {
+      date: DATE,
+      meetingLink: LINK,
+      applicationId: 'app-1',
+    })
+
+    expect(mockCreateInterviewSlot).toHaveBeenCalledWith(
+      reviewer,
+      { date: new Date(DATE), meetingLink: LINK },
+      'app-1',
+    )
+    expect(mockSendInterviewAssignedEmail).toHaveBeenCalled()
+  })
+
+  it('refuses an applicant adding a slot', async () => {
     await expect(
-      call(POST, reviewer, {
-        date: DATE,
-        meetingLink: LINK,
-        applicationId: 'app-1',
-      }),
+      call(
+        POST,
+        { ...reviewer, role: 'instructor' },
+        {
+          date: DATE,
+          meetingLink: LINK,
+        },
+      ),
     ).rejects.toMatchObject({ status: 403 })
     expect(mockCreateInterviewSlot).not.toHaveBeenCalled()
+  })
+
+  describe("action: 'createMany'", () => {
+    const counts = {
+      created: 2,
+      replaced: 0,
+      skippedBooked: 0,
+      skippedOverlap: 0,
+      skippedOutside: 0,
+    }
+    const LATER = '2026-10-05T18:15:00.000Z'
+
+    it("creates the caller's open slots inside the server's window", async () => {
+      mockCreateOpenInterviewSlots.mockResolvedValue(counts)
+
+      const res = await call(POST, reviewer, {
+        action: 'createMany',
+        dates: [DATE, LATER],
+        meetingLink: LINK,
+      })
+
+      expect(mockCreateOpenInterviewSlots).toHaveBeenCalledWith(
+        reviewer,
+        [new Date(DATE), new Date(LATER)],
+        LINK,
+        WINDOW,
+      )
+      expect(await res.json()).toEqual(counts)
+      expect(mockCreateInterviewSlot).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['no times', { dates: [], meetingLink: LINK }],
+      ['a local date-time', { dates: ['2026-10-05T14:00'], meetingLink: LINK }],
+      [
+        'a meeting link on another host',
+        { dates: [DATE], meetingLink: 'https://evil.example.com/j/1' },
+      ],
+      [
+        'more times than one save sends',
+        { dates: Array(2001).fill(DATE), meetingLink: LINK },
+      ],
+    ])('refuses %s', async (_, body) => {
+      await expect(
+        call(POST, reviewer, { action: 'createMany', ...body }),
+      ).rejects.toMatchObject({ status: 400 })
+      expect(mockCreateOpenInterviewSlots).not.toHaveBeenCalled()
+    })
+
+    it('refuses a caller who is not an interviewer', async () => {
+      await expect(
+        call(
+          POST,
+          { ...reviewer, role: 'student' },
+          {
+            action: 'createMany',
+            dates: [DATE],
+            meetingLink: LINK,
+          },
+        ),
+      ).rejects.toMatchObject({ status: 403 })
+    })
   })
 
   it.each([
@@ -293,4 +388,34 @@ describe('/api/interviewSlot emails for a booked slot', () => {
       expect(mockSendInterviewCanceledEmail).not.toHaveBeenCalled()
     },
   )
+})
+
+describe("DELETE /api/interviewSlot, action: 'deleteMany'", () => {
+  it("deletes the caller's open slots among the ids", async () => {
+    const counts = { deleted: 1, skippedBooked: 1, skippedNotOwn: 0 }
+    mockDeleteOpenInterviewSlots.mockResolvedValue(counts)
+
+    const res = await call(DELETE, reviewer, {
+      action: 'deleteMany',
+      slotIds: ['slot-1', 'slot-2'],
+    })
+
+    expect(mockDeleteOpenInterviewSlots).toHaveBeenCalledWith(reviewer, [
+      'slot-1',
+      'slot-2',
+    ])
+    expect(await res.json()).toEqual(counts)
+    expect(mockDeleteInterviewSlot).not.toHaveBeenCalled()
+    expect(mockSendInterviewCanceledEmail).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['no ids', []],
+    ['a path-like id', ['a/b']],
+  ])('refuses %s', async (_, slotIds) => {
+    await expect(
+      call(DELETE, reviewer, { action: 'deleteMany', slotIds }),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(mockDeleteOpenInterviewSlots).not.toHaveBeenCalled()
+  })
 })

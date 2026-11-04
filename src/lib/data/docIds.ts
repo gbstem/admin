@@ -118,13 +118,8 @@ export function parseSubRequestDocId(
 
 // -------------------------------------------------- interview time requests
 
-/**
- * `semesters/{id}/interviewTimeRequests/{id}`: `${uid}-${date}`, where `date` is the
- * `YYYY-MM-DDTHH:mm` value the applicant picked.
- */
-export function slotRequestDocId(uid: string, date: string): string {
-  return `${uid}-${date}`
-}
+// Retired: candidates' painted availability, keyed by uid, replaced them.
+// Past semesters' requests are still keyed `${uid}-${YYYY-MM-DDTHH:mm}`.
 
 /**
  * The applicant who filed an interview time request, or null for an id in

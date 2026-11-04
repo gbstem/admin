@@ -1,5 +1,9 @@
 # Interview Scheduling: Availability Grid Proposal
 
+## Status
+
+Committed November 4, 2026
+
 ## The problem
 
 Setting up instructor interviews is tedious on both sides.
@@ -196,9 +200,10 @@ This is the difference between a large project and a moderate one. It means:
   all interviewers _is_ the collection.
 - No scheduled job and no cache invalidation. Expansion happens once,
   synchronously, when the interviewer clicks save.
-- No new server-side code path for interviewers, and no change to the slot
-  rules in `firestore.rules`. (The candidate side swaps one portal route and one
-  read rule for another — §4.8.)
+- No new route for interviewers, and no change to the slot rules in
+  `firestore.rules`: the bulk save is two new actions on the existing
+  `/api/interviewSlot` route (§4.2). (The candidate side swaps one portal route
+  and one read rule for another — §4.8.)
 - No change to the `Data.InterviewSlot` shape, and no data migration.
 - No new booking race. A candidate still claims exactly one document.
 - **The "availability withdrawn after it was booked" problem does not exist.**
@@ -218,18 +223,38 @@ most worried about is free.
 Two pure functions in `src/lib/shared/`:
 
 ```
-expandGrid(selection, weekRange, durationMinutes) → Date[]
-expandGridToSlots(selection, weekRange, durationMinutes, interviewer, meetingLink)
-  → Data.InterviewSlot[]
+expandGrid(selection, weekRange, durationMinutes, { window, now }) → Date[]
 ```
 
 `expandGrid` turns painted cells into instants and is the half both sides use:
-interviewers wrap each instant in a slot, candidates store the instants as they
+interviewers' instants become slots, candidates store the instants as they
 are (§4.8). No I/O, no framework coupling, unit-tested under `__tests__/` like
-the rest of `src/lib`. Times in the past are skipped. The interviewer's slots
-are written with a single `writeBatch`, chunked to Firestore's 500-operation
-limit — the example pattern over five weeks is 215 slots, but a full-window
-paint can exceed 500.
+the rest of `src/lib`. Times in the past or outside the window are skipped.
+
+**As implemented, the slots are written server-side, not by the browser.**
+This proposal was written expecting the browser to wrap each instant in a slot
+(an `expandGridToSlots`) and write them with a client `writeBatch`. By the time
+it was built, the codebase had adopted the rule that _the browser never writes
+Firestore_ (admin's CLAUDE.md): `firestore.rules` grants no client write to
+`instructorInterviewTimes`, and every slot write goes through admin's
+`/api/interviewSlot` with the Admin SDK. So the browser sends only the
+instants and a meeting link, and two actions on that existing route do the
+rest in `#lib/server/interviewSlots`:
+
+- `POST {action: 'createMany', dates, meetingLink}` →
+  `createOpenInterviewSlots`. The server builds each slot itself (interviewer
+  name from the caller's profile, uid from the session), drops times past or
+  outside the window it enforces, and writes in transactions of 200 slots,
+  each slot read in the transaction that writes it (§4.3). It also skips any
+  time that would overlap another of the caller's live slots (§4.6), and
+  reports what it did with every time: created, re-linked, booked, overlapping
+  or outside.
+- `DELETE {action: 'deleteMany', slotIds}` → `deleteOpenInterviewSlots`, which
+  deletes only the caller's own still-open slots (§4.4), even for an admin.
+
+So `expandGridToSlots` does not exist, and "no new server-side code path"
+became "no new route": the trade is two server functions in return for
+keeping every slot write behind one checked, tested route.
 
 The grid component and `expandGrid` live in `src/lib/shared/` in **both repos,
 file for file**, under the existing rule for that directory (nothing imported
@@ -347,7 +372,8 @@ side:
 The document id is the candidate's uid, which also retires the oddity of
 today's request ids carrying the applicant's wall-clock `YYYY-MM-DDTHH:mm`.
 
-Picking from it (§1) needs one change on the server. Both selectable cells are
+Picking from it (§1) needs one change on the server (beyond §4.2's bulk
+actions). Both selectable cells are
 the existing `/api/interviewSlot` create-with-assignee operation that **Schedule
 this** uses: slot ids are deterministic on (instant, interviewer), so creating
 at the time of one of your open slots takes that slot over, and the create path

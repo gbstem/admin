@@ -1,3 +1,4 @@
+import { currentSemester } from '#lib/data/collections.js'
 import { interviewService } from '#lib/services/interviewService.js'
 import * as firestore from 'firebase/firestore'
 import type {} from '../src/data.d.ts'
@@ -38,24 +39,31 @@ describe('interviewService (Data Access Layer)', () => {
     })
   })
 
-  describe('fetchSlotRequests', () => {
-    it('queries and returns sorted slot requests', async () => {
+  describe('fetchCandidateAvailability', () => {
+    it("parses each candidate's times, soonest first", async () => {
       const mockDocs = [
         {
-          id: 'req-1',
+          id: 'uid-a',
           data: () => ({
-            date: { seconds: 1779900600 },
-            name: 'Bob',
+            times: [{ seconds: 1790000000 }, { seconds: 1780000000 }],
+            updated: { seconds: 1779000000 },
           }),
         },
+        { id: 'broken', data: () => ({}) },
       ]
       ;(firestore.getDocs as jest.Mock).mockResolvedValueOnce({
-        forEach: (cb: any) => mockDocs.forEach(cb),
+        docs: mockDocs,
       })
 
-      const requests = await interviewService.fetchSlotRequests()
-      expect(requests.length).toBe(1)
-      expect(requests[0].id).toBe('req-1')
+      await expect(
+        interviewService.fetchCandidateAvailability(),
+      ).resolves.toEqual([
+        {
+          uid: 'uid-a',
+          times: [new Date(1780000000 * 1000), new Date(1790000000 * 1000)],
+          updated: new Date(1779000000 * 1000),
+        },
+      ])
     })
   })
 
@@ -102,13 +110,13 @@ describe('interviewService (Data Access Layer)', () => {
     })
   })
 
-  describe('fetchSlotRequestEmails', () => {
-    const requests = [
-      { id: 'uid-a-2026-09-30', uid: 'uid-a' },
-      { id: 'uid-b-2026-10-01', uid: 'uid-b' },
-    ] as Data.SlotRequest[]
+  describe('fetchIntervieweeEmails', () => {
+    const interviewees = [
+      { applicationId: 'uid-a', uid: 'uid-a', firstName: 'A', lastName: '' },
+      { applicationId: 'uid-b', uid: 'uid-b', firstName: 'B', lastName: '' },
+    ]
 
-    it('asks once for every request and keys the addresses by request', async () => {
+    it('asks once for every candidate and keys the addresses by application', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -118,23 +126,24 @@ describe('interviewService (Data Access Layer)', () => {
       })
 
       await expect(
-        interviewService.fetchSlotRequestEmails(requests),
-      ).resolves.toEqual({ 'uid-a-2026-09-30': 'a@example.com' })
+        interviewService.fetchIntervieweeEmails(interviewees),
+      ).resolves.toEqual({ 'uid-a': 'a@example.com' })
       expect(global.fetch).toHaveBeenCalledTimes(1)
       const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
       expect(url).toBe('/api/resolveEmails')
       expect(JSON.parse(init.body)).toEqual({
-        intent: 'slotRequestApplicants',
+        intent: 'applicants',
         uids: ['uid-a', 'uid-b'],
-        context: { requestIds: ['uid-a-2026-09-30', 'uid-b-2026-10-01'] },
+        context: {
+          applicationIds: ['uid-a', 'uid-b'],
+          semesterId: currentSemester,
+        },
       })
     })
 
-    it('makes no request when none of them records a uid', async () => {
+    it('makes no request when there is no one to look up', async () => {
       await expect(
-        interviewService.fetchSlotRequestEmails([
-          { id: 'legacy' } as Data.SlotRequest,
-        ]),
+        interviewService.fetchIntervieweeEmails([]),
       ).resolves.toEqual({})
       expect(global.fetch).not.toHaveBeenCalled()
     })
@@ -183,6 +192,51 @@ describe('interviewService (Data Access Layer)', () => {
       })
 
       expect(sent().body).not.toHaveProperty('applicationId')
+    })
+
+    it('createOpenInterviewSlots posts every time as an instant, with one link', async () => {
+      const counts = {
+        created: 2,
+        replaced: 0,
+        skippedBooked: 0,
+        skippedOverlap: 0,
+        skippedOutside: 0,
+      }
+      respond(counts)
+      const dates = [
+        new Date('2030-01-15T20:00:00.000Z'),
+        new Date('2030-01-15T20:15:00.000Z'),
+      ]
+
+      await expect(
+        interviewService.createOpenInterviewSlots(dates, 'https://zoom.us/j/1'),
+      ).resolves.toEqual(counts)
+      expect(sent()).toEqual({
+        method: 'POST',
+        body: {
+          action: 'createMany',
+          dates: dates.map((date) => date.toISOString()),
+          meetingLink: 'https://zoom.us/j/1',
+        },
+      })
+    })
+
+    it('deleteOpenInterviewSlots sends only the slot ids', async () => {
+      respond({ deleted: 1, skippedBooked: 1, skippedNotOwn: 0 })
+
+      await interviewService.deleteOpenInterviewSlots(['slot-1', 'slot-2'])
+      expect(sent()).toEqual({
+        method: 'DELETE',
+        body: { action: 'deleteMany', slotIds: ['slot-1', 'slot-2'] },
+      })
+    })
+
+    it('createOpenInterviewSlots throws the refusal', async () => {
+      respond({ message: 'Paint at least one time' }, false)
+
+      await expect(
+        interviewService.createOpenInterviewSlots([], 'https://zoom.us/j/1'),
+      ).rejects.toThrow('Paint at least one time')
     })
 
     it('updateInterviewSlot patches only the date and the meeting link', async () => {

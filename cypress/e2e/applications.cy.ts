@@ -459,7 +459,7 @@ describe('Section D: Instructor Applications Management', () => {
         // cy.setFieldValue, not .type(): Cypress types into a datetime-local
         // widget one keystroke per sub-field (month/day/year/hour/minute),
         // which is slower and less reliable than a single assignment. See
-        // interviews.cy.ts's "Add A Time Slot" case for the same fix on the
+        // interviews.cy.ts's "Add a Single Timeslot" case for the same fix on the
         // same input type.
         cy.setFieldValue('input[type="datetime-local"]', '2026-06-15T15:00')
         cy.get('input[name="interviewer"]').type('Jane Doe')
