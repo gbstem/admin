@@ -2,10 +2,15 @@
   import { page } from '$app/state'
   import { user } from '#lib/client/firebase.js'
   import CheckboxInput from '#lib/components/CheckboxInput.svelte'
+  import CandidateAvailabilityList from '#lib/components/CandidateAvailabilityList.svelte'
+  import {
+    lastMeetingLink,
+    type PickTarget,
+  } from '#lib/helpers/availabilityGrid.js'
   import {
     canMarkSlotMissed,
     canUserModifySlot,
-    groupSlotRequests,
+    listCandidateAvailability,
     intervieweeLabel,
     isOwnInterviewSlot,
     resetInterviewSlotToAdd,
@@ -18,9 +23,7 @@
     GBSTEM_TIME_ZONE,
     cn,
     formatDate,
-    formatDateLocal,
     formatDateShort,
-    toLocalISOString,
   } from '#lib/utils.js'
   import { semesterDates } from '#lib/data/collections.js'
   import { localTimeZoneLabel } from '#lib/shared/gbstemTime.js'
@@ -28,6 +31,7 @@
     INTERVIEW_DURATION_MINUTES,
     interviewWindow,
     isWithinInterviewWindow,
+    type InterviewWindow,
   } from '#lib/shared/interviews.js'
   import { onMount } from 'svelte'
   import { defaults, superForm } from 'sveltekit-superforms'
@@ -44,9 +48,14 @@
 
   interface Props {
     class?: string
+    /** The window the server enforces; semesterDates' own by default. */
+    interviewWindow?: InterviewWindow
   }
 
-  let { class: className = '' }: Props = $props()
+  let {
+    class: className = '',
+    interviewWindow: bookingWindow = interviewWindow(semesterDates),
+  }: Props = $props()
 
   let editSlot = $state('')
   let interviewees: EligibleInterviewee[] = $state([])
@@ -56,7 +65,7 @@
   let onlyShowFutureSlots = $state(true)
   let showValidation = false
   let allInterviewSlots: Data.InterviewSlot[] = $state([])
-  let interviewSlotRequests: Data.SlotRequest[] = $state([])
+  let candidateAvailability: Data.InterviewAvailability[] = $state([])
   let interviewSlotToAdd: Data.InterviewSlot = $state(
     getInterviewSlotDefaults(),
   )
@@ -66,11 +75,12 @@
   // Every time on this page is shown in the viewer's own zone; this names it.
   const timeZone = localTimeZoneLabel()
   // Applicants can book only inside the window; its days are gbSTEM's.
-  const bookingWindow = interviewWindow(semesterDates)
-  const windowDays = `${formatDateShort(bookingWindow.opens, GBSTEM_TIME_ZONE)} – ${formatDateShort(new Date(bookingWindow.closes.getTime() - 1), GBSTEM_TIME_ZONE)}`
+  let windowDays = $derived(
+    `${formatDateShort(bookingWindow.opens, GBSTEM_TIME_ZONE)} – ${formatDateShort(new Date(bookingWindow.closes.getTime() - 1), GBSTEM_TIME_ZONE)}`,
+  )
 
   /**
-   * The "Add A Time Slot" card.
+   * The "Add a Single Timeslot" card.
    *
    * Superforms makes the schema the thing that actually guards the write.
    *
@@ -170,24 +180,31 @@
     }
   }
 
-  async function getTimeRequests() {
-    return interviewService.fetchSlotRequests()
-  }
+  // applicationId -> the candidate's current address, resolved from their
+  // uid; availability stores no address.
+  let intervieweeEmails: Record<string, string> = $state({})
 
-  // requestId -> the applicant's current address, resolved from the uid on
-  // the request. Requests store no address: a stored copy went stale as soon
-  // as the applicant changed their account email.
-  let slotRequestEmails: Record<string, string> = $state({})
-
-  async function loadSlotRequestEmails() {
+  async function loadIntervieweeEmails() {
     try {
-      slotRequestEmails = await interviewService.fetchSlotRequestEmails(
-        interviewSlotRequests,
-      )
+      intervieweeEmails =
+        await interviewService.fetchIntervieweeEmails(interviewees)
     } catch (err) {
-      console.error('Failed to resolve slot request addresses:', err)
+      console.error('Failed to resolve candidate addresses:', err)
     }
   }
+
+  async function refetchAvailability() {
+    try {
+      candidateAvailability =
+        await interviewService.fetchCandidateAvailability()
+    } catch (err) {
+      console.error('Failed to load candidate availability:', err)
+    }
+  }
+
+  // The link slots created from a candidate's availability get: the
+  // interviewer's most recent one until they change it.
+  let availabilityLink = $state('')
 
   async function getInterviewees() {
     return interviewService.fetchEligibleInterviewees()
@@ -217,27 +234,38 @@
   )
   let selectedInterviewee = $derived(intervieweesByLabel.get(interviewee))
 
-  function labelOf(target: EligibleInterviewee): string {
-    for (const [label, e] of intervieweesByLabel) {
-      if (e.applicationId === target.applicationId) return label
-    }
-    return ''
-  }
-
-  let requestGroups = $derived(
-    groupSlotRequests(interviewSlotRequests, interviewees),
+  let availabilityList = $derived(
+    listCandidateAvailability(candidateAvailability, interviewees),
   )
 
-  /** Fills the Add-a-Slot card from one of an applicant's time requests. */
-  function scheduleRequest(
+  /**
+   * Schedules a candidate at a time they painted: the interviewer's open slot
+   * there, assigned, or a new slot already assigned. Either is the same
+   * create-with-assignee write as the Add-a-Slot card, and emails them.
+   */
+  async function assignFromAvailability(
     target: EligibleInterviewee,
-    request: Data.SlotRequest,
+    { date }: PickTarget,
+    meetingLink: string,
   ) {
-    interviewee = labelOf(target)
-    addFormData.update((current: any) => ({
-      ...current,
-      date: toLocalISOString(request.date),
-    }))
+    try {
+      const { emailSent } = await interviewService.createOrAssignInterviewSlot(
+        { date: date.toISOString(), meetingLink },
+        target.applicationId,
+      )
+      if (emailSent) {
+        alert.trigger('success', 'Interviewee assigned and email sent.')
+      } else {
+        alert.trigger(
+          'error',
+          'Interviewee assigned, but their email could not be sent.',
+        )
+      }
+    } catch (err: any) {
+      console.error('Assign from availability error:', err)
+      alert.trigger('error', `Failed to assign: ${err.message}`)
+    }
+    await Promise.all([refetchSlots(), refetchInterviewees()])
   }
 
   onMount(() => {
@@ -246,9 +274,10 @@
         try {
           currentUser = user
           await refetchSlots()
-          interviewSlotRequests = await getTimeRequests()
-          void loadSlotRequestEmails()
+          availabilityLink = lastMeetingLink(allInterviewSlots, user.object.uid)
+          await refetchAvailability()
           interviewees = await getInterviewees()
+          void loadIntervieweeEmails()
           addFormData.update((current: any) => ({
             ...current,
             interviewerName: currentUser?.object.displayName ?? '',
@@ -328,7 +357,7 @@
   }
 
   // Assigning, deleting or marking a booked slot missed changes who still
-  // needs an interview, and so which time requests list.
+  // needs an interview, and so whose availability lists.
   async function refetchInterviewees() {
     try {
       interviewees = await getInterviewees()
@@ -488,44 +517,34 @@
       </p>
       <div class="right-2 items-center">
         <Card class="mb-4">
-          <h2 class="font-bold">Interview Time Requests</h2>
-          <!-- Only applicants who still need an interview: once one is
-               scheduled or decided their requests drop out, and they come
-               back if that interview is deleted or marked missed. -->
-          {#each requestGroups as group (group.interviewee.uid)}
-            <div class="mt-2 rounded-lg border border-gray-200 p-4">
-              <p>
-                <b>{intervieweeLabel(group.interviewee)}</b>
-                <span class="ml-2"
-                  >{slotRequestEmails[group.requests[0].id] ?? ''}</span
-                >
-              </p>
-              {#each group.requests as request (request.id)}
-                <div
-                  class={cn(
-                    'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg p-2',
-                    request.date > new Date() ? 'bg-blue-100' : 'bg-red-100',
-                  )}
-                >
-                  <p>{formatDateLocal(request.date)}</p>
-                  {#if page.data.user?.role === 'admin'}
-                    <Button
-                      color="blue"
-                      class="px-2 py-1"
-                      type="button"
-                      onclick={() =>
-                        scheduleRequest(group.interviewee, request)}
-                      >Schedule this</Button
-                    >
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          {/each}
+          <!-- Only candidates who still need an interview: once one is
+               scheduled or decided their availability drops out, and it
+               comes back if that interview is deleted or marked missed. -->
+          <CandidateAvailabilityList
+            window={bookingWindow}
+            availability={availabilityList}
+            slots={allInterviewSlots}
+            uid={currentUser?.object?.uid}
+            emails={intervieweeEmails}
+            bind:meetingLink={availabilityLink}
+            onassign={assignFromAvailability}
+          />
+        </Card>
+        <Card class="mb-4">
+          <h2 class="font-bold">Your Availability</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Paint your availability on a grid instead of adding them one at a
+            time.
+          </p>
+          <Button
+            color="blue"
+            class="mt-4 inline-block px-2 py-1"
+            href="/interviews/availability">Paint Availability</Button
+          >
         </Card>
         <form novalidate use:addEnhance class="w-full">
           <Card>
-            <h2 class="font-bold">Add A Time Slot</h2>
+            <h2 class="font-bold">Add a Single Timeslot</h2>
             <FormInput
               form={addFormResult}
               name="date"
@@ -553,7 +572,7 @@
             <div class="flex items-end gap-4">
               <Select
                 bind:value={interviewee}
-                label="Assign Interviewee (ONLY USE when fulfilling that person's interview time request)"
+                label="Assign Interviewee (ONLY USE when fulfilling a time that person asked for)"
                 options={intervieweeOptions}
               />
               <Button

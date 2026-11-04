@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { seedEmulator } from './scripts/seedLib'
-import { interviewTimeRequestsCollection } from './src/lib/data/collections'
+import { interviewAvailabilityCollection } from './src/lib/data/collections'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -187,28 +187,32 @@ export default defineConfig({
             })
           return null
         },
-        // Writes a slot request doc in the shape portal's
-        // interviewService.requestInterviewSlot writes. A task of its own
-        // rather than `mergeFirestoreDoc`, because `date` has to be stored as
-        // a Timestamp and task arguments arrive as JSON, which turns a Date
-        // into a string.
-        async setInterviewTimeRequest(request: {
-          id: string
+        // Writes a candidate's availability doc in the shape portal's
+        // /api/availability writes. A task of its own rather than
+        // `mergeFirestoreDoc`, because `times` and `updated` have to be
+        // stored as Timestamps and task arguments arrive as JSON, which turns
+        // a Date into a string.
+        async setInterviewAvailability(availability: {
           uid: string
-          firstName: string
-          lastName: string
-          date: string
+          times: string[]
+          updated?: string
         }) {
           if (getApps().length === 0) {
             initializeApp({
               projectId: process.env.FIREBASE_PROJECT_ID || 'demo-gbstem',
             })
           }
-          const { id, date, ...fields } = request
+          const { uid, times, updated } = availability
           await getFirestore()
-            .collection(interviewTimeRequestsCollection)
-            .doc(id)
-            .set({ ...fields, date: Timestamp.fromDate(new Date(date)) })
+            .collection(interviewAvailabilityCollection)
+            .doc(uid)
+            .set({
+              uid,
+              times: times.map((time) => Timestamp.fromDate(new Date(time))),
+              updated: Timestamp.fromDate(
+                updated ? new Date(updated) : new Date(),
+              ),
+            })
           return null
         },
         // Writes a `tokens` doc directly, bypassing the app's own token

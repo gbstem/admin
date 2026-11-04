@@ -22,7 +22,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   currentSemester,
-  interviewTimeRequestsCollection,
+  interviewAvailabilityCollection,
   semesterCollectionPath,
 } from '../../src/lib/data/collections'
 
@@ -1104,87 +1104,60 @@ describe('decisions - read by their applicant, admins and reviewers; no client w
   })
 })
 
-describe('interviewTimeRequests - admins/reviewers read; applicants file through the API', () => {
-  // Keyed `${uid}-${requestedDate}` - see portal's /api/slotRequest.
-  const requestId = (uid: string) => `${uid}-2026-10-05T14:00`
-  const request = (uid: string) => ({
+describe('interviewAvailability - admins/reviewers read; candidates save through the API', () => {
+  // Keyed by the candidate's uid - see portal's /api/availability.
+  const availability = (uid: string) => ({
     uid,
-    firstName: 'Timmy',
-    lastName: 'Tester',
-    email: 'applicant@example.com',
-    date: new Date('2026-10-05T14:00:00.000Z'),
+    times: [new Date('2026-10-05T14:00:00.000Z')],
+    updated: new Date('2026-10-01T12:00:00.000Z'),
   })
 
-  async function seedRequest(uid: string) {
+  async function seedAvailability(uid: string) {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(
-        doc(
-          context.firestore(),
-          interviewTimeRequestsCollection,
-          requestId(uid),
-        ),
-        request(uid),
+        doc(context.firestore(), interviewAvailabilityCollection, uid),
+        availability(uid),
       )
     })
   }
 
-  it('refuses an instructor applicant creating even their own request', async () => {
+  it('refuses a candidate writing even their own availability', async () => {
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
       setDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
-        request(UIDS.undecided),
+        doc(db, interviewAvailabilityCollection, UIDS.undecided),
+        availability(UIDS.undecided),
       ),
     )
   })
 
-  it('refuses creating a request keyed under another uid', async () => {
+  it("refuses writing availability under another candidate's uid", async () => {
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
       setDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.interviewing)),
-        request(UIDS.undecided),
+        doc(db, interviewAvailabilityCollection, UIDS.interviewing),
+        availability(UIDS.undecided),
       ),
     )
   })
 
-  it("refuses a request whose uid field isn't the caller's", async () => {
+  it('refuses a candidate reading any availability, even their own', async () => {
+    await seedAvailability(UIDS.undecided)
+    await seedAvailability(UIDS.interviewing)
     const db = as(UIDS.undecided, 'instructor')
     await assertFails(
-      setDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
-        request(UIDS.interviewing),
-      ),
+      getDoc(doc(db, interviewAvailabilityCollection, UIDS.undecided)),
+    )
+    await assertFails(
+      getDoc(doc(db, interviewAvailabilityCollection, UIDS.interviewing)),
     )
   })
 
-  it('refuses an instructor applicant reading any request, even their own', async () => {
-    await seedRequest(UIDS.undecided)
-    await seedRequest(UIDS.interviewing)
+  it('refuses a candidate updating or deleting their own availability', async () => {
+    await seedAvailability(UIDS.undecided)
     const db = as(UIDS.undecided, 'instructor')
-    await assertFails(
-      getDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
-      ),
-    )
-    await assertFails(
-      getDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.interviewing)),
-      ),
-    )
-  })
-
-  it('refuses an instructor applicant updating or deleting their own request', async () => {
-    await seedRequest(UIDS.undecided)
-    const db = as(UIDS.undecided, 'instructor')
-    const ref = doc(
-      db,
-      interviewTimeRequestsCollection,
-      requestId(UIDS.undecided),
-    )
-    await assertFails(
-      updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
-    )
+    const ref = doc(db, interviewAvailabilityCollection, UIDS.undecided)
+    await assertFails(updateDoc(ref, { times: [] }))
     await assertFails(deleteDoc(ref))
   })
 
@@ -1192,56 +1165,40 @@ describe('interviewTimeRequests - admins/reviewers read; applicants file through
     ['an admin', UIDS.admin, 'admin'],
     ['a reviewer', UIDS.reviewer, 'reviewer'],
   ] as const)(
-    'lets %s read requests, but not write one',
+    "lets %s read candidates' availability, but not write it",
     async (_, uid, role) => {
-      await seedRequest(UIDS.undecided)
+      await seedAvailability(UIDS.undecided)
       const db = as(uid, role)
-      const ref = doc(
-        db,
-        interviewTimeRequestsCollection,
-        requestId(UIDS.undecided),
-      )
+      const ref = doc(db, interviewAvailabilityCollection, UIDS.undecided)
       await assertSucceeds(getDoc(ref))
       await assertSucceeds(
-        getDocs(collection(db, interviewTimeRequestsCollection)),
+        getDocs(collection(db, interviewAvailabilityCollection)),
       )
-      await assertFails(
-        updateDoc(ref, { date: new Date('2026-10-06T14:00:00.000Z') }),
-      )
+      await assertFails(updateDoc(ref, { times: [] }))
       await assertFails(deleteDoc(ref))
       await assertFails(
         setDoc(
-          doc(
-            db,
-            interviewTimeRequestsCollection,
-            requestId(UIDS.interviewing),
-          ),
-          request(UIDS.interviewing),
+          doc(db, interviewAvailabilityCollection, UIDS.interviewing),
+          availability(UIDS.interviewing),
         ),
       )
     },
   )
 
-  it("refuses a student reading another user's request", async () => {
-    await seedRequest(UIDS.undecided)
+  it("refuses a student reading a candidate's availability", async () => {
+    await seedAvailability(UIDS.undecided)
     const db = as(UIDS.student, 'student')
     await assertFails(
-      getDoc(
-        doc(db, interviewTimeRequestsCollection, requestId(UIDS.undecided)),
-      ),
+      getDoc(doc(db, interviewAvailabilityCollection, UIDS.undecided)),
     )
   })
 
   it('refuses an unauthenticated user', async () => {
-    await seedRequest(UIDS.undecided)
+    await seedAvailability(UIDS.undecided)
     const db = testEnv.unauthenticatedContext().firestore()
-    const ref = doc(
-      db,
-      interviewTimeRequestsCollection,
-      requestId(UIDS.undecided),
-    )
+    const ref = doc(db, interviewAvailabilityCollection, UIDS.undecided)
     await assertFails(getDoc(ref))
-    await assertFails(setDoc(ref, request(UIDS.undecided)))
+    await assertFails(setDoc(ref, availability(UIDS.undecided)))
   })
 })
 

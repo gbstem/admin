@@ -100,12 +100,12 @@ declare global {
       meetingLink: string
     }
 
-    type SlotRequest = {
-      date: Date
-      id: string
+    // A candidate's painted availability: the instants they're free, from
+    // portal's grid, and when they last saved it.
+    type InterviewAvailability = {
       uid: string
-      firstName: string
-      lastName: string
+      times: Date[]
+      updated: Date
     }
 
     type Registration<T extends 'client' | 'server' | 'pojo'> = {

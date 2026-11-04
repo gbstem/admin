@@ -1,4 +1,5 @@
 import { getInterviewSlotDefaults } from '#lib/components/forms/schemas.js'
+import { toDate } from '#lib/shared/timestamps.js'
 import { toLocalISOString } from '#lib/utils.js'
 import type {} from '../../data.d.ts'
 
@@ -22,9 +23,9 @@ export type InterviewIneligibility = 'unsubmitted' | 'scheduled' | 'decided'
  * an interview: submitted, with no interview held or booked (a missed one
  * doesn't count - see `meta.interview`), and not yet decided.
  *
- * The one rule behind the eligible-interviewee picker, the time-request list,
- * and every server write that books an interview - admin's
- * createInterviewSlot here, and portal's /api/interview and /api/slotRequest,
+ * The one rule behind the eligible-interviewee picker, the candidate
+ * availability list, and every server write that books an interview - admin's
+ * createInterviewSlot here, and portal's /api/interview and /api/availability,
  * which keep their own copy of this rule.
  */
 export function interviewIneligibility(
@@ -60,32 +61,21 @@ export function parseInterviewSlotDoc(
 }
 
 /**
- * Parses raw Firestore document data into a Data.SlotRequest object.
+ * Parses a candidate's `interviewAvailability` document, whose id is their
+ * uid, into a Data.InterviewAvailability: its times as Dates, soonest first.
  */
-export function parseSlotRequestDoc(
+export function parseAvailabilityDoc(
   id: string,
   data: any,
-): Data.SlotRequest | null {
-  if (!data || !data.date) return null
-  const timestampSeconds =
-    data.date.seconds ??
-    (data.date instanceof Date ? data.date.getTime() / 1000 : 0)
+): Data.InterviewAvailability | null {
+  if (!data || !Array.isArray(data.times)) return null
   return {
-    date: new Date(timestampSeconds * 1000),
-    id,
-    uid: data.uid ?? '',
-    firstName: data.firstName ?? '',
-    lastName: data.lastName ?? '',
+    uid: data.uid || id,
+    times: data.times
+      .map((time: unknown) => toDate(time))
+      .sort((a: Date, b: Date) => a.getTime() - b.getTime()),
+    updated: data.updated ? toDate(data.updated) : new Date(0),
   }
-}
-
-/**
- * Sorts slot requests chronologically by date.
- */
-export function sortSlotRequestsByDate(
-  requests: Data.SlotRequest[],
-): Data.SlotRequest[] {
-  return [...requests].sort((a, b) => a.date.getTime() - b.date.getTime())
 }
 
 /** An applicant who can be given an interview, as the picker offers them. */
@@ -121,41 +111,38 @@ export function filterEligibleInterviewees(
     .sort((a, b) => intervieweeLabel(a).localeCompare(intervieweeLabel(b)))
 }
 
-/** How long a request stays listed after its time has passed. */
-const PAST_REQUEST_DAYS = 30
-
-/** One applicant's open time requests, as the request list shows them. */
-export interface SlotRequestGroup {
+/** One candidate's availability, as the /interviews page lists it. */
+export interface CandidateAvailability {
   interviewee: EligibleInterviewee
-  /** Soonest first. */
-  requests: Data.SlotRequest[]
+  /** Only times still to come, soonest first. */
+  times: Date[]
+  updated: Date
 }
 
 /**
- * The time requests to list, grouped by the applicant who filed them: only
- * applicants who still need an interview (`eligible`), and only requests
- * upcoming or under 30 days past. Requests are never edited when an
- * applicant is scheduled, unscheduled or decided - whether they show is
- * worked out here, so they reappear when a booking is cancelled or missed.
+ * The availability to list: only candidates who still need an interview
+ * (`eligible`), and only their times still to come; a candidate with none
+ * left drops out. Availability is never edited when a candidate is scheduled,
+ * unscheduled or decided - whether it shows is worked out here, so it comes
+ * back when a booking is cancelled or missed.
  *
- * Groups are ordered by their soonest request.
+ * Ordered by each candidate's soonest time.
  */
-export function groupSlotRequests(
-  requests: Data.SlotRequest[],
+export function listCandidateAvailability(
+  availability: Data.InterviewAvailability[],
   eligible: EligibleInterviewee[],
   now: Date = new Date(),
-): SlotRequestGroup[] {
+): CandidateAvailability[] {
   const byUid = new Map(eligible.map((e) => [e.uid, e]))
-  const cutoff = now.getTime() - PAST_REQUEST_DAYS * 24 * 60 * 60 * 1000
-  const groups = new Map<string, SlotRequestGroup>()
-  for (const request of sortSlotRequestsByDate(requests)) {
-    const interviewee = byUid.get(request.uid)
-    if (!interviewee || request.date.getTime() <= cutoff) continue
-    const group = groups.get(request.uid) ?? { interviewee, requests: [] }
-    group.requests.push(request)
-    groups.set(request.uid, group)
-  }
-  return [...groups.values()]
+  return availability
+    .flatMap(({ uid, times, updated }) => {
+      const interviewee = byUid.get(uid)
+      const upcoming = times.filter((time) => time > now)
+      return interviewee && upcoming.length
+        ? [{ interviewee, times: upcoming, updated }]
+        : []
+    })
+    .sort((a, b) => a.times[0].getTime() - b.times[0].getTime())
 }
 
 /** True when `slot` is booked, its time has come, and it can be marked missed. */

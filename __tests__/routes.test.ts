@@ -252,10 +252,7 @@ jest.mock('firebase/storage', () => ({ getStorage: jest.fn() }))
 import { recordNewAccount } from '#lib/server/accountService.js'
 import { verifyToken } from '#lib/server/firebase.js'
 import { handle } from '../src/hooks.server'
-import {
-  currentSemester,
-  interviewTimeRequestsCollection,
-} from '../src/lib/data/collections'
+import { currentSemester } from '../src/lib/data/collections'
 import { load as emailVerifiedLayoutLoad } from '../src/routes/(signedIn)/(emailVerified)/+layout.server'
 import { load as announcementsLoad } from '../src/routes/(signedIn)/(emailVerified)/announcements/+page.server'
 import { load as applicationsLoad } from '../src/routes/(signedIn)/(emailVerified)/applications/+page.server'
@@ -1460,91 +1457,6 @@ describe('api/resolveEmails', () => {
         message: EMAIL_LOOKUP_REFUSED,
       })
       expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('slotRequestApplicants', () => {
-    /** Serves `requests` by document id from the slot request collection. */
-    function mockSlotRequests(requests: Record<string, any>) {
-      mockAdminDb.getAll.mockImplementation(
-        async (...refs: { path: string }[]) =>
-          refs.map((ref) => {
-            const id = ref.path.replace(
-              `${interviewTimeRequestsCollection}/`,
-              '',
-            )
-            return {
-              id,
-              exists: id in requests,
-              data: () => requests[id],
-            }
-          }),
-      )
-    }
-
-    const requestLookup = (overrides: Record<string, unknown> = {}) => ({
-      intent: 'slotRequestApplicants',
-      uids: ['applicant-uid'],
-      context: { requestIds: ['applicant-uid-2026-09-30'] },
-      ...overrides,
-    })
-
-    beforeEach(() => {
-      mockAdminDb.doc.mockImplementation((path: string) => ({ path }))
-    })
-
-    it("returns each applicant's current address", async () => {
-      mockSlotRequests({
-        'applicant-uid-2026-09-30': { uid: 'applicant-uid' },
-      })
-      mockRequest.json.mockResolvedValue(requestLookup())
-      mockAdminAuth.getUsers.mockResolvedValueOnce({
-        users: [{ uid: 'applicant-uid', email: 'applicant@example.com' }],
-      })
-
-      const res: any = await post()
-
-      expect(await res.json()).toEqual({
-        emails: { 'applicant-uid': 'applicant@example.com' },
-      })
-    })
-
-    // The uid comes from the request's own field, never parsed out of its id.
-    it('refuses a request with no uid field', async () => {
-      mockSlotRequests({ 'applicant-uid-2026-09-30': {} })
-      mockRequest.json.mockResolvedValue(requestLookup())
-
-      await expect(post()).rejects.toMatchObject({
-        status: 403,
-        message: EMAIL_LOOKUP_REFUSED,
-      })
-      expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
-    })
-
-    it('refuses a uid that filed none of the named requests', async () => {
-      mockSlotRequests({
-        'applicant-uid-2026-09-30': { uid: 'applicant-uid' },
-      })
-      mockRequest.json.mockResolvedValue(
-        requestLookup({ uids: ['applicant-uid', 'someone-else'] }),
-      )
-
-      await expect(post()).rejects.toMatchObject({
-        status: 403,
-        message: EMAIL_LOOKUP_REFUSED,
-      })
-      expect(mockAdminAuth.getUsers).not.toHaveBeenCalled()
-    })
-
-    it('refuses an applicant account', async () => {
-      mockSlotRequests({
-        'applicant-uid-2026-09-30': { uid: 'applicant-uid' },
-      })
-      mockRequest.json.mockResolvedValue(requestLookup())
-
-      await expect(
-        post({ user: { ...adminLocals.user, role: 'applicant' } }),
-      ).rejects.toMatchObject({ status: 403 })
     })
   })
 

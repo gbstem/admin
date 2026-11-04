@@ -14,6 +14,9 @@ export const variables = defineEnvVars({
   FIREBASE_AUTH_EMULATOR_HOST: { schema: optional },
   FIRESTORE_EMULATOR_HOST: { schema: optional },
   STORAGE_EMULATOR_HOST: { schema: optional },
+  // Replaces semesterDates.interviewsEnd, emulator only - see
+  // #lib/server/interviewWindow.
+  E2E_INTERVIEWS_END: { schema: optional },
   FIREBASE_CLIENT_EMAIL: { static: true },
   FIREBASE_PRIVATE_KEY: { static: true },
   FIREBASE_PROJECT_ID: { static: true },

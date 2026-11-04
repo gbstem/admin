@@ -403,7 +403,7 @@ graph TD
 - **Steps**:
   1. Click the **"Interviews"** link in the navigation bar (navigates to `/interviews`).
   2. Verify the **Interview Time Requests** card is visible.
-  3. In the **Add A Time Slot** card:
+  3. In the **Add a Single Timeslot** card:
      - Enter a date in the future in the **Set Date** field.
      - Type a Zoom link in the **Interview Meeting Link** input.
      - Select `David Miller` from the **Assign Interviewee** dropdown.

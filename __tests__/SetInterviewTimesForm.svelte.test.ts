@@ -110,7 +110,9 @@ describe('SetInterviewTimesForm Component', () => {
     ;(mockUserStore as any).set(undefined)
 
     jest.spyOn(interviewService, 'fetchInterviewSlots').mockResolvedValue([])
-    jest.spyOn(interviewService, 'fetchSlotRequests').mockResolvedValue([])
+    jest
+      .spyOn(interviewService, 'fetchCandidateAvailability')
+      .mockResolvedValue([])
     jest
       .spyOn(interviewService, 'fetchEligibleInterviewees')
       .mockResolvedValue([])
@@ -126,7 +128,7 @@ describe('SetInterviewTimesForm Component', () => {
     jest
       .spyOn(interviewService, 'markInterviewSlotMissed')
       .mockResolvedValue({ message: 'Done.', emailSent: true })
-    jest.spyOn(interviewService, 'fetchSlotRequestEmails').mockResolvedValue({})
+    jest.spyOn(interviewService, 'fetchIntervieweeEmails').mockResolvedValue({})
   })
 
   afterEach(() => {
@@ -139,19 +141,24 @@ describe('SetInterviewTimesForm Component', () => {
   // `user` - mirroring the real timing where onMount subscribes before
   // Firebase's auth-state listener has fired. The role is the one the
   // signed-in layout provides from the server, there before the component is.
-  async function mountAuthenticated(user: any = authUser) {
+  async function mountAuthenticated(
+    user: any = authUser,
+    props: Record<string, unknown> = {},
+  ) {
     ;(page.data as any).user = {
       uid: user.object.uid,
       email: user.object.email,
       emailVerified: true,
       role: user.role,
     }
-    const app = mount(SetInterviewTimesForm, { target: container })
+    const app = mount(SetInterviewTimesForm, { target: container, props })
     flushSync()
     ;(mockUserStore as any).set(user)
     flushSync()
     await waitFor(() => {
-      expect(within(container).getByText('Add A Time Slot')).toBeInTheDocument()
+      expect(
+        within(container).getByText('Add a Single Timeslot'),
+      ).toBeInTheDocument()
     })
     return app
   }
@@ -169,10 +176,10 @@ describe('SetInterviewTimesForm Component', () => {
     const app = await mountAuthenticated()
 
     expect(interviewService.fetchInterviewSlots).toHaveBeenCalled()
-    expect(interviewService.fetchSlotRequests).toHaveBeenCalled()
+    expect(interviewService.fetchCandidateAvailability).toHaveBeenCalled()
     expect(interviewService.fetchEligibleInterviewees).toHaveBeenCalled()
     expect(
-      within(container).getByText('Interview Time Requests'),
+      within(container).getByText('Candidate Availability'),
     ).toBeInTheDocument()
     // TextInput always renders a trailing (CSS-hidden when not required) "*"
     // span inside the <label>, so its accessible text content is literally
@@ -345,119 +352,144 @@ describe('SetInterviewTimesForm Component', () => {
     unmount(app)
   })
 
-  describe('interview time requests', () => {
+  describe('candidate availability', () => {
     const ada = {
       applicationId: 'ada',
       uid: 'ada',
       firstName: 'Ada',
       lastName: 'Lovelace',
     }
-    const inDays = (days: number) =>
-      new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-    const request = (uid: string, id: string, date: Date) => ({
-      id,
+    // Tomorrow at 3:00 PM local: a row of the grid, and within this window.
+    const tomorrowAt3 = () => {
+      const date = new Date()
+      date.setDate(date.getDate() + 1)
+      date.setHours(15, 0, 0, 0)
+      return date
+    }
+    const openWindow = {
+      opens: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      closes: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    }
+    const availability = (uid: string, times: Date[]) => ({
       uid,
-      date,
-      firstName: uid,
-      lastName: '',
+      times,
+      updated: new Date('2026-10-01T12:00:00Z'),
     })
+    const cellFor = (date: Date) =>
+      // eslint-disable-next-line testing-library/no-node-access -- cells are addressed by their grid key, the coordinate the component draws them by
+      container.querySelector<HTMLElement>(
+        `[data-testid="candidate-availability"] [data-cell="${date.getDay()}:${date.getHours() * 60 + date.getMinutes()}"]`,
+      )
 
-    it("lists an eligible applicant's requests together, and no one else's", async () => {
-      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
-        request('ada', 'ada-1', inDays(1)),
-        request('ada', 'ada-2', inDays(2)),
-        // Scheduled or decided: not among the eligible interviewees.
-        request('bob', 'bob-1', inDays(1)),
-      ])
-      ;(
-        interviewService.fetchEligibleInterviewees as jest.Mock
-      ).mockResolvedValue([ada])
-      const app = await mountAuthenticated()
-
+    async function mountWith(user: any = authUser) {
+      const app = await mountAuthenticated(user, {
+        interviewWindow: openWindow,
+      })
       await waitFor(() => {
         expect(within(container).getByText('Ada Lovelace')).toBeInTheDocument()
       })
-      expect(within(container).getAllByText('Schedule this')).toHaveLength(2)
-      expect(within(container).queryByText('bob')).toBeNull()
+      return app
+    }
 
-      unmount(app)
-    })
-
-    it('fills the Add A Time Slot card from a request', async () => {
-      const date = inDays(1)
-      date.setSeconds(0, 0)
-      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
-        request('ada', 'ada-1', date),
-      ])
+    it("lists an eligible candidate's painted times, and no one else's", async () => {
       ;(
-        interviewService.fetchEligibleInterviewees as jest.Mock
-      ).mockResolvedValue([ada])
-      const app = await mountAuthenticated()
-
-      await waitFor(() => {
-        expect(within(container).getByText('Schedule this')).toBeInTheDocument()
-      })
-      fireEvent.click(within(container).getByText('Schedule this'))
-      flushSync()
-
-      await waitFor(() => {
-        expect(
-          within(container).getByLabelText('Assign Interviewee', {
-            exact: false,
-          }),
-        ).toHaveValue('Ada Lovelace')
-      })
-      expect(
-        within(container).getByLabelText('Set Date (your local time', {
-          exact: false,
-        }),
-      ).toHaveValue(toLocalISOString(date))
-
-      unmount(app)
-    })
-
-    it('tells two applicants with the same name apart in the picker', async () => {
-      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
-        request('ada-2', 'ada-2-1', inDays(1)),
-      ])
-      ;(
-        interviewService.fetchEligibleInterviewees as jest.Mock
+        interviewService.fetchCandidateAvailability as jest.Mock
       ).mockResolvedValue([
-        ada,
-        { ...ada, applicationId: 'ada-2', uid: 'ada-2' },
+        availability('ada', [tomorrowAt3()]),
+        // Scheduled or decided: not among the eligible interviewees.
+        availability('bob', [tomorrowAt3()]),
       ])
-      const app = await mountAuthenticated()
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      const app = await mountWith()
 
-      await waitFor(() => {
-        expect(within(container).getByText('Schedule this')).toBeInTheDocument()
-      })
-      fireEvent.click(within(container).getByText('Schedule this'))
-      flushSync()
+      expect(
+        within(container).getAllByTestId('candidate-availability'),
+      ).toHaveLength(1)
+      expect(within(container).getByText(/1 time offered/)).toBeInTheDocument()
+      expect(cellFor(tomorrowAt3())?.tagName).toBe('BUTTON')
 
+      unmount(app)
+    })
+
+    it('creates a slot assigned to the candidate where the interviewer is free', async () => {
+      const date = tomorrowAt3()
+      ;(
+        interviewService.fetchCandidateAvailability as jest.Mock
+      ).mockResolvedValue([availability('ada', [date])])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+        { ...ownSlot, date: '2026-01-01T10:00' },
+      ])
+      jest.spyOn(window, 'confirm').mockReturnValue(true)
+      const app = await mountWith()
+
+      fireEvent.click(cellFor(date)!)
       await waitFor(() => {
         expect(
-          within(container).getByLabelText('Assign Interviewee', {
-            exact: false,
-          }),
-        ).toHaveValue('Ada Lovelace (ada-2)')
+          interviewService.createOrAssignInterviewSlot,
+        ).toHaveBeenCalledWith(
+          // The interviewer's most recent link, offered again.
+          { date: date.toISOString(), meetingLink: ownSlot.meetingLink },
+          'ada',
+        )
       })
 
       unmount(app)
     })
 
-    it('offers Schedule this to admins only', async () => {
-      ;(interviewService.fetchSlotRequests as jest.Mock).mockResolvedValue([
-        request('ada', 'ada-1', inDays(1)),
-      ])
+    it("assigns the interviewer's own open slot at that time, with its link", async () => {
+      const date = tomorrowAt3()
+      ;(
+        interviewService.fetchCandidateAvailability as jest.Mock
+      ).mockResolvedValue([availability('ada', [date])])
       ;(
         interviewService.fetchEligibleInterviewees as jest.Mock
       ).mockResolvedValue([ada])
-      const app = await mountAuthenticated(reviewerAuthUser)
+      ;(interviewService.fetchInterviewSlots as jest.Mock).mockResolvedValue([
+        {
+          ...ownSlot,
+          interviewerUid: reviewerAuthUser.object.uid,
+          date: toLocalISOString(date),
+          meetingLink: 'https://zoom.us/j/7',
+        },
+      ])
+      jest.spyOn(window, 'confirm').mockReturnValue(true)
+      const app = await mountWith(reviewerAuthUser)
 
+      expect(cellFor(date)).toHaveTextContent('Open')
+      fireEvent.click(cellFor(date)!)
       await waitFor(() => {
-        expect(within(container).getByText('Ada Lovelace')).toBeInTheDocument()
+        expect(
+          interviewService.createOrAssignInterviewSlot,
+        ).toHaveBeenCalledWith(
+          { date: date.toISOString(), meetingLink: 'https://zoom.us/j/7' },
+          'ada',
+        )
       })
-      expect(within(container).queryByText('Schedule this')).toBeNull()
+
+      unmount(app)
+    })
+
+    it('assigns nothing when the interviewer cancels the confirmation', async () => {
+      const date = tomorrowAt3()
+      ;(
+        interviewService.fetchCandidateAvailability as jest.Mock
+      ).mockResolvedValue([availability('ada', [date])])
+      ;(
+        interviewService.fetchEligibleInterviewees as jest.Mock
+      ).mockResolvedValue([ada])
+      jest.spyOn(window, 'confirm').mockReturnValue(false)
+      const app = await mountWith()
+
+      fireEvent.click(cellFor(date)!)
+      flushSync()
+      expect(
+        interviewService.createOrAssignInterviewSlot,
+      ).not.toHaveBeenCalled()
 
       unmount(app)
     })

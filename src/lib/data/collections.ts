@@ -37,11 +37,12 @@ export const instructorFeedbackCollection = semesterCollectionPath(
   suffix,
   'instructorFeedback',
 )
-// Applicants' requests for an interview time none of the offered slots
-// covers, keyed `${uid}-${date}`.
-export const interviewTimeRequestsCollection = semesterCollectionPath(
+// Each candidate's painted interview availability, keyed by their uid: the
+// times they're free when no offered slot works. Written only by portal's
+// /api/availability.
+export const interviewAvailabilityCollection = semesterCollectionPath(
   suffix,
-  'interviewTimeRequests',
+  'interviewAvailability',
 )
 export const interviewTimesCollection = semesterCollectionPath(
   suffix,

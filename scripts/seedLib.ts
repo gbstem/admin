@@ -21,7 +21,7 @@ import {
   currentSemester,
   decisionsCollection,
   instructorFeedbackCollection,
-  interviewTimeRequestsCollection,
+  interviewAvailabilityCollection,
   interviewTimesCollection,
   registrationsCollection,
   semesterCollectionPath,
@@ -205,7 +205,7 @@ export async function seedEmulator(): Promise<void> {
     'tokens',
     checkInsCollection,
     'users',
-    interviewTimeRequestsCollection,
+    interviewAvailabilityCollection,
     'semesterDates',
     // Past semesters' sub requests, archived by
     // scripts/archive-past-sub-requests.ts - e2e tests plant some.
@@ -1394,7 +1394,12 @@ export async function seedEmulator(): Promise<void> {
   console.log(
     `Seeding mock interview slots in "${interviewTimesCollection}"...`,
   )
-  const dynamicFutureDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+  // On a quarter hour, as every slot the availability grid makes is.
+  const QUARTER_HOUR = 15 * 60 * 1000
+  const dynamicFutureDate = new Date(
+    Math.ceil((Date.now() + 2 * 24 * 60 * 60 * 1000) / QUARTER_HOUR) *
+      QUARTER_HOUR,
+  )
   await db
     .collection(interviewTimesCollection)
     .doc('slot-1')

@@ -16,7 +16,11 @@ import { sendEmail } from '#lib/server/email.js'
 import { adminDb } from '#lib/server/firebase.js'
 import { accountName } from '#lib/server/userProfile.js'
 import { GBSTEM_TIME_ZONE, formatDateLocal } from '#lib/utils.js'
-import { INTERVIEW_DURATION_MINUTES } from '#lib/shared/interviews.js'
+import {
+  INTERVIEW_DURATION_MINUTES,
+  isWithinInterviewWindow,
+  type InterviewWindow,
+} from '#lib/shared/interviews.js'
 import { toDate } from '#lib/shared/timestamps.js'
 import { error } from '@sveltejs/kit'
 
@@ -284,6 +288,200 @@ export async function markInterviewSlotMissed(
       missedBy,
     }
   })
+}
+
+/**
+ * How many slots one transaction takes on. Each slot is a read and a write,
+ * and a transaction holds at most 500 writes, so a full-window paint is
+ * saved as several transactions: each all or nothing, the save as a whole
+ * not.
+ */
+const BULK_CHUNK = 200
+
+const chunks = <T>(items: T[]): T[][] =>
+  Array.from({ length: Math.ceil(items.length / BULK_CHUNK) }, (_, i) =>
+    items.slice(i * BULK_CHUNK, (i + 1) * BULK_CHUNK),
+  )
+
+const DURATION_MS = INTERVIEW_DURATION_MINUTES * 60_000
+
+/** What a bulk create did with each time it was given. */
+export interface CreateManyResult {
+  /** New open slots. */
+  created: number
+  /** The caller's open slots already at that time, given the new link. */
+  replaced: number
+  /** Times the caller has a booked or missed slot at, left alone. */
+  skippedBooked: number
+  /** Times that would overlap another of the caller's slots. */
+  skippedOverlap: number
+  /** Times already past, or outside the interview window. */
+  skippedOutside: number
+}
+
+/**
+ * Creates the caller's own open slots at each of `dates`, with one meeting
+ * link: the availability grid's save, after the browser has expanded the
+ * painted cells into instants (see `expandGrid` in #lib/shared).
+ *
+ * The same guarantee as createInterviewSlot, slot by slot: a slot's id is its
+ * time plus the caller's uid, and each is read inside the transaction that
+ * writes it, so repainting a range never reopens a booked slot - it is
+ * skipped and counted instead, as is a missed one, which stays as the record
+ * of what was booked. An open slot already there is rewritten with the new
+ * link. A time is also skipped when it would start inside another of the
+ * caller's live slots, or one would start inside it: two candidates on one
+ * interviewer's call. And a time already past or outside `window` is
+ * dropped, whatever the browser sent.
+ */
+export async function createOpenInterviewSlots(
+  caller: SlotCaller,
+  dates: Date[],
+  meetingLink: string,
+  window: InterviewWindow,
+  now: Date = new Date(),
+): Promise<CreateManyResult> {
+  const interviewerName = await accountName(caller.uid)
+  if (!interviewerName) {
+    throw error(400, 'Add your name on your profile before adding timeslots.')
+  }
+  const result: CreateManyResult = {
+    created: 0,
+    replaced: 0,
+    skippedBooked: 0,
+    skippedOverlap: 0,
+    skippedOutside: 0,
+  }
+  const unique = new Map<number, Date>()
+  for (const date of dates) {
+    if (date > now && isWithinInterviewWindow(date, window)) {
+      unique.set(date.getTime(), date)
+    } else {
+      result.skippedOutside++
+    }
+  }
+  const wanted = [...unique.values()].sort((a, b) => a.getTime() - b.getTime())
+  const ownSlots = adminDb
+    .collection(interviewTimesCollection)
+    .where('interviewerUid', '==', caller.uid)
+
+  for (const chunk of chunks(wanted)) {
+    const counts = await adminDb.runTransaction(async (transaction) => {
+      const counts = { created: 0, replaced: 0, booked: 0, overlap: 0 }
+      const ids = chunk.map((date) =>
+        interviewSlotDocId(date.toISOString(), caller.uid),
+      )
+      const own = await transaction.get(ownSlots)
+      const snaps = await transaction.getAll(...ids.map(slotRef))
+      // Every live slot of the caller's, by start: the ones written by an
+      // earlier chunk are read back here too.
+      const taken = own.docs
+        .filter((doc) => doc.data().interviewSlotStatus !== 'missed')
+        .map((doc) => ({
+          id: doc.id,
+          start: toDate(doc.data().date).getTime(),
+        }))
+      chunk.forEach((date, i) => {
+        const snap = snaps[i]
+        const existing = snap.exists ? (snap.data() as ReadSlot) : null
+        if (existing?.intervieweeId) {
+          counts.booked++
+          return
+        }
+        const start = date.getTime()
+        const overlaps = taken.some(
+          (slot) =>
+            slot.id !== ids[i] && Math.abs(slot.start - start) < DURATION_MS,
+        )
+        if (overlaps) {
+          counts.overlap++
+          return
+        }
+        const slot: StoredSlot = {
+          id: ids[i],
+          date,
+          meetingLink,
+          interviewerName,
+          interviewerUid: caller.uid,
+          intervieweeId: '',
+          intervieweeFirstName: '',
+          intervieweeLastName: '',
+          interviewSlotStatus: 'available',
+        }
+        transaction.set(snap.ref, withSemester(slot))
+        if (existing) {
+          counts.replaced++
+        } else {
+          counts.created++
+          taken.push({ id: ids[i], start })
+        }
+      })
+      return counts
+    })
+    result.created += counts.created
+    result.replaced += counts.replaced
+    result.skippedBooked += counts.booked
+    result.skippedOverlap += counts.overlap
+  }
+  return result
+}
+
+/** What a bulk delete did with each slot it was given. */
+export interface DeleteManyResult {
+  deleted: number
+  /** Booked or missed slots, which only a deliberate one-slot delete removes. */
+  skippedBooked: number
+  /** Someone else's slots, which the grid never offers to remove. */
+  skippedNotOwn: number
+}
+
+/**
+ * Deletes the caller's own open slots among `slotIds`: un-painting cells on
+ * the availability grid. Only a slot still open is deleted, checked inside
+ * the transaction that deletes it; a booked one is skipped, so a bulk delete
+ * can never cancel somebody's interview. That stays deleteInterviewSlot's
+ * job, one slot at a time, emailing the applicant. Even an admin's bulk
+ * delete touches only their own slots. A slot already gone counts as neither.
+ */
+export async function deleteOpenInterviewSlots(
+  caller: SlotCaller,
+  slotIds: string[],
+): Promise<DeleteManyResult> {
+  const result: DeleteManyResult = {
+    deleted: 0,
+    skippedBooked: 0,
+    skippedNotOwn: 0,
+  }
+  for (const chunk of chunks([...new Set(slotIds)])) {
+    const counts = await adminDb.runTransaction(async (transaction) => {
+      const counts: DeleteManyResult = {
+        deleted: 0,
+        skippedBooked: 0,
+        skippedNotOwn: 0,
+      }
+      const snaps = await transaction.getAll(...chunk.map(slotRef))
+      for (const snap of snaps) {
+        if (!snap.exists) continue
+        const slot = snap.data() as ReadSlot
+        if (slot.interviewerUid !== caller.uid) {
+          counts.skippedNotOwn++
+        } else if (
+          slot.intervieweeId ||
+          slot.interviewSlotStatus !== 'available'
+        ) {
+          counts.skippedBooked++
+        } else {
+          transaction.delete(snap.ref)
+          counts.deleted++
+        }
+      }
+      return counts
+    })
+    result.deleted += counts.deleted
+    result.skippedBooked += counts.skippedBooked
+    result.skippedNotOwn += counts.skippedNotOwn
+  }
+  return result
 }
 
 const EMAIL_ROUTE = '/api/interviewSlot'

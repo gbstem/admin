@@ -1,13 +1,12 @@
 process.env.TZ = 'America/New_York'
 import type {} from '../src/data.d.ts'
 import {
+  parseAvailabilityDoc,
   parseInterviewSlotDoc,
-  parseSlotRequestDoc,
-  sortSlotRequestsByDate,
   filterEligibleInterviewees,
   canMarkSlotMissed,
   canUserModifySlot,
-  groupSlotRequests,
+  listCandidateAvailability,
   interviewIneligibility,
   isFinalDecision,
   needsInterview,
@@ -36,40 +35,23 @@ describe('SetInterviewTimes Helpers', () => {
     })
   })
 
-  describe('parseSlotRequestDoc & sortSlotRequestsByDate', () => {
-    test('leaves the uid empty on a request with no uid field', () => {
-      const raw = {
-        date: { seconds: 1779900600 },
-        firstName: 'Alice',
-        lastName: 'Smith',
-      }
-
-      const req = parseSlotRequestDoc('uid123-2026-05-28', raw)
-      expect(req?.id).toBe('uid123-2026-05-28')
-      expect(req?.uid).toBe('')
-      expect(req?.firstName).toBe('Alice')
+  describe('parseAvailabilityDoc', () => {
+    test('returns null for a document with no times', () => {
+      expect(parseAvailabilityDoc('uid-1', null)).toBeNull()
+      expect(parseAvailabilityDoc('uid-1', { updated: new Date() })).toBeNull()
     })
 
-    test('uses explicit data.uid when present in raw doc', () => {
-      const raw = {
-        uid: 'explicit-uid-456',
-        date: { seconds: 1779900600 },
-        firstName: 'Bob',
-        lastName: 'Jones',
-        email: 'bob@example.com',
-      }
+    test('reads stored timestamps as Dates, soonest first, keyed by its id', () => {
+      const availability = parseAvailabilityDoc('uid-1', {
+        times: [{ seconds: 1790000000 }, new Date(1780000000 * 1000)],
+        updated: { seconds: 1779000000 },
+      })
 
-      const req = parseSlotRequestDoc('fallback-id-2026-05-28', raw)
-      expect(req?.uid).toBe('explicit-uid-456')
-      expect(req?.firstName).toBe('Bob')
-    })
-
-    test('sorts requests chronologically by date', () => {
-      const req1 = { date: new Date('2026-05-20') } as Data.SlotRequest
-      const req2 = { date: new Date('2026-05-10') } as Data.SlotRequest
-
-      const sorted = sortSlotRequestsByDate([req1, req2])
-      expect(sorted[0].date.getTime()).toBeLessThan(sorted[1].date.getTime())
+      expect(availability).toEqual({
+        uid: 'uid-1',
+        times: [new Date(1780000000 * 1000), new Date(1790000000 * 1000)],
+        updated: new Date(1779000000 * 1000),
+      })
     })
   })
 
@@ -165,7 +147,7 @@ describe('SetInterviewTimes Helpers', () => {
     })
   })
 
-  describe('groupSlotRequests', () => {
+  describe('listCandidateAvailability', () => {
     const NOW = new Date('2026-10-04T12:00:00.000Z')
     const DAY = 24 * 60 * 60 * 1000
     const ada: EligibleInterviewee = {
@@ -180,49 +162,43 @@ describe('SetInterviewTimes Helpers', () => {
       firstName: 'Grace',
       lastName: 'Hopper',
     }
-    const request = (uid: string, offsetDays: number): Data.SlotRequest => ({
-      id: `${uid}-${offsetDays}`,
+    const at = (offsetDays: number) =>
+      new Date(NOW.getTime() + offsetDays * DAY)
+    const availability = (
+      uid: string,
+      ...offsets: number[]
+    ): Data.InterviewAvailability => ({
       uid,
-      date: new Date(NOW.getTime() + offsetDays * DAY),
-      firstName: '',
-      lastName: '',
+      times: offsets.map(at),
+      updated: NOW,
     })
 
-    test("groups each eligible applicant's requests, soonest group first", () => {
-      const groups = groupSlotRequests(
-        [
-          request('ada', 3),
-          request('grace', 1),
-          request('ada', 2),
-          request('grace', 5),
-        ],
+    test("lists each eligible candidate's times to come, soonest candidate first", () => {
+      const list = listCandidateAvailability(
+        [availability('ada', -1, 2, 3), availability('grace', 1, 5)],
         [ada, grace],
         NOW,
       )
 
-      expect(groups.map((g) => g.interviewee.uid)).toEqual(['grace', 'ada'])
-      expect(groups[1].requests.map((r) => r.id)).toEqual(['ada-2', 'ada-3'])
+      expect(list.map((c) => c.interviewee.uid)).toEqual(['grace', 'ada'])
+      expect(list[1].times).toEqual([at(2), at(3)])
     })
 
-    // Scheduled or decided applicants aren't among the eligible, so their
-    // requests drop out - and come back once they're eligible again.
-    test("leaves out the requests of applicants who don't need an interview", () => {
-      const requests = [request('ada', 1), request('grace', 1)]
+    // Scheduled or decided candidates aren't among the eligible, so their
+    // availability drops out - and comes back once they're eligible again.
+    test("leaves out candidates who don't need an interview", () => {
+      const all = [availability('ada', 1), availability('grace', 1)]
 
       expect(
-        groupSlotRequests(requests, [grace], NOW).map((g) => g.interviewee),
+        listCandidateAvailability(all, [grace], NOW).map((c) => c.interviewee),
       ).toEqual([grace])
-      expect(groupSlotRequests(requests, [ada, grace], NOW)).toHaveLength(2)
+      expect(listCandidateAvailability(all, [ada, grace], NOW)).toHaveLength(2)
     })
 
-    test('keeps requests up to 30 days past, and no older', () => {
-      const groups = groupSlotRequests(
-        [request('ada', -29), request('ada', -31)],
-        [ada],
-        NOW,
-      )
-
-      expect(groups[0].requests.map((r) => r.id)).toEqual(['ada--29'])
+    test('leaves out a candidate whose times have all passed', () => {
+      expect(
+        listCandidateAvailability([availability('ada', -2, -1)], [ada], NOW),
+      ).toEqual([])
     })
   })
 

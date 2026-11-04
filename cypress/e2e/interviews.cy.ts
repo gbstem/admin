@@ -1,10 +1,16 @@
 import {
   applicationsCollection,
   currentSemester,
-  interviewTimeRequestsCollection,
+  interviewAvailabilityCollection,
   interviewTimesCollection,
 } from '../../src/lib/data/collections'
-import { interviewSlotDocId, slotRequestDocId } from '../../src/lib/data/docIds'
+import { interviewSlotDocId } from '../../src/lib/data/docIds'
+import {
+  addWeeks,
+  cellInstant,
+  gridPosition,
+  weekStart,
+} from '../../src/lib/shared/availabilityGrid'
 import { prepareDocForCompare } from '../support/utils'
 
 describe('Section H: Interview Timeslots Configuration', () => {
@@ -25,12 +31,12 @@ describe('Section H: Interview Timeslots Configuration', () => {
   })
 
   it('Test Case 16: View, Create, and Manage Interview Slots', () => {
-    // Verify Interview Time Requests card is visible
-    cy.contains('h2', 'Interview Time Requests').should('exist')
+    // Verify the Candidate Availability card is visible
+    cy.contains('h2', 'Candidate Availability').should('exist')
 
     // Fill slot details
     // Future date: 2027-10-10 at 10:00 AM
-    cy.contains('h2', 'Add A Time Slot')
+    cy.contains('h2', 'Add a Single Timeslot')
       .parent()
       .within(() => {
         cy.setFieldValue(
@@ -164,74 +170,63 @@ describe('Section H: Interview Timeslots Configuration', () => {
     cy.get('@confirms').should('have.length', 1)
   })
 
-  it('Test Case 16a: Interview Time Requests - Each Request Shows Its Requester', () => {
-    // The seed has no time requests, so these are written the way portal's
-    // "request a time" does. The list only shows requests from applicants
-    // still waiting for an interview. Test Case 16 books David Miller and
-    // then frees him again (and checks it), but this test can run without it
-    // on a retry, so he is put back explicitly.
-    const requestDates = ['2030-01-15T10:00', '2030-01-16T11:00']
-    const requestIds = requestDates.map((date) =>
-      slotRequestDocId('app-david', date),
-    )
+  it('Test Case 16a: Candidate Availability - Picking A Painted Time Schedules Them', () => {
+    // The seed has no availability, so David's is written the way portal's
+    // /api/availability does. Only candidates still waiting for an interview
+    // are listed. Test Case 16 books David Miller and then frees him again,
+    // but this test can run without it on a retry, so he is put back.
     setDavidMeta({ interview: false, decisionType: null })
-    requestDates.forEach((date, i) => {
-      cy.task('setInterviewTimeRequest', {
-        id: requestIds[i],
-        uid: 'app-david',
-        firstName: 'David',
-        lastName: 'Miller',
-        date,
-      })
+    cy.task('setInterviewAvailability', {
+      uid: 'app-david',
+      times: [PAINTED_TIME, addMinutes(PAINTED_TIME, 15)].map((time) =>
+        time.toISOString(),
+      ),
     })
     cy.reload()
     cy.intercept('POST', '/api/resolveEmails').as('resolveEmails')
 
-    // One group per applicant, headed by their name and address. The request
-    // stores no address: the one shown is what Auth holds for its uid,
-    // fetched through /api/resolveEmails.
-    requestsCard()
+    // One grid per candidate, headed by their name and address, which
+    // availability doesn't store: Auth's, through /api/resolveEmails.
+    availabilityCard()
       .contains('b', 'David Miller', { timeout: 10000 })
       .parent()
       .should('contain.text', 'applicant1@gmail.com')
     cy.wait('@resolveEmails')
-      .its('response.body.emails')
-      .should('deep.equal', { 'app-david': 'applicant1@gmail.com' })
-    requestsCard().find('b:contains("David Miller")').should('have.length', 1)
-    requestsCard()
-      .find('button:contains("Schedule this")')
-      .should('have.length', 2)
+    availabilityCard().should('contain.text', '2 times offered')
+    availabilityCard()
+      .find('input[name="candidate-availability-meeting-link"]')
+      .clear()
+    availabilityCard()
+      .find('input[name="candidate-availability-meeting-link"]')
+      .type(REQUEST_LINK)
 
-    // "Schedule this" fills the card with that request's time and applicant.
-    requestsCard().find('button:contains("Schedule this")').first().click()
-    cy.contains('h2', 'Add A Time Slot')
-      .parent()
-      .within(() => {
-        cy.get('input[name="set-date-your-local-time"]').should(
-          'have.value',
-          requestDates[0],
-        )
-        cy.get('input[name^="assign-interviewee"]').should(
-          'have.value',
-          'David Miller',
-        )
-        cy.setFieldValue('input[name="interview-meeting-link"]', REQUEST_LINK)
-      })
+    // The admin has no slot there, so the cell offers to create one for him.
     cy.captureConfirms().as('confirms')
-    cy.contains('button', 'Confirm Timeslot').click({ force: true })
+    davidCell(PAINTED_TIME).click()
+    cy.get('@confirms').should('have.length', 1)
     cy.waitForNotification('Interviewee assigned and email sent.')
+    cy.verifyEmailSent('applicant1@gmail.com', 'has been scheduled')
 
-    // Booked: every one of his requests leaves the list, none was deleted.
-    expectInterviewFlag('app-david', true)
-    requestsCard().should('not.contain.text', 'David Miller')
-    requestIds.forEach((id) => {
+    // Booked: the slot is the admin's, at that time, naming him, and his
+    // availability leaves the list without being deleted.
+    getDemoAdminUid().then((uid: string) => {
       cy.task(
-        'checkFirestoreDocExists',
-        `${interviewTimeRequestsCollection}/${id}`,
-      ).should('eq', true)
+        'readFirestoreDoc',
+        `${interviewTimesCollection}/${interviewSlotDocId(PAINTED_TIME.toISOString(), uid)}`,
+      ).then((slot: any) => {
+        expect(slot.intervieweeId).to.equal('app-david')
+        expect(slot.interviewSlotStatus).to.equal('pending')
+        expect(slot.meetingLink).to.equal(REQUEST_LINK)
+      })
     })
+    expectInterviewFlag('app-david', true)
+    availabilityCard().should('not.contain.text', 'David Miller')
+    cy.task(
+      'checkFirestoreDocExists',
+      `${interviewAvailabilityCollection}/app-david`,
+    ).should('eq', true)
 
-    // Deleting the interview brings them back for someone else to take.
+    // Deleting the interview brings him back for someone else to take.
     cy.contains('a', REQUEST_LINK)
       .parent()
       .parent()
@@ -246,27 +241,27 @@ describe('Section H: Interview Timeslots Configuration', () => {
       })
     cy.waitForNotification('Timeslot successfully deleted.')
     expectInterviewFlag('app-david', false)
-    requestsCard().contains('b', 'David Miller').should('exist')
+    availabilityCard().contains('b', 'David Miller').should('exist')
 
-    // A final decision hides them; an invitation to interview doesn't.
+    // A final decision hides him; an invitation to interview doesn't.
     setDavidMeta({ decisionType: 'rejected' })
     cy.reload()
-    cy.contains('h2', 'Add A Time Slot').should('exist')
-    requestsCard().should('not.contain.text', 'David Miller')
+    cy.contains('h2', 'Add a Single Timeslot').should('exist')
+    availabilityCard().should('not.contain.text', 'David Miller')
     setDavidMeta({ decisionType: 'interview' })
     cy.reload()
-    requestsCard().contains('b', 'David Miller').should('exist')
+    availabilityCard().contains('b', 'David Miller').should('exist')
 
     setDavidMeta({ decisionType: null })
-    requestIds.forEach((id) =>
-      cy.task('deleteFirestoreDoc', `${interviewTimeRequestsCollection}/${id}`),
+    cy.task(
+      'deleteFirestoreDoc',
+      `${interviewAvailabilityCollection}/app-david`,
     )
   })
 
   it('Test Case 16g: Marking A Booked Interview Missed Frees The Applicant', () => {
     const slotId = 'missed-slot-16g'
     const missedLink = 'https://zoom.us/j/4444444444'
-    const requestId = slotRequestDocId('app-david', '2030-02-01T10:00')
     setDavidMeta({ interview: true, decisionType: null })
     getDemoAdminUid().then((uid: string) => {
       cy.setInterviewSlot({
@@ -281,18 +276,15 @@ describe('Section H: Interview Timeslots Configuration', () => {
         intervieweeId: 'app-david',
       })
     })
-    cy.task('setInterviewTimeRequest', {
-      id: requestId,
+    cy.task('setInterviewAvailability', {
       uid: 'app-david',
-      firstName: 'David',
-      lastName: 'Miller',
-      date: '2030-02-01T10:00',
+      times: [new Date('2030-02-01T10:00').toISOString()],
     })
     cy.reload()
 
-    // Booked, so his request isn't listed yet.
-    cy.contains('h2', 'Add A Time Slot').should('exist')
-    requestsCard().should('not.contain.text', 'David Miller')
+    // Booked, so his availability isn't listed yet.
+    cy.contains('h2', 'Add a Single Timeslot').should('exist')
+    availabilityCard().should('not.contain.text', 'David Miller')
 
     cy.get('input[name="only-show-future-interview-slots"]').click({
       force: true,
@@ -319,7 +311,7 @@ describe('Section H: Interview Timeslots Configuration', () => {
       },
     )
     expectInterviewFlag('app-david', false)
-    requestsCard().contains('b', 'David Miller').should('exist')
+    availabilityCard().contains('b', 'David Miller').should('exist')
     cy.contains('a', missedLink)
       .parent()
       .parent()
@@ -329,15 +321,32 @@ describe('Section H: Interview Timeslots Configuration', () => {
     cy.task('deleteFirestoreDoc', `${interviewTimesCollection}/${slotId}`)
     cy.task(
       'deleteFirestoreDoc',
-      `${interviewTimeRequestsCollection}/${requestId}`,
+      `${interviewAvailabilityCollection}/app-david`,
     )
   })
 })
 
-/** The "Interview Time Requests" card. */
-function requestsCard(): Cypress.Chainable<JQuery<HTMLElement>> {
-  return cy.contains('h2', 'Interview Time Requests').parent()
+/** The "Candidate Availability" card. */
+function availabilityCard(): Cypress.Chainable<JQuery<HTMLElement>> {
+  return cy.contains('h2', 'Candidate Availability').parent()
 }
+
+/** `date`'s cell on David Miller's availability grid. */
+function davidCell(date: Date): Cypress.Chainable<JQuery<HTMLElement>> {
+  return availabilityCard()
+    .contains('b', 'David Miller')
+    .parents('[data-testid="candidate-availability"]')
+    .find(`[data-cell="${gridPosition(date, 15).key}"]`)
+}
+
+const addMinutes = (date: Date, minutes: number) =>
+  new Date(date.getTime() + minutes * 60_000)
+
+/**
+ * The time Test Case 16a's candidate painted, in the browser's own zone like
+ * the grid: a Tuesday afternoon years out, clear of every seeded slot.
+ */
+const PAINTED_TIME = new Date(2029, 4, 8, 15, 0)
 
 /** Merges `meta` into David Miller's application, as the API routes would. */
 function setDavidMeta(meta: Record<string, unknown>) {
@@ -347,7 +356,7 @@ function setDavidMeta(meta: Record<string, unknown>) {
   })
 }
 
-/** The meeting link Test Case 16a books David Miller's request with. */
+/** The meeting link Test Case 16a schedules David Miller with. */
 const REQUEST_LINK = 'https://zoom.us/j/7777777777'
 
 /**
@@ -404,7 +413,7 @@ function readSlotDoc(docId: string): Cypress.Chainable<any> {
 }
 
 function fillAddSlot() {
-  cy.contains('h2', 'Add A Time Slot')
+  cy.contains('h2', 'Add a Single Timeslot')
     .parent()
     .within(() => {
       cy.setFieldValue(
@@ -615,3 +624,119 @@ describe('Section H: Interview Slot Ownership Filtering', () => {
       })
   })
 })
+
+describe('Section H2: Painting Interview Availability', () => {
+  // Two weeks ahead, so every painted time is still to come, and inside the
+  // emulator's stretched interview window (E2E_INTERVIEWS_END).
+  const FIRST = addWeeks(weekStart(new Date()), 2)
+  const WED_10 = '3:600'
+  const WED_1015 = '3:615'
+  const LINK = 'https://zoom.us/j/5555555555'
+  const createdIn = (weeks: number[], uid: string) =>
+    weeks.map(
+      (w) =>
+        `${interviewTimesCollection}/${interviewSlotDocId(cellInstant(addWeeks(FIRST, w), WED_10).toISOString(), uid)}`,
+    )
+  const bookedPath = (uid: string) =>
+    `${interviewTimesCollection}/${interviewSlotDocId(cellInstant(FIRST, WED_1015).toISOString(), uid)}`
+
+  beforeEach(() => {
+    Cypress.on('uncaught:exception', (err) =>
+      err.message.includes('Firebase') ? false : true,
+    )
+    cy.signedInSession('admin', { initialPage: '/interviews/availability' })
+  })
+
+  it('Test Case 16h: a painted week repeats into open slots, and un-painting deletes only open ones', () => {
+    getDemoAdminUid().then((uid: string) => {
+      // Someone has already booked the Wednesday 10:15 two weeks out.
+      cy.setInterviewSlot({
+        collectionPath: interviewTimesCollection,
+        id: interviewSlotDocId(cellInstant(FIRST, WED_1015).toISOString(), uid),
+        date: cellInstant(FIRST, WED_1015).toISOString(),
+        interviewerName: 'Demo Admin',
+        interviewerUid: uid,
+        meetingLink: LINK,
+        semester: currentSemester,
+        intervieweeId: 'someone-booked',
+      })
+      cy.reload()
+
+      // Wednesday 10:00 and 10:15, repeated over two weeks starting two out.
+      cy.get('[data-testid="repeat-from"]').select('2')
+      // By value, the week's index: the emulator's window runs for decades,
+      // so labels alone repeat from year to year.
+      cy.get('[data-testid="repeat-through"]').select('3')
+      cy.get('input[name="availability-meeting-link"]').clear()
+      cy.get('input[name="availability-meeting-link"]').type(LINK)
+      patternGrid().find(`[data-cell="${WED_10}"]`).click()
+      patternGrid().find(`[data-cell="${WED_1015}"]`).click()
+      cy.get('[data-testid="pattern-preview"]')
+        .invoke('text')
+        .should(
+          'match',
+          /2 interview slots per week over\s+2 weeks — 4 slots total/,
+        )
+      cy.contains('button', 'Create 4 slots').click()
+
+      // The booked one is left as it was; the other three are open slots.
+      cy.waitForNotification('3 slots created, 1 booked time left alone.')
+      createdIn([0, 1], uid).forEach((path) => {
+        cy.task('readFirestoreDoc', path).then((slot: any) => {
+          expect(slot.interviewSlotStatus).to.equal('available')
+          expect(slot.meetingLink).to.equal(LINK)
+          expect(slot.interviewerUid).to.equal(uid)
+        })
+      })
+      cy.task('readFirestoreDoc', bookedPath(uid)).then((slot: any) => {
+        expect(slot.intervieweeId).to.equal('someone-booked')
+        expect(slot.interviewSlotStatus).to.equal('pending')
+      })
+
+      // That week, on the review grid: open slots painted, the booked one
+      // locked. Un-painting both deletes only the open one.
+      cy.contains('button', 'Next week →').click()
+      cy.contains('button', 'Next week →').click()
+      reviewGrid()
+        .find(`[data-cell="${WED_10}"]`)
+        .should('have.attr', 'aria-pressed', 'true')
+      reviewGrid()
+        .find(`[data-cell="${WED_1015}"]`)
+        .should('contain.text', 'Booked')
+      reviewGrid().find(`[data-cell="${WED_10}"]`).click()
+      reviewGrid().find(`[data-cell="${WED_1015}"]`).click()
+      cy.get('[data-testid="week-preview"]').should(
+        'contain.text',
+        'adds 0 slots and deletes',
+      )
+      cy.contains('button', 'Save this week').click()
+      cy.waitForNotification('1 open slot deleted.')
+      cy.task('checkFirestoreDocExists', createdIn([0], uid)[0]).should(
+        'eq',
+        false,
+      )
+      cy.task('checkFirestoreDocExists', createdIn([1], uid)[0]).should(
+        'eq',
+        true,
+      )
+      cy.task('checkFirestoreDocExists', bookedPath(uid)).should('eq', true)
+
+      // Clean up for retries and later specs.
+      ;[...createdIn([0, 1], uid), bookedPath(uid)].forEach((path) =>
+        cy.task('deleteFirestoreDoc', path),
+      )
+      cy.task(
+        'deleteFirestoreDoc',
+        `${interviewTimesCollection}/${interviewSlotDocId(cellInstant(addWeeks(FIRST, 1), WED_1015).toISOString(), uid)}`,
+      )
+    })
+  })
+})
+
+function patternGrid(): Cypress.Chainable<JQuery<HTMLElement>> {
+  return cy.get('[role="group"][aria-label="Your weekly availability"]')
+}
+
+function reviewGrid(): Cypress.Chainable<JQuery<HTMLElement>> {
+  return cy.get('[role="group"][aria-label^="Your slots for the"]')
+}
