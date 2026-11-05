@@ -244,7 +244,7 @@ Whether an instructor applicant can be given an interview is worked out from the
 
 #### The availability grid
 
-Scheduling runs both ways on one week grid, `#lib/shared/AvailabilityGrid.svelte` (byte-identical in portal), with rows one interview long (`INTERVIEW_DURATION_MINUTES`) in the viewer's own time zone. See [INTERVIEW_SCHEDULING_PLAN.md](INTERVIEW_SCHEDULING_PLAN.md) for the reasoning.
+Scheduling runs both ways on one week grid, `#lib/shared/AvailabilityGrid.svelte` (byte-identical in portal), with rows one interview long (`INTERVIEW_DURATION_MINUTES`) in the viewer's own time zone. See [INTERVIEW_SCHEDULING_PLAN.md](docs/INTERVIEW_SCHEDULING_PLAN.md) for the reasoning.
 
 - **Interviewers paint, candidates pick.** `/interviews/availability` paints a weekly pattern repeated over chosen weeks, and edits one real week at a time. Painted cells are expanded into instants in the browser (`expandGrid` in `#lib/shared/availabilityGrid`) and saved as ordinary slots through `/api/interviewSlot`'s `createMany`/`deleteMany` actions: nothing stores a pattern. Bulk create reads each slot inside its transaction and skips booked or missed ones, and times overlapping another of the caller's slots; bulk delete removes only the caller's open slots. Portal shows candidates the distinct open times, with no interviewer named, and assigns one interviewer's slot when they book.
 - **Candidates paint, interviewers pick.** When no open time works, a candidate paints when they're free; portal's `/api/availability` saves it as one `interviewAvailability/{uid}` document of instants and emails admins once per save. The **Candidate Availability** card on `/interviews` shows each eligible candidate's grid over the viewing interviewer's own slots, and a click assigns their open slot there or creates one already assigned - the same `/api/interviewSlot` write as **Add a Single Timeslot**, open to reviewers since the slot is always the caller's own.
@@ -456,6 +456,7 @@ Below is an alphabetical list of the top-level directories and significant confi
 - **`__mocks__/`**: Contains mock implementations for unit testing (e.g., mock SvelteKit modules like `$app/env`, `$app/navigation`).
 - **`__tests__/`**: Contains all of our Jest unit tests (such as utility tests and form validation schema scenario tests). The one exception is **`__tests__/rules/`**, which evaluates `firestore.rules` against a running Firestore emulator rather than mocking it — run those with `yarn test:rules`, not `yarn test`. See [Roles and Authorization](#roles-and-authorization).
 - **`cypress/`**: Contains the Cypress e2e test suite, test configurations, fixtures, and page object/support configurations.
+- **`docs/`**: Contains design and implementation documentation for current and proposed features.
 - **`node_modules/`**: Automatically generated directory containing the project's dependencies.
 - **`scripts/`**: Contains development and setup script utilities: the database seeding script (`seed.ts`) and email build tools.
 - **`src/`**: The core SvelteKit application source code.
@@ -485,7 +486,6 @@ Below is an alphabetical list of the top-level directories and significant confi
 - **`firebase.json`**: Defines local configurations for Firebase emulator environments and project builds.
 - **`firestore.indexes.json`**: Declarative composite index definitions for Cloud Firestore, deployed via `firebase deploy --only firestore:indexes`. Indexes are keyed by collection ID, so they cover every semester's subcollections automatically.
 - **`firestore.rules`**: Firebase security rules defining read/write permissions for the Cloud Firestore database. This is applied by the Firebase emulators for local testing, but needs to be manually pushed to production because it has to be merged with the `curriculum` repo version of this file in production (simple copy-and-paste). Covered by `yarn test:rules` — see [Roles and Authorization](#roles-and-authorization) before changing anything in it.
-- **`INTERVIEW_SCHEDULING_PLAN.md`**: Architectural design and proposal document for the instructor interview scheduling and availability grid system.
 - **`jest-transform-esm-to-cjs.cjs`**: Custom Jest transformer that transpiles ESM JavaScript files from `node_modules/svelte` into CommonJS for the Jest testing environment.
 - **`jest-transform-svelte-module.cjs`**: Custom Jest transformer for compiling Svelte 5 component modules for the Jest testing environment.
 - **`jest.config.ts`**: The configuration file for our Jest testing environment, specifically tailored to work alongside TypeScript and Svelte.
