@@ -1,6 +1,7 @@
 {
   "installCommand": "COREPACK_HOME=/tmp/corepack yarn install --immutable",
   "buildCommand": "COREPACK_HOME=/tmp/corepack yarn run build",
+  "ignoreCommand": "test -z \"$GBSTEM_CANONICAL_VERCEL_PROJECT\"",
   "crons": [
     {
       "path": "/api/cron/resetIdleVerification",

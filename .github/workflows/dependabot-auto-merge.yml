@@ -11,6 +11,13 @@ name: Dependabot auto-merge
 # yuenlers-projects/gbstem-admin-dz80) are deliberately NOT required, so their
 # failures do not gate merges.
 #
+# Those other projects can't be disconnected (they live in scopes we no longer
+# control, sharing the one Vercel GitHub App installation on this org), so
+# vercel.json's ignoreCommand makes them skip every build instead: it builds only
+# where the GBSTEM_CANONICAL_VERCEL_PROJECT env var is set, which it is solely in
+# the gb-stem-s-projects project. JSON can't hold that explanation, so it lives
+# here. Removing the variable from that project silently stops all deployments.
+#
 # WATCH OUT WHEN CLEANING UP THOSE DUPLICATES: Vercel names its status context
 # based on how many projects are connected to THIS REPO -- not on how many exist
 # in the Vercel account. Two or more projects gives the qualified
