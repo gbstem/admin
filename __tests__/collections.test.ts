@@ -191,3 +191,33 @@ describe('collections.ts', () => {
     })
   })
 })
+
+// The forms render these lists in keyed {#each} blocks by `name`, and store
+// the name as the chosen value, so a repeated name crashes the form
+// (each_key_duplicate) and makes two choices indistinguishable.
+describe('option lists have unique names', () => {
+  const lists: Record<
+    string,
+    { name: string }[]
+  > = require('../src/lib/data/index')
+  const duplicates = (names: string[]) =>
+    names.filter((name, i) => names.indexOf(name) !== i)
+
+  it.each(Object.keys(lists))('%s', (key) => {
+    expect(duplicates(lists[key].map((item) => item.name))).toEqual([])
+  })
+
+  // `coursesJson` is the current half only; the other half becomes current at
+  // rollover, so it is checked too.
+  it.each(['fall', 'spring'])('courses.json, %s half', (half) => {
+    const courses: {
+      name: string
+      semester: string
+    }[] = require('../src/lib/data/courses.json')
+    const names = courses
+      .filter((course) => course.semester === half)
+      .map((course) => course.name)
+    expect(names.length).toBeGreaterThan(0)
+    expect(duplicates(names)).toEqual([])
+  })
+})
