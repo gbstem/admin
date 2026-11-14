@@ -1,10 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/env'
   import { dialogState } from '#lib/stores.svelte.js'
-  import { clickOutside, cn, trapFocus } from '#lib/utils.js'
+  import { cn } from '#lib/utils.js'
   import { uniqueId } from 'lodash-es'
   import { onDestroy } from 'svelte'
-  import { fade } from 'svelte/transition'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { XMark } from '@steeze-ui/heroicons'
 
@@ -30,29 +29,32 @@
     title,
     description,
   }: Props = $props()
-  let bodyLocked = $state(false)
+
+  let dialogEl: HTMLDialogElement | undefined = $state()
+
   $effect(() => {
     if (browser) {
       if (open) {
         dialogState.current = id
-        document.body.style.overflowY = 'hidden'
-        bodyLocked = true
       } else if (dialogState.current === id) {
         dialogState.current = null
-        document.body.style.overflowY = 'auto'
-        bodyLocked = false
+      }
+    }
+  })
+
+  $effect(() => {
+    if (open && dialogEl && !dialogEl.open) {
+      if (typeof dialogEl.showModal === 'function') {
+        dialogEl.showModal()
+      } else {
+        dialogEl.setAttribute('open', '')
       }
     }
   })
 
   onDestroy(() => {
-    if (browser) {
-      if (dialogState.current === id) {
-        dialogState.current = null
-      }
-      if (bodyLocked) {
-        document.body.style.overflowY = 'auto'
-      }
+    if (browser && dialogState.current === id) {
+      dialogState.current = null
     }
   })
 
@@ -67,33 +69,40 @@
       onCancel?.()
     }
   }
-  function handleEscape(e: KeyboardEvent) {
-    if (open && !disabled) {
-      if (e.code === 'Escape') {
-        handleCancel()
-      }
-    }
-  }
 </script>
 
-<svelte:body
-  onkeydown={(e) => {
-    e.stopPropagation()
-    handleEscape(e)
-  }}
-></svelte:body>
-
 {#if open}
-  <div
-    class="fixed inset-0 z-50 h-screen w-screen bg-black opacity-40"
-    transition:fade={{ duration: 200 }}
-  ></div>
-  <div
-    class="fixed inset-0 z-50 h-screen w-screen overflow-y-auto"
-    transition:fade={{ duration: 200 }}
+  <!-- svelte-ignore a11y_no_redundant_roles -->
+  <dialog
+    bind:this={dialogEl}
+    role="dialog"
+    aria-modal="true"
+    oncancel={(e) => {
+      e.preventDefault()
+      handleCancel()
+    }}
+    onkeydown={(e) => {
+      if (e.key === 'Escape' || e.code === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        handleCancel()
+      }
+    }}
+    onclick={(e) => {
+      if (e.target === dialogEl && !alert) {
+        handleCancel()
+      }
+    }}
+    class="fixed inset-0 z-50 m-0 h-screen max-h-none w-screen max-w-none overflow-y-auto border-0 bg-transparent p-0 backdrop:bg-black/40"
   >
     <div
       class="relative flex min-h-screen items-center justify-center px-d/2 py-d"
+      onclick={(e) => {
+        if (e.target === e.currentTarget && !alert) {
+          handleCancel()
+        }
+      }}
+      role="presentation"
     >
       <div
         class={cn(
@@ -101,14 +110,6 @@
           size === 'full' && 'h-fit min-h-full',
           size === 'min' && 'max-w-2xl',
         )}
-        role="dialog"
-        use:trapFocus
-        use:clickOutside
-        onoutclick={() => {
-          if (!alert) {
-            handleCancel()
-          }
-        }}
       >
         <button
           type="button"
@@ -129,5 +130,5 @@
         </div>
       </div>
     </div>
-  </div>
+  </dialog>
 {/if}

@@ -49,13 +49,10 @@ describe('Section H: Interview Timeslots Configuration', () => {
         )
 
         // Assign Interviewee: select David Miller
-        cy.get('input[name^="assign-interviewee"]').clear()
-        cy.get('input[name^="assign-interviewee"]').type('David Miller')
-        cy.get('input[name^="assign-interviewee"]')
-          .parent()
-          .find('[role="option"]')
-          .contains('David Miller')
-          .click({ force: true })
+        cy.selectComboboxOption(
+          'input[name^="assign-interviewee"]',
+          'David Miller',
+        )
       })
 
     // Confirm Timeslot with an assigned interviewe

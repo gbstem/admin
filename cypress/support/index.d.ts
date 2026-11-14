@@ -11,7 +11,7 @@ declare namespace Cypress {
     fillInput(selector: string, text: string): Chainable<any>
     setFieldValue(selector: string, value: string): Chainable<any>
     submitSearch(term: string): Chainable<any>
-    selectOption(
+    selectComboboxOption(
       selector: string,
       text: string,
       options?: Partial<Cypress.Timeoutable>,
