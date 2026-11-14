@@ -17,7 +17,7 @@ describe('Section N: End-to-End Account Lifecycle', () => {
   it('Test Case 23: Complete Account Creation and Management Lifecycle', () => {
     // 1. Generate the Registration Token
     cy.signedInSession('admin', { initialPage: '/tokens' })
-    cy.selectOption('input[name="per-page"]', '50')
+    cy.get('select[name="per-page"]').select('50')
 
     // Open creation modal
     cy.get('th').find('button').click({ force: true })

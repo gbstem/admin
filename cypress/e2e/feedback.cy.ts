@@ -50,7 +50,7 @@ describe('Section I: Feedback Views', () => {
     })
 
     // Filter by course
-    cy.selectOption('input[name="course"]', 'Python 1')
+    cy.get('select[name="course"]').select('Python 1')
     cy.get('table', { timeout: 10000 }).should(($table) => {
       // Verify Christopher gets filtered out and John stays
       expect($table).to.not.contain('Christopher Lee')
@@ -166,7 +166,7 @@ describe('Section I: Feedback Views', () => {
     })
 
     // Filter by course
-    cy.selectOption('input[name="course"]', 'Python 1')
+    cy.get('select[name="course"]').select('Python 1')
     cy.get('table', { timeout: 10000 }).should(($table) => {
       // Verify Karen gets filtered out and Mary stays
       expect($table).to.not.contain('Karen Martin')

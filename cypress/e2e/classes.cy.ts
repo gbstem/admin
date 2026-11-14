@@ -42,13 +42,7 @@ describe('Section E: Classes Directory', () => {
     })
 
     // Select "Python 1" from Course filter dropdown
-    cy.get('input[name="course"]').clear()
-    cy.get('input[name="course"]').type('Python 1')
-    cy.get('input[name="course"]')
-      .parent()
-      .find('button')
-      .contains('Python 1')
-      .click({ force: true })
+    cy.get('select[name="course"]').select('Python 1')
 
     // Table should contain Python 1 classes only
     cy.get('table', { timeout: 10000 }).should(($table) => {
@@ -334,7 +328,9 @@ const CLASS_TIMESTAMP_FIELDS = ['meetingTimes', 'completedClassDates']
 function fillClassForm(input: ClassInput) {
   // Native `<select>` elements here, not the custom combobox the other admin
   // forms use, so `cy.select` rather than `cy.selectOption`.
-  cy.get('select[name="course"]').select(input.course, { force: true })
+  cy.get('[role="dialog"] select[name="course"]').select(input.course, {
+    force: true,
+  })
   cy.setFieldValue(
     'input[name="gradeRecommendation"]',
     input.gradeRecommendation,

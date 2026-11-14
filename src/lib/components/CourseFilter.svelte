@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Select from './Select.svelte'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { coursesJson } from '#lib/data/index.js'
@@ -13,9 +12,7 @@
   let value = $derived(page.url.searchParams.get(paramName) ?? 'all')
 
   function handleChange(newValue: string) {
-    if (newValue === value) return
-    // See StatusFilter: an empty box is mid-edit, not a selection of 'all'.
-    if (!newValue) return
+    if (!newValue || newValue === value) return
 
     const base = new URLSearchParams(page.url.search)
     if (newValue === 'all') {
@@ -28,18 +25,23 @@
     // reset: false - see PerPageControl.
     goto(`?${base.toString()}`, { reset: false })
   }
-
-  const options = [
-    { name: 'all' },
-    ...coursesJson.map((course) => ({ name: course.name })),
-  ]
 </script>
 
-<Select
-  class="mt-0 w-64"
-  {value}
-  onchange={handleChange}
-  label="Course"
-  {options}
-  required
-/>
+<div class="relative mt-0 w-64">
+  <label for="course" class="text-sm font-bold">
+    <span>Course<span class="text-red-500">*</span></span>
+  </label>
+  <select
+    id="course"
+    name="course"
+    {value}
+    onchange={(e) => handleChange(e.currentTarget.value)}
+    required
+    class="mt-1 block h-12 w-full rounded-md border border-gray-400 bg-white px-3 transition-colors focus:border-gray-600 focus:outline-hidden"
+  >
+    <option value="all">all</option>
+    {#each coursesJson as course (course.name)}
+      <option value={course.name}>{course.name}</option>
+    {/each}
+  </select>
+</div>

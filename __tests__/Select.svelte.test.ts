@@ -147,15 +147,10 @@ describe('StatusFilter', () => {
     setUrl('http://localhost/')
   })
 
-  it('navigates when a real option is chosen', async () => {
-    const input = within(target).getByLabelText(/Status/) as HTMLInputElement
+  it('navigates when a real option is chosen', () => {
+    const select = within(target).getByLabelText(/Status/) as HTMLSelectElement
 
-    fireEvent.focusIn(input)
-    flushSync()
-    const all = optionButtons(target).find(
-      (b) => b.textContent?.trim() === 'all',
-    )
-    fireEvent.click(all as HTMLButtonElement)
+    fireEvent.change(select, { target: { value: 'all' } })
     flushSync()
 
     expect(gotoMock).toHaveBeenCalledWith('?filter=all', {
@@ -163,20 +158,10 @@ describe('StatusFilter', () => {
     })
   })
 
-  it('does not navigate when the committed value is empty', async () => {
-    const input = within(target).getByLabelText(/Status/) as HTMLInputElement
+  it('does not navigate when the current option is re-selected', () => {
+    const select = within(target).getByLabelText(/Status/) as HTMLSelectElement
 
-    // Typing text that matches no option empties the filtered list, so the
-    // Enter handler commits `filteredOptions[0]` - which is `undefined`. That
-    // is the one commit path that can still produce an empty value, and
-    // treating it as "the user picked the default" is what made this filter
-    // navigate mid-interaction.
-    fireEvent.focusIn(input)
-    flushSync()
-    fireEvent.input(input, { target: { value: 'zzz' } })
-    flushSync()
-    await afterDebounce()
-    fireEvent.keyDown(input, { code: 'Enter' })
+    fireEvent.change(select, { target: { value: 'incomplete' } })
     flushSync()
 
     expect(gotoMock).not.toHaveBeenCalled()
