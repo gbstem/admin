@@ -585,7 +585,7 @@ function setAppCheckbox(selector: string, checked: boolean) {
 function fillApplicationForm(input: ApplicationInput) {
   cy.setFieldValue('input[name="personal.phoneNumber"]', input.phoneNumber)
   cy.setFieldValue('input[name="personal.dateOfBirth"]', input.dateOfBirth)
-  cy.selectOption('input[name="personal.gender"]', input.gender)
+  cy.get('select[name="personal.gender"]').select(input.gender)
 
   // Clear every box first so the result is the input exactly, not the input
   // unioned with whatever was stored.
@@ -609,7 +609,7 @@ function fillApplicationForm(input: ApplicationInput) {
   cy.setFieldValue('input[name="program.timeSlots"]', input.timeSlots)
   cy.setFieldValue('textarea[name="program.notAvailable"]', input.notAvailable)
   setAppCheckbox('input[name="program.inPerson"]', input.inPerson)
-  cy.selectOption('input[name="program.reason"]', input.reason)
+  cy.get('select[name="program.reason"]').select(input.reason)
 
   setAppCheckbox('input[name="essay.taughtBefore"]', input.taughtBefore)
   cy.setFieldValue(

@@ -23,13 +23,7 @@ describe('Section K: Registration Signup Tokens', () => {
 
     // Fill out Token creation form
     // Role selection
-    cy.get('input[name="what-role-should-this-token-grant"]').clear()
-    cy.get('input[name="what-role-should-this-token-grant"]').type('admin')
-    cy.get('input[name="what-role-should-this-token-grant"]')
-      .parent()
-      .find('button')
-      .contains('admin')
-      .click({ force: true })
+    cy.get('select[name="what-role-should-this-token-grant"]').select('admin')
 
     // Check "Should this token be one-time use?"
     cy.get('input[name="should-this-token-be-one-time-use"]').check({
@@ -126,8 +120,7 @@ describe('Section H: Signup Token Field Coverage', () => {
     // A reviewer token, deliberately: Test Case 20 above creates an *admin*
     // one in the same seeded database, so the role is what tells the two
     // 20-character rows apart.
-    cy.selectOption(
-      'input[name="what-role-should-this-token-grant"]',
+    cy.get('select[name="what-role-should-this-token-grant"]').select(
       'reviewer',
     )
     cy.get('input[name="should-this-token-be-one-time-use"]').check({

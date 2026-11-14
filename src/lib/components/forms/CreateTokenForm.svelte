@@ -13,7 +13,7 @@
     tokenSchema,
   } from './schemas'
   import FormInput from '../FormInput.svelte'
-  import FormSelect from '../FormSelect.svelte'
+  import FormNativeSelect from '../FormNativeSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'
 
   interface Props {
@@ -74,14 +74,16 @@
     <div class="flex w-full justify-center">
       <div class="w-full max-w-lg space-y-4 text-left">
         <div class="flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="role"
             inputName="what-role-should-this-token-grant"
             bind:value={$form.role}
-            options={[{ name: 'reviewer' }, { name: 'admin' }]}
             label="What role should this token grant?"
-          />
+          >
+            <option value="reviewer">reviewer</option>
+            <option value="admin">admin</option>
+          </FormNativeSelect>
         </div>
 
         <div class="flex flex-col gap-1.5">

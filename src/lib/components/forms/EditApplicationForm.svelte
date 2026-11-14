@@ -23,7 +23,7 @@
   } from '#lib/helpers/editApplicationForm.js'
   import { cloneDeep } from 'lodash-es'
   import FormInput from '../FormInput.svelte'
-  import FormSelect from '../FormSelect.svelte'
+  import FormNativeSelect from '../FormNativeSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'
   import FormTextarea from '../FormTextarea.svelte'
 
@@ -188,13 +188,17 @@
       </div>
 
       <div class="mt-2 flex flex-col gap-1.5">
-        <FormSelect
+        <FormNativeSelect
           form={formResult}
           name="personal.gender"
           label="Gender"
-          options={gendersJson}
           bind:value={$form.personal.gender}
-        />
+        >
+          <option value="" disabled>Select gender</option>
+          {#each gendersJson as item (item.name)}
+            <option value={item.name}>{item.name}</option>
+          {/each}
+        </FormNativeSelect>
       </div>
 
       <div class="mt-4 grid gap-1">
@@ -312,13 +316,17 @@
       </div>
 
       <div class="mt-4 flex flex-col gap-1.5">
-        <FormSelect
+        <FormNativeSelect
           form={formResult}
           name="program.reason"
           label="How did you learn about gbSTEM?"
-          options={reasonsJson}
           bind:value={$form.program.reason}
-        />
+        >
+          <option value="" disabled>Select reason</option>
+          {#each reasonsJson as item (item.name)}
+            <option value={item.name}>{item.name}</option>
+          {/each}
+        </FormNativeSelect>
       </div>
 
       <div class="mt-8">

@@ -258,7 +258,7 @@ describe('Section G: Pre-Registrations Directory', () => {
     cy.get('[role="dialog"]').should('exist')
 
     // Verify parent education select field displays the seeded choice
-    cy.get('input[name="personal.parentEducation"]').should(
+    cy.get('select[name="personal.parentEducation"]').should(
       'have.value',
       "Bachelor's degree",
     )
@@ -268,16 +268,15 @@ describe('Section G: Pre-Registrations Directory', () => {
     cy.contains('button', 'Save changes').should('be.visible')
 
     // Verify parent education select field validity is clean
-    cy.get('input[name="personal.parentEducation"]').then(($el) => {
-      const input = $el[0] as HTMLInputElement
-      expect(input.validationMessage).to.equal('')
-      expect(input.checkValidity()).to.equal(true)
+    cy.get('select[name="personal.parentEducation"]').then(($el) => {
+      const select = $el[0] as HTMLSelectElement
+      expect(select.validationMessage).to.equal('')
+      expect(select.checkValidity()).to.equal(true)
     })
 
     // Change student grade from 4 to 5
-    cy.get('input[name="student-grade"]').scrollIntoView()
-    cy.get('input[name="student-grade"]').clear({ force: true })
-    cy.get('input[name="student-grade"]').type('5', { force: true })
+    cy.get('select[name="student-grade"]').scrollIntoView()
+    cy.get('select[name="student-grade"]').select('5', { force: true })
 
     // Click Save changes
     cy.contains('button', 'Save changes').scrollIntoView()
@@ -285,7 +284,7 @@ describe('Section G: Pre-Registrations Directory', () => {
     cy.waitForNotification('Changes were saved successfully.')
 
     // Verify parent education remains intact after save
-    cy.get('input[name="personal.parentEducation"]').should(
+    cy.get('select[name="personal.parentEducation"]').should(
       'have.value',
       "Bachelor's degree",
     )
@@ -369,10 +368,9 @@ function fillRegistrationForm(input: RegistrationInput) {
   )
   cy.setFieldValue('input[name="personal.phoneNumber"]', input.phoneNumber)
   cy.setFieldValue('input[name="personal.dateOfBirth"]', input.dateOfBirth)
-  cy.selectOption('input[name="personal.gender"]', input.gender)
-  cy.selectOption('input[name="personal.frlp"]', input.frlp)
-  cy.selectOption(
-    'input[name="personal.parentEducation"]',
+  cy.get('select[name="personal.gender"]').select(input.gender)
+  cy.get('select[name="personal.frlp"]').select(input.frlp)
+  cy.get('select[name="personal.parentEducation"]').select(
     input.parentEducation,
   )
 
@@ -384,16 +382,15 @@ function fillRegistrationForm(input: RegistrationInput) {
   })
 
   cy.setFieldValue('input[name="academic.school"]', input.school)
-  cy.selectOption('input[name="student-grade"]', input.grade)
+  cy.get('select[name="student-grade"]').select(input.grade)
 
-  cy.selectOption('input[name="program.csCourse"]', input.csCourse)
-  cy.selectOption('input[name="program.mathCourse"]', input.mathCourse)
-  cy.selectOption(
-    'input[name="program.engineeringCourse"]',
+  cy.get('select[name="program.csCourse"]').select(input.csCourse)
+  cy.get('select[name="program.mathCourse"]').select(input.mathCourse)
+  cy.get('select[name="program.engineeringCourse"]').select(
     input.engineeringCourse,
   )
-  cy.selectOption('input[name="program.scienceCourse"]', input.scienceCourse)
-  cy.selectOption('input[name="program.reason"]', input.reason)
+  cy.get('select[name="program.scienceCourse"]').select(input.scienceCourse)
+  cy.get('select[name="program.reason"]').select(input.reason)
 
   const setCheckbox = (selector: string, checked: boolean) => {
     if (checked) cy.get(selector).check({ force: true })

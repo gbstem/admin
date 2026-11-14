@@ -28,7 +28,7 @@
     gradesJson,
   } from '#lib/data/index.js'
   import FormInput from '../FormInput.svelte'
-  import FormSelect from '../FormSelect.svelte'
+  import FormNativeSelect from '../FormNativeSelect.svelte'
   import FormCheckbox from '../FormCheckbox.svelte'
 
   interface Props {
@@ -221,34 +221,46 @@
 
       <div class="grid gap-1 sm:grid-cols-2 sm:gap-3">
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="personal.gender"
             label="Gender"
-            options={gendersJson}
             bind:value={$form.personal.gender}
-          />
+          >
+            <option value="" disabled>Select gender</option>
+            {#each gendersJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
 
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="personal.frlp"
             label="Eligible for federal free or reduced lunch program?"
-            options={frlpJson}
             bind:value={$form.personal.frlp}
-          />
+          >
+            <option value="" disabled>Select option</option>
+            {#each frlpJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
       </div>
 
       <div class="mt-2 flex flex-col gap-1.5">
-        <FormSelect
+        <FormNativeSelect
           form={formResult}
           name="personal.parentEducation"
           label="Highest level of education completed"
-          options={parentEducationJson}
           bind:value={$form.personal.parentEducation}
-        />
+        >
+          <option value="" disabled>Select option</option>
+          {#each parentEducationJson as item (item.name)}
+            <option value={item.name}>{item.name}</option>
+          {/each}
+        </FormNativeSelect>
       </div>
 
       <div class="mt-4 grid gap-1">
@@ -290,14 +302,18 @@
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="academic.grade"
             inputName="student-grade"
             label="Grade"
-            options={gradesJson}
             bind:value={$form.academic.grade}
-          />
+          >
+            <option value="" disabled>Select grade</option>
+            {#each gradesJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
       </div>
     </div>
@@ -306,56 +322,76 @@
       <span class="font-bold">Program Details</span>
       <div class="grid gap-1 sm:grid-cols-2 sm:gap-3">
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="program.csCourse"
             label="CS course"
-            options={csCoursesJson}
             bind:value={$form.program.csCourse}
-          />
+          >
+            <option value="" disabled>Select course</option>
+            {#each csCoursesJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
 
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="program.mathCourse"
             label="Math course"
-            options={mathCoursesJson}
             bind:value={$form.program.mathCourse}
-          />
+          >
+            <option value="" disabled>Select course</option>
+            {#each mathCoursesJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
       </div>
 
       <div class="grid gap-1 sm:grid-cols-2 sm:gap-3">
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="program.engineeringCourse"
             label="Engineering course"
-            options={engineeringCoursesJson}
             bind:value={$form.program.engineeringCourse}
-          />
+          >
+            <option value="" disabled>Select course</option>
+            {#each engineeringCoursesJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
 
         <div class="mt-2 flex flex-col gap-1.5">
-          <FormSelect
+          <FormNativeSelect
             form={formResult}
             name="program.scienceCourse"
             label="Science course"
-            options={scienceCoursesJson}
             bind:value={$form.program.scienceCourse}
-          />
+          >
+            <option value="" disabled>Select course</option>
+            {#each scienceCoursesJson as item (item.name)}
+              <option value={item.name}>{item.name}</option>
+            {/each}
+          </FormNativeSelect>
         </div>
       </div>
 
       <div class="mt-2 flex flex-col gap-1.5">
-        <FormSelect
+        <FormNativeSelect
           form={formResult}
           name="program.reason"
           label="Why are you enrolling your child?"
-          options={reasonsJson}
           bind:value={$form.program.reason}
-        />
+        >
+          <option value="" disabled>Select reason</option>
+          {#each reasonsJson as item (item.name)}
+            <option value={item.name}>{item.name}</option>
+          {/each}
+        </FormNativeSelect>
       </div>
 
       <div class="flex flex-col gap-1.5 pt-4">

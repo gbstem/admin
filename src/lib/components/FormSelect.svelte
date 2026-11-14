@@ -1,4 +1,5 @@
 <script lang="ts">
+  // @deprecated — migrated to FormNativeSelect.svelte in Phase 2; scheduled for deletion in Phase 3.
   import { constraintAt, constraintsStore } from './fieldConstraints'
   import { fromStore } from 'svelte/store'
   import Select from '#lib/components/Select.svelte'

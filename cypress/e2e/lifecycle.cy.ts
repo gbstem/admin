@@ -24,13 +24,7 @@ describe('Section N: End-to-End Account Lifecycle', () => {
     cy.get('[role="dialog"]').should('exist')
 
     // Role selection: admin
-    cy.get('input[name="what-role-should-this-token-grant"]').clear()
-    cy.get('input[name="what-role-should-this-token-grant"]').type('admin')
-    cy.get('input[name="what-role-should-this-token-grant"]')
-      .parent()
-      .find('button')
-      .contains('admin')
-      .click({ force: true })
+    cy.get('select[name="what-role-should-this-token-grant"]').select('admin')
 
     // Check "Should this token be one-time use?"
     cy.get('input[name="should-this-token-be-one-time-use"]').check({
