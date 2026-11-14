@@ -1,6 +1,6 @@
 <script lang="ts">
   import Card from '#lib/components/Card.svelte'
-  import Select from '#lib/components/Select.svelte'
+  import SearchableSelect from '#lib/components/SearchableSelect.svelte'
   import sendClassReminder from '#lib/data/helpers/sendClassReminders.js'
   import type ClassData from '#lib/data/types/ClassData.js'
   import type Student from '#lib/data/types/Student.js'
@@ -389,7 +389,7 @@
         </div>
         {#if !loading}
           <div class="lg:w-1/2">
-            <Select
+            <SearchableSelect
               bind:value={selectedAddClass}
               options={unenrolledClasses.map((c) => {
                 return {
@@ -405,7 +405,7 @@
             class="mt-4">Add Class</Button
           >
           <div class="lg:w-1/2">
-            <Select
+            <SearchableSelect
               bind:value={selectedDropClass}
               options={enrolledClasses.map((c) => {
                 return {

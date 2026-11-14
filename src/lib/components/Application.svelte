@@ -5,7 +5,6 @@
   import DateTimeInput from '#lib/components/DateTimeInput.svelte'
   import Form from '#lib/components/Form.svelte'
   import NumberInput from '#lib/components/NumberInput.svelte'
-  import Select from '#lib/components/Select.svelte'
   import Textarea from '#lib/components/Textarea.svelte'
   import TextInput from '#lib/components/TextInput.svelte'
   import { interviewAttendanceJson } from '#lib/data/index.js'
@@ -392,13 +391,28 @@
                   label="Interviewer"
                   required
                 />
-                <Select
-                  type="text"
-                  bind:value={interview.attendance}
-                  options={interviewAttendanceJson}
-                  label="Attendance"
-                  required
-                />
+                <div class="relative mt-2">
+                  <label for="attendance" class="text-sm font-bold">
+                    <span>
+                      Attendance<span class="text-red-500">*</span>
+                    </span>
+                  </label>
+                  <select
+                    id="attendance"
+                    name="attendance"
+                    bind:value={interview.attendance}
+                    required
+                    class="mt-1 block h-12 w-full rounded-md border border-gray-400 bg-white px-3 transition-colors focus:border-gray-600 focus:outline-hidden disabled:bg-white disabled:text-gray-400"
+                  >
+                    <option value="" disabled>Select an option</option>
+                    <option value="Null" disabled hidden
+                      >Select an option</option
+                    >
+                    {#each interviewAttendanceJson as option (option.name)}
+                      <option value={option.name}>{option.name}</option>
+                    {/each}
+                  </select>
+                </div>
                 <ul class="my-4 list-disc rounded-lg bg-gray-100 p-4 px-8">
                   <li>
                     Greet the candidate when they arrive & ask them how they

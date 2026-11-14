@@ -40,7 +40,7 @@
   import Card from '../Card.svelte'
   import FormInput from '../FormInput.svelte'
   import Loading from '../Loading.svelte'
-  import Select from '../Select.svelte'
+  import SearchableSelect from '../SearchableSelect.svelte'
   import { openableMeetingLink } from '#lib/helpers/meetingLink.js'
   import { getInterviewSlotDefaults, interviewSlotSchema } from './schemas'
   import { Icon } from '@steeze-ui/svelte-icon'
@@ -570,7 +570,7 @@
               bind:value={$addFormData.meetingLink}
             />
             <div class="flex items-end gap-4">
-              <Select
+              <SearchableSelect
                 bind:value={interviewee}
                 label="Assign Interviewee (ONLY USE when fulfilling a time that person asked for)"
                 options={intervieweeOptions}

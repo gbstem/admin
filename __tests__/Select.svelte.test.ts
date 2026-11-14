@@ -7,11 +7,11 @@ jest.mock('$app/navigation', () => ({
   goto: jest.fn(),
 }))
 
-import { mount, unmount, flushSync } from 'svelte'
+import { mount, unmount, flushSync, tick } from 'svelte'
 import { fireEvent, within } from '@testing-library/dom'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
-import Select from '#lib/components/Select.svelte'
+import SearchableSelect from '#lib/components/SearchableSelect.svelte'
 import StatusFilter from '#lib/components/StatusFilter.svelte'
 
 const gotoMock = goto as unknown as jest.Mock
@@ -32,7 +32,7 @@ function optionButtons(container: HTMLElement) {
   )
 }
 
-describe('Select', () => {
+describe('SearchableSelect', () => {
   let target: HTMLElement
   let component: Record<string, any>
 
@@ -51,7 +51,7 @@ describe('Select', () => {
     value: string
     onchange: (value: string) => void
   }) {
-    component = mount(Select, {
+    component = mount(SearchableSelect, {
       target,
       props: {
         label: 'Status',
@@ -116,9 +116,11 @@ describe('Select', () => {
 
     fireEvent.focusIn(input)
     flushSync()
-    fireEvent.keyDown(input, { code: 'ArrowDown' })
+    await tick()
     flushSync()
-    fireEvent.keyDown(input, { code: 'Enter' })
+    fireEvent.keyDown(input, { key: 'ArrowDown', code: 'ArrowDown' })
+    flushSync()
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' })
     flushSync()
 
     expect(onchange).toHaveBeenCalledWith('submitted')

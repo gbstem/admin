@@ -445,7 +445,7 @@ describe('Section D: Instructor Applications Management', () => {
         // same input type.
         cy.setFieldValue('input[type="datetime-local"]', '2026-06-15T15:00')
         cy.get('input[name="interviewer"]').type('Jane Doe')
-        cy.selectOption('input[name="attendance"]', 'On Time')
+        cy.get('select[name="attendance"]').select('On Time')
 
         // Ratings inputs
         cy.get('input[type="number"]').eq(0).clear()
@@ -514,7 +514,7 @@ describe('Section D: Instructor Applications Management', () => {
           timeout: TABLE_TIMEOUT,
         }).should('have.value', '2026-06-15T15:00')
         cy.get('input[name="interviewer"]').should('have.value', 'Jane Doe')
-        cy.get('input[name="attendance"]').should('have.value', 'On Time')
+        cy.get('select[name="attendance"]').should('have.value', 'On Time')
         cy.get('input[type="number"]').eq(0).should('have.value', '4')
         cy.get('textarea[name="conversation-notes"]').should(
           'have.value',
