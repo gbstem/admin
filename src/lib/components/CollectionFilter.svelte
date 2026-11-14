@@ -1,37 +1,15 @@
 <script lang="ts">
-  import Select from './Select.svelte'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { currentSemester, resolveSemester } from '#lib/data/collections.js'
+  import { resolveSemester } from '#lib/data/collections.js'
   import collectionsList from '#lib/data/collectionsList.json'
 
-  const idToName: Record<string, string> = $state({})
-  const nameToId: Record<string, string> = {}
-  for (const sem of collectionsList) {
-    idToName[sem.id] = sem.name
-    nameToId[sem.name] = sem.id
-  }
-
-  // lib/data/collectionsList.json should be ordered from the most recent
-  // semester to the oldest, so that the default semester shown in the
-  // dropdown is the most recent one.
-  const defaultDisplayName =
-    idToName[currentSemester] ?? collectionsList[0]?.name ?? 'ERROR'
-
-  let displayName = $derived(
-    idToName[resolveSemester(page.url.searchParams.get('semester'))] ??
-      defaultDisplayName,
+  let selectedId = $derived(
+    resolveSemester(page.url.searchParams.get('semester')),
   )
 
-  function handleChange(newDisplayName: string) {
-    // See StatusFilter: an empty box is mid-edit, not a selection. Without
-    // this it falls through to `?? currentSemester` below and navigates away
-    // from whichever past semester is being browsed.
-    if (!newDisplayName) return
-
-    const urlSemester = resolveSemester(page.url.searchParams.get('semester'))
-    const targetId = nameToId[newDisplayName] ?? currentSemester
-    if (targetId === urlSemester) return
+  function handleChange(targetId: string) {
+    if (!targetId || targetId === selectedId) return
 
     const base = new URLSearchParams(page.url.search)
     base.set('semester', targetId)
@@ -40,15 +18,22 @@
     // reset: false - see PerPageControl.
     goto(`?${base.toString()}`, { reset: false })
   }
-
-  const options = collectionsList.map((col) => ({ name: col.name }))
 </script>
 
-<Select
-  class="mt-0 w-64"
-  value={displayName}
-  onchange={handleChange}
-  label="Collection"
-  {options}
-  required
-/>
+<div class="relative mt-0 w-64">
+  <label for="collection" class="text-sm font-bold">
+    <span>Collection<span class="text-red-500">*</span></span>
+  </label>
+  <select
+    id="collection"
+    name="collection"
+    value={selectedId}
+    onchange={(e) => handleChange(e.currentTarget.value)}
+    required
+    class="mt-1 block h-12 w-full rounded-md border border-gray-400 bg-white px-3 transition-colors focus:border-gray-600 focus:outline-hidden"
+  >
+    {#each collectionsList as col (col.id)}
+      <option value={col.id}>{col.name}</option>
+    {/each}
+  </select>
+</div>

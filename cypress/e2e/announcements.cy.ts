@@ -14,8 +14,8 @@ describe('Section C: Announcements Page', () => {
     // Navigate to a URL with custom limit parameter
     cy.visit('/announcements?limit=50&page=1')
 
-    // The dropdown input should automatically reflect the limit "50"
-    cy.get('input[name="per-page"]').should('have.value', '50')
+    // The dropdown should automatically reflect the limit "50"
+    cy.get('select[name="per-page"]').should('have.value', '50')
 
     // Since we seeded 30 mock announcements, and the limit is 50:
     // Page 1 should contain all 30 announcements, and Next button should be hidden.

@@ -49,7 +49,7 @@ describe('Section J: Substitute Requests Log', () => {
     })
 
     // Filter by course
-    cy.selectOption('input[name="course"]', 'Python 1')
+    cy.get('select[name="course"]').select('Python 1')
     cy.get('table', { timeout: 10000 }).should(($table) => {
       // Verify Python 2 gets filtered out and Python 1 stays
       expect($table).to.not.contain('Python 2')

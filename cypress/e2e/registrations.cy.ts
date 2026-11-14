@@ -66,20 +66,20 @@ describe('Section G: Pre-Registrations Directory', () => {
     })
 
     // Verify Per Page dropdown functionality
-    cy.get('input[name="per-page"]').should('have.value', '25')
-    cy.selectOption('input[name="per-page"]', '50')
+    cy.get('select[name="per-page"]').should('have.value', '25')
+    cy.get('select[name="per-page"]').select('50')
     cy.url().should('contain', 'limit=50')
-    cy.get('input[name="per-page"]').should('have.value', '50')
+    cy.get('select[name="per-page"]').should('have.value', '50')
 
-    // Select "submitted" from Status filter dropdown
-    cy.selectOption('input[name="status"]', 'incomplete')
+    // Select "incomplete" from Status filter dropdown
+    cy.get('select[name="status"]').select('incomplete')
     cy.get('table', { timeout: 10000 }).should(($table) => {
       // Verify Charlie gets filtered out and Mark stays
       expect($table).to.not.contain('Charlie Brown')
       expect($table).to.contain('Mark Lewis')
     })
 
-    cy.selectOption('input[name="status"]', 'all')
+    cy.get('select[name="status"]').select('all')
     cy.get('table', { timeout: 10000 }).should(($table) => {
       // Verify Charlie gets restored and Mark stays
       expect($table).to.contain('Charlie Brown')

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Select from './Select.svelte'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
+  import { kebabCase } from 'lodash-es'
 
   interface Props {
     type: 'students' | 'registrations' | 'applications'
@@ -14,12 +14,7 @@
   let value = $derived(page.url.searchParams.get('filter') ?? defaultFilter)
 
   function handleChange(newValue: string) {
-    if (newValue === value) return
-    // An empty box is a field being edited, not a choice of the default
-    // filter. Committing it navigates mid-interaction, which resets this
-    // component's value out from under the dropdown the user (or Cypress) is
-    // still picking from. PerPageControl has guarded this from the start.
-    if (!newValue) return
+    if (!newValue || newValue === value) return
 
     const base = new URLSearchParams(page.url.search)
     if (newValue === defaultFilter) {
@@ -34,22 +29,16 @@
   }
 
   const optionsMap = {
-    students: [{ name: 'all' }, { name: 'submitted' }, { name: 'enrolled' }],
+    students: ['all', 'submitted', 'enrolled'],
     registrations: [
-      { name: 'all' },
-      { name: 'submitted' },
-      { name: 'enrolled' },
-      { name: 'inPerson' },
-      { name: 'incomplete' },
-      { name: 'not enrolled' },
+      'all',
+      'submitted',
+      'enrolled',
+      'inPerson',
+      'incomplete',
+      'not enrolled',
     ],
-    applications: [
-      { name: 'all' },
-      { name: 'undecided' },
-      { name: 'inPerson' },
-      { name: 'incomplete' },
-      { name: 'complete' },
-    ],
+    applications: ['all', 'undecided', 'inPerson', 'incomplete', 'complete'],
   }
 
   const labelMap = {
@@ -60,13 +49,23 @@
 
   let options = $derived(optionsMap[type])
   let label = $derived(labelMap[type])
+  let name = $derived(kebabCase(label))
 </script>
 
-<Select
-  class="mt-0 w-64"
-  {value}
-  onchange={handleChange}
-  {label}
-  {options}
-  required
-/>
+<div class="relative mt-0 w-64">
+  <label for={name} class="text-sm font-bold">
+    <span>{label}<span class="text-red-500">*</span></span>
+  </label>
+  <select
+    id={name}
+    {name}
+    {value}
+    onchange={(e) => handleChange(e.currentTarget.value)}
+    required
+    class="mt-1 block h-12 w-full rounded-md border border-gray-400 bg-white px-3 transition-colors focus:border-gray-600 focus:outline-hidden"
+  >
+    {#each options as opt (opt)}
+      <option value={opt}>{opt}</option>
+    {/each}
+  </select>
+</div>

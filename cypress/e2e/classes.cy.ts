@@ -42,13 +42,7 @@ describe('Section E: Classes Directory', () => {
     })
 
     // Select "Python 1" from Course filter dropdown
-    cy.get('input[name="course"]').clear()
-    cy.get('input[name="course"]').type('Python 1')
-    cy.get('input[name="course"]')
-      .parent()
-      .find('button')
-      .contains('Python 1')
-      .click({ force: true })
+    cy.get('select[name="course"]').select('Python 1')
 
     // Table should contain Python 1 classes only
     cy.get('table', { timeout: 10000 }).should(($table) => {

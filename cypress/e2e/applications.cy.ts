@@ -76,13 +76,7 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Select "Fall 2025" from Collection dropdown
-    cy.get('input[name="collection"]').clear()
-    cy.get('input[name="collection"]').type('Fall 2025')
-    cy.get('input[name="collection"]')
-      .parent()
-      .find('button')
-      .contains('Fall 2025')
-      .click({ force: true })
+    cy.get('select[name="collection"]').select('Fall 2025')
     cy.get('table', { timeout: TABLE_TIMEOUT }).should(($table) => {
       // Verify no applications from the current semester remain
       expect($table).to.not.contain('David Miller')
@@ -90,13 +84,7 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Switch back to the current semester to see the applications again
-    cy.get('input[name="collection"]').clear()
-    cy.get('input[name="collection"]').type(currentSemesterName)
-    cy.get('input[name="collection"]')
-      .parent()
-      .find('button')
-      .contains(currentSemesterName)
-      .click({ force: true })
+    cy.get('select[name="collection"]').select(currentSemesterName)
     cy.get('table', { timeout: TABLE_TIMEOUT }).should(($table) => {
       // Ensure applications from the current semester reappear
       expect($table).to.contain('David Miller')
@@ -104,13 +92,7 @@ describe('Section D: Instructor Applications Management', () => {
     })
 
     // Select "undecided" from Decision dropdown
-    cy.get('input[name="decision"]').clear()
-    cy.get('input[name="decision"]').type('undecided')
-    cy.get('input[name="decision"]')
-      .parent()
-      .find('button')
-      .contains('undecided')
-      .click({ force: true })
+    cy.get('select[name="decision"]').select('undecided')
     cy.get('table', { timeout: TABLE_TIMEOUT }).should(($table) => {
       // Ensure demo instructor is removed and David stays
       expect($table).to.not.contain('Demo Instructor')

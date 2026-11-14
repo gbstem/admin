@@ -13,7 +13,7 @@ describe('Section K: Registration Signup Tokens', () => {
 
     // Authenticate as Admin
     cy.signedInSession('admin', { initialPage: '/tokens' })
-    cy.selectOption('input[name="per-page"]', '50')
+    cy.get('select[name="per-page"]').select('50')
   })
 
   it('Test Case 20: Create, Copy, and Delete Signup Tokens', () => {
