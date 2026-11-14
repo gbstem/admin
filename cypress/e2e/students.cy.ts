@@ -221,7 +221,7 @@ describe('Section F: Students Directory', () => {
       .eq(0)
       .parent()
       .parent()
-      .find('button')
+      .find('[role="option"]')
       .contains('Python 1 taught by Demo Instructor')
       .click({ force: true })
 
@@ -275,7 +275,7 @@ describe('Section F: Students Directory', () => {
       .eq(1)
       .parent()
       .parent()
-      .find('button')
+      .find('[role="option"]')
       .contains('Python 1')
       .click({ force: true })
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import adapter from '@sveltejs/adapter-vercel'
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 import { sveltekit } from '@sveltejs/kit/vite'
@@ -26,6 +27,16 @@ const config = {
     }),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      'bits-ui': fileURLToPath(
+        new URL(
+          './node_modules/bits-ui/dist/bits/combobox/index.js',
+          import.meta.url,
+        ),
+      ),
+    },
+  },
   server: { watch: { ignored: ['**/__tests__/**', '**/cypress/**'] } },
 }
 

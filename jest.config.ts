@@ -23,11 +23,11 @@ const config: Config = {
     // `esm-env` dependency) - down-level both so Jest's CJS loader can
     // read them (paired with transformIgnorePatterns below, since
     // node_modules is untransformed by default).
-    'node_modules[/\\\\](svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui)[/\\\\].*\\.js$':
+    'node_modules[/\\\\](svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui|bits-ui|@floating-ui|tabbable)[/\\\\].*\\.js$':
       '<rootDir>/jest-transform-esm-to-cjs.cjs',
   },
   transformIgnorePatterns: [
-    '[/\\\\]node_modules[/\\\\](?!(svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui)[/\\\\])',
+    '[/\\\\]node_modules[/\\\\](?!(svelte|esm-env|lodash-es|formsnap|svelte-toolbelt|sveltekit-superforms|ts-deepmerge|memoize-weak|devalue|runed|@steeze-ui|bits-ui|@floating-ui|tabbable)[/\\\\])',
   ],
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
@@ -50,6 +50,7 @@ const config: Config = {
     '^\\$app/navigation$': '<rootDir>/__mocks__/sveltekit/navigation.cjs',
     '^\\$app/forms$': '<rootDir>/__mocks__/sveltekit/forms.cjs',
     '^formsnap$': '<rootDir>/node_modules/formsnap/dist/index.js',
+    '^bits-ui$': '<rootDir>/node_modules/bits-ui/dist/bits/combobox/index.js',
     '^svelte-toolbelt$': '<rootDir>/node_modules/svelte-toolbelt/dist/index.js',
     '^sveltekit-superforms$':
       '<rootDir>/node_modules/sveltekit-superforms/dist/index.js',
