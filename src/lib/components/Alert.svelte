@@ -1,10 +1,10 @@
 <script lang="ts">
   import { alert } from '#lib/stores.js'
-  import { cn } from '#lib/utils.js'
   import { navigating } from '$app/state'
   import { fade } from 'svelte/transition'
   import { onDestroy, onMount } from 'svelte'
   import { browser } from '$app/env'
+  import { cn } from '#lib/utils.js'
   import { Icon } from '@steeze-ui/svelte-icon'
   import {
     CheckCircle,

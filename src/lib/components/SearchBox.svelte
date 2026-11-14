@@ -2,8 +2,6 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import Button from './Button.svelte'
-  import Form from './Form.svelte'
-  import TextInput from './TextInput.svelte'
   import { Icon } from '@steeze-ui/svelte-icon'
   import { MagnifyingGlass } from '@steeze-ui/heroicons'
   import SpinnerIcon from '#lib/components/icons/SpinnerIcon.svelte'
@@ -15,28 +13,20 @@
 
   let { basePath = '', placeholder = 'Search' }: Props = $props()
 
-  // Unlike the URL-filter family (CourseFilter/StatusFilter/etc.), `search`
-  // can't become a plain $derived of the URL: unlike those, this field is
-  // edited-then-submitted, not committed on every keystroke, so it needs
-  // its own mutable local state independent of the URL between submits.
-  // The guard is load-bearing, not a hack: without it, this effect would
-  // reset `search` to the URL's last-submitted query on every unrelated
-  // navigation (e.g. changing a different filter on the same page),
-  // discarding whatever the user is mid-typing.
-  let lastUrlQuery = page.url.searchParams.get('query') ?? ''
-  let search = $state(lastUrlQuery)
+  let inputEl: HTMLInputElement | undefined = $state()
   let searching = $state(false)
+  let urlQuery = $derived(page.url.searchParams.get('query') ?? '')
 
   $effect(() => {
-    const urlQuery = page.url.searchParams.get('query') ?? ''
-    if (urlQuery !== lastUrlQuery) {
-      lastUrlQuery = urlQuery
-      search = urlQuery
+    if (inputEl && inputEl.value !== urlQuery) {
+      inputEl.value = urlQuery
     }
   })
 
-  // Each search keeps focus where it is (reset: false - see PerPageControl).
-  async function handleSearch() {
+  function handleSearch(e: SubmitEvent) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget as HTMLFormElement)
+    const search = String(formData.get('query') ?? '')
     searching = true
     const base = new URLSearchParams(page.url.search)
     if (search === '') {
@@ -54,9 +44,11 @@
     }
   }
 
-  async function handleClear() {
+  function handleClear() {
     searching = true
-    search = ''
+    if (inputEl) {
+      inputEl.value = ''
+    }
     const base = new URLSearchParams(page.url.search)
     base.delete('query')
     base.delete('updated')
@@ -66,15 +58,20 @@
   }
 </script>
 
-<Form class="flex w-full gap-4 sm:w-96 sm:shrink-0" onSubmit={handleSearch}>
+<form
+  method="GET"
+  action={basePath || undefined}
+  class="flex w-full gap-4 sm:w-96 sm:shrink-0"
+  onsubmit={handleSearch}
+>
   <div class="relative grow">
-    <TextInput
-      class={{
-        container: 'mt-0',
-        input: 'mt-0 pr-20',
-      }}
-      bind:value={search}
+    <input
+      bind:this={inputEl}
+      type="text"
+      name="query"
+      value={urlQuery}
       {placeholder}
+      class="block h-12 w-full appearance-none rounded-md border border-gray-400 px-3 pr-20 transition-colors placeholder:text-gray-500 focus:border-gray-600 focus:outline-hidden disabled:bg-white disabled:text-gray-400 disabled:placeholder:text-gray-400"
     />
     <div class="absolute top-0 right-2 flex h-12 items-center">
       <Button
@@ -98,4 +95,4 @@
       <Icon src={MagnifyingGlass} class="size-6" />
     {/if}
   </Button>
-</Form>
+</form>

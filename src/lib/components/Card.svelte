@@ -4,9 +4,10 @@
   interface Props {
     class?: string
     children?: import('svelte').Snippet
+    [key: string]: any
   }
 
-  let { class: className = '', children }: Props = $props()
+  let { class: className = '', children, ...rest }: Props = $props()
 </script>
 
 <div
@@ -14,6 +15,7 @@
     'w-full rounded-md border border-gray-200 bg-white p-4 shadow-sm md:p-6',
     className,
   )}
+  {...rest}
 >
   {@render children?.()}
 </div>

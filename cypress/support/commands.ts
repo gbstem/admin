@@ -248,36 +248,17 @@ Cypress.Commands.add('signOutViaUi', () => {
   cy.get('input[type="email"]').should('be.visible')
 })
 
-// Picks an option in a Select.svelte combobox.
-//
-// Two things this has to work around, both learned the hard way:
-//
-// 1. Clearing first is required for a select that already holds a value.
-//    `handleFocusIn` shows the whole option list, but the `filterOptionsBy`
-//    effect then narrows it by the text in the input on a 150ms debounce - so
-//    a pre-filled select collapses to just its own current value about a frame
-//    after the dropdown opens, and every other option disappears before a
-//    retrying assertion can land on it. Clearing resets the filter to the full
-//    list, and `handleInput` sets `open = true`, so it opens the dropdown too.
-//
-// 2. The option lookup is scoped to this select's own dropdown, not the page.
-//    Other buttons elsewhere may carry the same text - the dashboard's class
-//    picker is labelled with its class's course name, so an unscoped
-//    `cy.contains('button', 'Mathematics 1a')` matches the picker and silently
-//    switches class instead of choosing the option. The input and its option
-//    list share a parent, and the only other button under that parent is the
-//    dropdown toggle, which has no text and so can never match.
+// Picks an option in a SearchableSelect.svelte (bits-ui Combobox).
 Cypress.Commands.add(
-  'selectOption',
+  'selectComboboxOption',
   (selector: string, text: string, options?: Partial<Cypress.Timeoutable>) => {
     cy.get(selector, options).clear({ force: true })
+    cy.get(selector, options).type(text, { force: true })
     cy.get(selector, options)
       .parent()
-      .find('button')
+      .find('[role="option"]')
       .contains(text, options)
       .click({ force: true })
-    // `contains` matches substrings, so confirm the option that was clicked is
-    // the one asked for rather than one merely containing that text.
     cy.get(selector, options).should('have.value', text)
   },
 )
