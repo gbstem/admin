@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { user } from '#lib/client/firebase.js'
   import Button from '#lib/components/Button.svelte'
   import Card from '#lib/components/Card.svelte'
@@ -77,11 +78,13 @@
     }
   }
 
-  user.subscribe((u) => {
-    if (u) {
-      loadDashboardData()
-    }
-  })
+  onMount(() =>
+    user.subscribe((u) => {
+      if (u) {
+        loadDashboardData()
+      }
+    }),
+  )
 </script>
 
 <svelte:head>
