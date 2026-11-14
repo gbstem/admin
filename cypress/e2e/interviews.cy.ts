@@ -53,7 +53,7 @@ describe('Section H: Interview Timeslots Configuration', () => {
         cy.get('input[name^="assign-interviewee"]').type('David Miller')
         cy.get('input[name^="assign-interviewee"]')
           .parent()
-          .find('button')
+          .find('[role="option"]')
           .contains('David Miller')
           .click({ force: true })
       })
