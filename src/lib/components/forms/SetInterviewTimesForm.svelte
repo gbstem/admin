@@ -580,7 +580,7 @@
                 class="h-fit"
                 onclick={() => {
                   handleClear()
-                }}><Icon src={Trash} class="size-6 text-black" /></Button
+                }}><Icon src={Trash} class="size-6" /></Button
               >
             </div>
             <div class="right-2 items-center">

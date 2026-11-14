@@ -357,7 +357,7 @@
               copyEmails([studentData.email, studentData.secondaryEmail])}
             class="flex items-center gap-1"
           >
-            <Icon src={DocumentDuplicate} class="size-5 text-black" />
+            <Icon src={DocumentDuplicate} class="size-5" />
             <span>Copy Emails</span>
           </Button>
         </div>

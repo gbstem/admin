@@ -276,7 +276,7 @@
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('interview')}
               >
-                <PersonIcon class="text-black" />
+                <PersonIcon />
                 <span>Interview</span></Button
               >
               <Button
@@ -297,11 +297,7 @@
                   : 'gray'}
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('substitute')}
-                ><Icon
-                  src={PlusCircle}
-                  theme="mini"
-                  class="size-5 text-purple-300"
-                />
+                ><Icon src={PlusCircle} theme="mini" class="size-5" />
                 <span>Substitute</span></Button
               >
               <Button
@@ -532,7 +528,6 @@
                   <div class="mt-8 font-bold">Mock Lesson Materials</div>
                   <div class="flex flex-wrap gap-4">
                     <Button
-                      class="bg-gray-200"
                       href="https://docs.google.com/presentation/d/1dtv0qWFLNg3pjnlPCkm8nKEkEU_m5-dcLVMNEJmwFjk/edit#slide=id.g11b679f5bf6_0_9"
                       target="_blank">Math</Button
                     >

@@ -328,7 +328,9 @@ const CLASS_TIMESTAMP_FIELDS = ['meetingTimes', 'completedClassDates']
 function fillClassForm(input: ClassInput) {
   // Native `<select>` elements here, not the custom combobox the other admin
   // forms use, so `cy.select` rather than `cy.selectOption`.
-  cy.get('select[name="course"]').select(input.course, { force: true })
+  cy.get('[role="dialog"] select[name="course"]').select(input.course, {
+    force: true,
+  })
   cy.setFieldValue(
     'input[name="gradeRecommendation"]',
     input.gradeRecommendation,
