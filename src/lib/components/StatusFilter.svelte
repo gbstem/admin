@@ -4,12 +4,16 @@
   import { kebabCase } from 'lodash-es'
 
   interface Props {
-    type: 'students' | 'registrations' | 'applications'
+    type: 'students' | 'registrations' | 'applications' | 'tokens'
   }
 
   let { type }: Props = $props()
 
-  let defaultFilter = $derived(type === 'registrations' ? 'submitted' : 'all')
+  const defaultMap: Partial<Record<Props['type'], string>> = {
+    registrations: 'submitted',
+    tokens: 'active',
+  }
+  let defaultFilter = $derived(defaultMap[type] ?? 'all')
 
   let value = $derived(page.url.searchParams.get('filter') ?? defaultFilter)
 
@@ -39,12 +43,14 @@
       'not enrolled',
     ],
     applications: ['all', 'undecided', 'inPerson', 'incomplete', 'complete'],
+    tokens: ['active', 'all'],
   }
 
   const labelMap = {
     students: 'Status',
     registrations: 'Status',
     applications: 'Decision',
+    tokens: 'Status',
   }
 
   let options = $derived(optionsMap[type])

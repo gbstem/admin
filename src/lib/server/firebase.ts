@@ -165,7 +165,12 @@ export async function verifyToken(
     }
     return tokenData
   } catch (err) {
-    if (err === 'fake' || err === 'expired' || err === 'consumed') {
+    if (
+      err === 'fake' ||
+      err === 'revoked' ||
+      err === 'expired' ||
+      err === 'consumed'
+    ) {
       throw err
     }
     throw 'unknown'

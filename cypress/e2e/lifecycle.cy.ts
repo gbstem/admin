@@ -35,6 +35,10 @@ describe('Section N: End-to-End Account Lifecycle', () => {
       'input[name="after-how-many-hours-should-this-token-expire"]',
       '24',
     )
+    cy.setFieldValue(
+      'input[name="what-is-this-token-for"]',
+      'Lifecycle e2e admin signup',
+    )
 
     // Click Create
     cy.contains('button', 'Create').click({ force: true })
@@ -49,23 +53,14 @@ describe('Section N: End-to-End Account Lifecycle', () => {
       })
     })
 
-    // Find the new row. Retry via .should() until it renders instead of
-    // guessing how long the table takes to pick up the new token.
-    cy.get('tbody tr', { timeout: 10000 }).should(($rows) => {
-      const found = $rows
-        .toArray()
-        .some((el) => Cypress.$(el).find('th').text().trim().length === 20)
-      expect(
-        found,
-        'expected a newly created 20-character token ID row',
-      ).to.equal(true)
-    })
-    cy.get('tbody tr').then(($rows) => {
-      const foundRow = $rows
-        .toArray()
-        .find((el) => Cypress.$(el).find('th').text().trim().length === 20)
-      cy.wrap(Cypress.$(foundRow)).as('newAdminRow')
-    })
+    // The list is newest first, so the new token is the top row. Retry via
+    // .should() until it renders instead of guessing how long that takes.
+    cy.get('tbody tr', { timeout: 10000 })
+      .first()
+      .should('contain', 'Lifecycle e2e admin signup')
+      .invoke('attr', 'data-token-id')
+      .should('have.length', 20)
+    cy.get('tbody tr').first().as('newAdminRow')
 
     // Copy token link
     cy.get('@newAdminRow').within(() => {

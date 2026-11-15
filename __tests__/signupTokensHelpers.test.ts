@@ -21,6 +21,22 @@ describe('tokenRejection', () => {
     )
   })
 
+  it('rejects a revoked token as revoked, though its expiry has passed too', () => {
+    expect(
+      tokenRejection(
+        token({
+          expires: { toDate: () => NOW },
+          revokedAt: { toDate: () => NOW },
+        }),
+        NOW,
+      ),
+    ).toBe('revoked')
+  })
+
+  it('treats a null revokedAt as not revoked', () => {
+    expect(tokenRejection(token({ revokedAt: null }), NOW)).toBeNull()
+  })
+
   it('rejects a single-use token that already has a consumer', () => {
     expect(tokenRejection(token({ consumers: ['uid-1'] }), NOW)).toBe(
       'consumed',

@@ -1,5 +1,16 @@
 import { errorMessage } from '#lib/shared/apiErrors.js'
-import type { DeleteTokensRequestBody } from '../../routes/api/tokens/+server'
+import type { TokenIdsRequestBody } from '../../routes/api/tokens/+server'
+
+async function send(method: 'PATCH' | 'DELETE', tokenIds: string[]) {
+  const res = await fetch('/api/tokens', {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tokenIds } satisfies TokenIdsRequestBody),
+  })
+  if (!res.ok) {
+    throw new Error(await errorMessage(res))
+  }
+}
 
 /**
  * Service providing Data Access Layer for signup Tokens. Creating one is
@@ -7,23 +18,18 @@ import type { DeleteTokensRequestBody } from '../../routes/api/tokens/+server'
  */
 export const tokenService = {
   /**
-   * Deletes a single token.
+   * Revokes tokens through `/api/tokens`: all of them, or none. The documents
+   * stay, so their consumers stay on record.
    */
-  async deleteToken(tokenId: string): Promise<void> {
-    await tokenService.deleteTokens([tokenId])
+  async revokeTokens(tokenIds: string[]): Promise<void> {
+    await send('PATCH', tokenIds)
   },
 
   /**
-   * Deletes tokens through `/api/tokens`: all of them, or none.
+   * Deletes unused tokens through `/api/tokens`: all of them, or none. The
+   * server refuses the lot if any has been used.
    */
   async deleteTokens(tokenIds: string[]): Promise<void> {
-    const res = await fetch('/api/tokens', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tokenIds } satisfies DeleteTokensRequestBody),
-    })
-    if (!res.ok) {
-      throw new Error(await errorMessage(res))
-    }
+    await send('DELETE', tokenIds)
   },
 }

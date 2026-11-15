@@ -87,6 +87,9 @@ export const EDIT_CLASS_FORM_ID = 'editClass'
 /** CreateTokenForm's id - see `EDIT_APPLICATION_FORM_ID`. */
 export const CREATE_TOKEN_FORM_ID = 'createToken'
 
+export const TOKEN_PURPOSE_MIN = 10
+export const TOKEN_PURPOSE_MAX = 80
+
 export const tokenSchema = z.object({
   role: z.enum(['reviewer', 'admin']),
   consumable: z.boolean(),
@@ -95,6 +98,12 @@ export const tokenSchema = z.object({
     .int()
     .min(1, 'Minimum is 1 hour')
     .max(48, 'Maximum is 48 hours'),
+  // Required so every token says why it exists; shown on the tokens page.
+  purpose: z
+    .string()
+    .trim()
+    .min(TOKEN_PURPOSE_MIN, `Minimum is ${TOKEN_PURPOSE_MIN} characters`)
+    .max(TOKEN_PURPOSE_MAX, `Maximum is ${TOKEN_PURPOSE_MAX} characters`),
 })
 
 /**
@@ -327,6 +336,7 @@ export function getCreateTokenFormDefaults() {
     role: 'reviewer' as const,
     consumable: false,
     expires: 24,
+    purpose: '',
   }
 }
 

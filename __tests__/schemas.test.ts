@@ -157,6 +157,7 @@ describe('Zod Validation Schemas', () => {
         role: 'reviewer',
         consumable: true,
         expires: 24,
+        purpose: 'Reviewer access for fall interviews',
       })
       expect(result.success).toBe(true)
     })
@@ -166,6 +167,7 @@ describe('Zod Validation Schemas', () => {
         role: 'admin',
         consumable: false,
         expires: 48,
+        purpose: 'Admin access for the new program director',
       })
       expect(result.success).toBe(true)
     })

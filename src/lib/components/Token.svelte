@@ -15,7 +15,7 @@
 
 <Dialog open={true} alert onCancel={handleExit}>
   {#snippet title()}
-    Token
+    New signup token
   {/snippet}
   {#snippet description()}
     <div>

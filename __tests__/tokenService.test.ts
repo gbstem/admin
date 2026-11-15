@@ -6,45 +6,65 @@ describe('tokenService (Data Access Layer)', () => {
     global.fetch = jest.fn() as jest.Mock
   })
 
-  const deleted = () => {
+  const sent = () => {
     const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
     return { url, method: init.method, body: JSON.parse(init.body) }
   }
 
-  describe('deleteToken', () => {
-    it('deletes the given token through /api/tokens', async () => {
+  describe('revokeTokens', () => {
+    it('revokes all given tokens in one PATCH to /api/tokens', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
 
-      await tokenService.deleteToken('tok-1')
+      await tokenService.revokeTokens(['tok-1', 'tok-2'])
 
-      expect(deleted()).toEqual({
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+      expect(sent()).toEqual({
         url: '/api/tokens',
-        method: 'DELETE',
-        body: { tokenIds: ['tok-1'] },
+        method: 'PATCH',
+        body: { tokenIds: ['tok-1', 'tok-2'] },
       })
     })
 
-    it("throws the server's message when the delete is refused", async () => {
+    it("throws the server's message when the revoke is refused", async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         statusText: 'Forbidden',
         json: async () => ({ message: 'Admins only.' }),
       })
 
-      await expect(tokenService.deleteToken('tok-1')).rejects.toThrow(
+      await expect(tokenService.revokeTokens(['tok-1'])).rejects.toThrow(
         'Admins only.',
       )
     })
   })
 
   describe('deleteTokens', () => {
-    it('deletes all given tokens in one request', async () => {
+    it('deletes all given tokens in one DELETE to /api/tokens', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
 
       await tokenService.deleteTokens(['tok-1', 'tok-2', 'tok-3'])
 
       expect(global.fetch).toHaveBeenCalledTimes(1)
-      expect(deleted().body).toEqual({ tokenIds: ['tok-1', 'tok-2', 'tok-3'] })
+      expect(sent()).toEqual({
+        url: '/api/tokens',
+        method: 'DELETE',
+        body: { tokenIds: ['tok-1', 'tok-2', 'tok-3'] },
+      })
+    })
+
+    it("throws the server's message when a used token blocks the delete", async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Conflict',
+        json: async () => ({
+          message:
+            'A token someone has signed up with can be revoked, not deleted.',
+        }),
+      })
+
+      await expect(tokenService.deleteTokens(['tok-1'])).rejects.toThrow(
+        'can be revoked, not deleted',
+      )
     })
 
     it('falls back to the status text when the error body is not JSON', async () => {

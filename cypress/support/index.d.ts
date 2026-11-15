@@ -57,6 +57,11 @@ declare namespace Cypress {
         consumable?: boolean
         consumers?: string[]
         expiresAt?: string
+        createdAt?: string
+        createdBy?: string | null
+        purpose?: string
+        revokedAt?: string
+        revokedBy?: string
       },
     ): Chainable<any>
     getFirebaseAuthToken(): Chainable<string>

@@ -1,3 +1,4 @@
+import type { TokenRejection } from '#lib/helpers/signupTokens.js'
 import { recordNewAccount } from '#lib/server/accountService.js'
 import { sendEmail } from '#lib/server/email.js'
 import { adminAuth, verifyToken } from '#lib/server/firebase.js'
@@ -8,12 +9,12 @@ import type { Actions, PageServerLoad } from './$types'
 
 // Shared with the `default` action below: same states, same copy, whether the
 // token fails on the initial GET (a stale link someone clicked) or on submit.
-export function _tokenErrorMessage(
-  state: 'consumed' | 'expired' | 'unknown',
-): string {
+export function _tokenErrorMessage(state: TokenRejection | 'unknown'): string {
   switch (state) {
     case 'consumed':
       return 'Token already consumed. If this token was meant specifically for your account, immediately contact an admin with this message.'
+    case 'revoked':
+      return 'This token was revoked by an admin. If you need a new token, contact an admin.'
     case 'expired':
       return 'Token has expired. If you need a new token, contact an admin.'
     case 'unknown':
@@ -31,7 +32,7 @@ export const load = (async ({ url }) => {
         tokenError: null,
       }
     } catch (err) {
-      const state = err as 'consumed' | 'expired' | 'fake' | 'unknown'
+      const state = err as TokenRejection | 'fake' | 'unknown'
       // A garbage/tampered token isn't something a real user with a stale
       // link produces, so it keeps the old silent bounce to signin. The other
       // three states are what a real user sees on an expired or already-used
@@ -97,7 +98,7 @@ export const actions = {
           )
         // Somebody else's signup used the token between the check above and
         // this one; say so, rather than suggesting a retry that can't work.
-        if (err === 'consumed' || err === 'expired') {
+        if (err === 'consumed' || err === 'expired' || err === 'revoked') {
           return fail(400, { error: _tokenErrorMessage(err) })
         }
         return fail(400, {
@@ -141,7 +142,7 @@ export const actions = {
       }
       return { success: true }
     } catch (err) {
-      const state = err as 'consumed' | 'expired' | 'fake' | 'unknown'
+      const state = err as TokenRejection | 'fake' | 'unknown'
       return fail(400, {
         error: _tokenErrorMessage(state === 'fake' ? 'unknown' : state),
       })

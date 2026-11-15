@@ -7,7 +7,7 @@ import { error, fail } from '@sveltejs/kit'
 import { superValidate } from 'sveltekit-superforms'
 import { zod } from 'sveltekit-superforms/adapters'
 import type { Actions, PageServerLoad } from './$types'
-import { tokenService } from '#lib/server/tokenService.js'
+import { parseTokenStatus, tokenService } from '#lib/server/tokenService.js'
 
 import { parsePagination } from '#lib/utils.js'
 
@@ -15,12 +15,15 @@ export const load = (async ({ depends, locals, url }) => {
   if (locals.user && locals.user.role === 'admin') {
     depends('app:tokens')
     const { pageNum, limitVal, offsetVal } = parsePagination(url)
+    const status = parseTokenStatus(url.searchParams.get('filter'))
     try {
       return {
         tokens: await tokenService.fetchTokens({
           limit: limitVal,
           offset: offsetVal,
+          status,
         }),
+        status,
         page: pageNum,
         limit: limitVal,
       }
@@ -44,14 +47,17 @@ export const actions: Actions = {
   /**
    * CreateTokenForm's save. Admins only: a token grants whoever holds it an
    * admin or reviewer account. Returns the new token's id for the signup
-   * link.
+   * link. The creator recorded on the token is the session's admin.
    */
   createToken: async ({ request, locals }) => {
-    verifyAdmin(locals)
+    const admin = verifyAdmin(locals)
     const form = await superValidate(request, zod(tokenSchema), {
       id: CREATE_TOKEN_FORM_ID,
     })
     if (!form.valid) return fail(400, { form })
-    return { form, tokenId: await tokenService.createToken(form.data) }
+    return {
+      form,
+      tokenId: await tokenService.createToken(form.data, admin.uid),
+    }
   },
 }

@@ -313,6 +313,18 @@ describe('Section A: Authentication and Navigation', () => {
       message: 'Token has expired. If you need a new token, contact an admin.',
     },
     {
+      label: 'Revoked Token',
+      id: 'revoked-test-token',
+      setup: () =>
+        cy.createTestToken('revoked-test-token', {
+          expiresAt: new Date(Date.now() - 60 * 1000).toISOString(),
+          revokedAt: new Date(Date.now() - 60 * 1000).toISOString(),
+          revokedBy: 'some-admin-uid',
+        }),
+      message:
+        'This token was revoked by an admin. If you need a new token, contact an admin.',
+    },
+    {
       label: 'Already-Used Token',
       id: 'consumed-test-token',
       setup: () =>
