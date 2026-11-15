@@ -225,6 +225,11 @@ export default defineConfig({
           consumable: boolean
           consumers: string[]
           expiresAt: string
+          createdAt: string
+          createdBy: string | null
+          purpose: string
+          revokedAt: string | null
+          revokedBy: string | null
         }) {
           if (getApps().length === 0) {
             initializeApp({
@@ -239,6 +244,13 @@ export default defineConfig({
               consumable: token.consumable,
               consumers: token.consumers,
               expires: Timestamp.fromDate(new Date(token.expiresAt)),
+              createdAt: Timestamp.fromDate(new Date(token.createdAt)),
+              createdBy: token.createdBy,
+              purpose: token.purpose,
+              revokedAt: token.revokedAt
+                ? Timestamp.fromDate(new Date(token.revokedAt))
+                : null,
+              revokedBy: token.revokedBy,
             })
           return null
         },

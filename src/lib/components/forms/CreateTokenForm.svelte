@@ -10,6 +10,8 @@
   import {
     CREATE_TOKEN_FORM_ID,
     getCreateTokenFormDefaults,
+    TOKEN_PURPOSE_MAX,
+    TOKEN_PURPOSE_MIN,
     tokenSchema,
   } from './schemas'
   import FormInput from '../FormInput.svelte'
@@ -40,7 +42,7 @@
         if (result.type !== 'success') return
         try {
           await writeToClipboard(
-            `${page.url.host}/signup?token=${result.data.tokenId}`,
+            `${page.url.origin}/signup?token=${result.data.tokenId}`,
           )
         } catch {
           // ignore clipboard errors
@@ -73,6 +75,22 @@
   <fieldset class="space-y-4" disabled={$delayed}>
     <div class="flex w-full justify-center">
       <div class="w-full max-w-lg space-y-4 text-left">
+        <div class="flex flex-col gap-1.5">
+          <FormInput
+            form={formResult}
+            name="purpose"
+            inputName="what-is-this-token-for"
+            label="What is this token for?"
+            placeholder="e.g. Reviewer access for Jane Doe, fall interviews"
+            maxlength={TOKEN_PURPOSE_MAX}
+            bind:value={$form.purpose}
+          />
+          <span class="text-xs font-semibold text-gray-500">
+            {TOKEN_PURPOSE_MIN}-{TOKEN_PURPOSE_MAX} characters, shown on the tokens
+            list. {($form.purpose ?? '').trim().length}/{TOKEN_PURPOSE_MAX}
+          </span>
+        </div>
+
         <div class="flex flex-col gap-1.5">
           <FormNativeSelect
             form={formResult}

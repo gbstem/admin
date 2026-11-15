@@ -40,7 +40,7 @@ function toSlotForDeletion(doc: QueryDocumentSnapshot) {
  * nothing. It also keeps the profile and the consumption together, so a token
  * is never used up by an account with no `users` document, or the reverse.
  *
- * Throws `'fake'`, `'expired'` or `'consumed'` - the same values as
+ * Throws `'fake'` or a `TokenRejection` - the same values as
  * verifyToken - for a token that can no longer be used.
  */
 export async function recordNewAccount(account: NewAccount): Promise<void> {

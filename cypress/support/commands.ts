@@ -429,6 +429,11 @@ Cypress.Commands.add(
       consumable?: boolean
       consumers?: string[]
       expiresAt?: string
+      createdAt?: string
+      createdBy?: string | null
+      purpose?: string
+      revokedAt?: string
+      revokedBy?: string
     } = {},
   ) => {
     return cy.task('setToken', {
@@ -439,6 +444,11 @@ Cypress.Commands.add(
       expiresAt:
         options.expiresAt ??
         new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: options.createdAt ?? new Date().toISOString(),
+      createdBy: options.createdBy ?? null,
+      purpose: options.purpose ?? `Cypress test token ${id}`,
+      revokedAt: options.revokedAt ?? null,
+      revokedBy: options.revokedBy ?? null,
     })
   },
 )

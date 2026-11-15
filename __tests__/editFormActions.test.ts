@@ -377,7 +377,12 @@ describe('/tokens?/createToken', () => {
       request: superformRequest(CREATE_TOKEN_FORM_ID, data),
       locals: { user },
     })
-  const validToken = { role: 'reviewer', consumable: true, expires: 24 }
+  const validToken = {
+    role: 'reviewer',
+    consumable: true,
+    expires: 24,
+    purpose: 'Reviewer access for fall interviews',
+  }
 
   beforeEach(() => {
     mockCreateToken.mockReset().mockResolvedValue('tok-1')
@@ -388,7 +393,25 @@ describe('/tokens?/createToken', () => {
 
     expect(result.form.valid).toBe(true)
     expect(result.tokenId).toBe('tok-1')
-    expect(mockCreateToken).toHaveBeenCalledWith(validToken)
+    expect(mockCreateToken).toHaveBeenCalledWith(validToken, admin.uid)
+  })
+
+  it('trims the purpose before saving it', async () => {
+    await create(admin, {
+      ...validToken,
+      purpose: '   Reviewer access for fall interviews  ',
+    })
+
+    expect(mockCreateToken.mock.calls[0][0].purpose).toBe(
+      'Reviewer access for fall interviews',
+    )
+  })
+
+  it('records the session admin as creator, whatever the form claims', async () => {
+    await create(admin, { ...validToken, createdBy: 'someone-else' })
+
+    expect(mockCreateToken.mock.calls[0][0]).not.toHaveProperty('createdBy')
+    expect(mockCreateToken.mock.calls[0][1]).toBe(admin.uid)
   })
 
   it.each([
@@ -398,6 +421,17 @@ describe('/tokens?/createToken', () => {
       'role',
     ],
     ['an expiry past 48 hours', { ...validToken, expires: 72 }, 'expires'],
+    ['no purpose', { ...validToken, purpose: '' }, 'purpose'],
+    [
+      'a purpose that is short once trimmed',
+      { ...validToken, purpose: '   test    ' },
+      'purpose',
+    ],
+    [
+      'a purpose over 80 characters',
+      { ...validToken, purpose: 'x'.repeat(81) },
+      'purpose',
+    ],
   ])('refuses %s, creating nothing', async (_, data, field) => {
     const result = await create(admin, data)
 

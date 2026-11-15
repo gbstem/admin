@@ -8,23 +8,25 @@
   import { actionsState } from '#lib/stores.svelte.js'
   import Token from '#lib/components/Token.svelte'
   import PerPageControl from '#lib/components/PerPageControl.svelte'
+  import StatusFilter from '#lib/components/StatusFilter.svelte'
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
   import { writeToClipboard } from '#lib/utils.js'
   import { Icon } from '@steeze-ui/svelte-icon'
-  import { Check, Plus, XMark } from '@steeze-ui/heroicons'
+  import { Plus } from '@steeze-ui/heroicons'
 
   interface Props {
     data: PageData
   }
 
+  type TokenRow = PageData['tokens'][number]
+
   let { data }: Props = $props()
 
   let create = $state(false)
-  let disabled = {
-    create: false,
-  }
-  let checked: Array<number> = $state([])
+  // Token ids, never row positions: a new token lands on top and shifts every
+  // row down, and a checked position would then name a different token.
+  let checked: Array<string> = $state([])
 
   let currentPage = $derived(data.page ?? 1)
   let currentLimit = $derived(data.limit ?? 25)
@@ -46,77 +48,112 @@
       return `?${base.toString()}`
     })(),
   )
-  $effect(() => {
-    if (checked.length > 0) {
-      actionsState.current = [
-        {
-          name: `Delete ${checked.length} ${
-            checked.length > 1 ? 'tokens' : 'token'
-          }`,
-          color: 'red',
-          callback: async () => {
-            try {
-              const tokenIds = checked.map((i) => data.tokens[i].id)
-              await tokenService.deleteTokens(tokenIds)
-              await invalidate('app:tokens')
-              checked = []
-              alert.trigger('success', 'Token deleted.')
-            } catch (err: any) {
-              console.error('Failed to delete tokens:', err)
-              throw err
-            }
-          },
-        },
-      ]
-    } else {
-      actionsState.current = null
+
+  // A checked id that left the page (filtered out, revoked from another tab)
+  // is dropped rather than acted on unseen.
+  let checkedTokens = $derived(
+    data.tokens.filter((token) => checked.includes(token.id)),
+  )
+
+  type TokenStatus = 'active' | 'used' | 'expired' | 'revoked'
+
+  function statusOf(token: TokenRow): TokenStatus {
+    if (token.values.revokedAt) return 'revoked'
+    if (token.values.expires <= new Date()) return 'expired'
+    if (token.values.consumable && token.values.consumers.length > 0) {
+      return 'used'
     }
+    return 'active'
+  }
+
+  const statusClass: Record<TokenStatus, string> = {
+    active: 'bg-green-100 text-green-800',
+    used: 'bg-gray-100 text-gray-700',
+    expired: 'bg-gray-100 text-gray-500',
+    revoked: 'bg-red-100 text-red-800',
+  }
+
+  function plural(n: number) {
+    return `${n} ${n === 1 ? 'token' : 'tokens'}`
+  }
+
+  async function run(
+    action: (ids: string[]) => Promise<void>,
+    ids: string[],
+    done: string,
+  ) {
+    try {
+      await action(ids)
+      checked = []
+      await invalidate('app:tokens')
+      alert.trigger('success', done)
+    } catch (err: any) {
+      alert.trigger('error', err.message, true)
+    }
+  }
+
+  $effect(() => {
+    const ids = checkedTokens.map((token) => token.id)
+    if (ids.length === 0) {
+      actionsState.current = null
+      return
+    }
+    const revocable = checkedTokens.filter(
+      (token) => statusOf(token) === 'active' || statusOf(token) === 'used',
+    )
+    const deletable = checkedTokens.every(
+      (token) => token.values.consumers.length === 0,
+    )
+    actionsState.current = [
+      ...(revocable.length > 0
+        ? [
+            {
+              name: `Revoke ${plural(revocable.length)}`,
+              color: 'red' as const,
+              callback: () =>
+                run(
+                  tokenService.revokeTokens,
+                  revocable.map((token) => token.id),
+                  'Tokens revoked.',
+                ),
+            },
+          ]
+        : []),
+      // A used token's consumers are the only record of who it signed up.
+      ...(deletable
+        ? [
+            {
+              name: `Delete ${plural(ids.length)}`,
+              color: 'red' as const,
+              callback: () =>
+                run(tokenService.deleteTokens, ids, 'Tokens deleted.'),
+            },
+          ]
+        : []),
+    ]
   })
+
   function handleCheck(
     e: Event & { currentTarget: EventTarget & HTMLInputElement },
-    i: number,
+    id: string,
   ) {
-    const target = e.target as HTMLInputElement
-    if (target.checked) {
-      checked = [...checked, i]
-    } else {
-      checked = checked.filter((item) => item !== i)
-    }
+    checked = e.currentTarget.checked
+      ? [...checked, id]
+      : checked.filter((item) => item !== id)
   }
   function handleCheckAll(
     e: Event & { currentTarget: EventTarget & HTMLInputElement },
   ) {
-    const target = e.target as HTMLInputElement
-    if (target.checked) {
-      checked = Array.from({ length: data.tokens.length }, (_, i) => i)
-    } else {
-      checked = []
-    }
+    checked = e.currentTarget.checked
+      ? data.tokens.map((token) => token.id)
+      : []
   }
-  function handleCreate() {
-    create = true
-  }
-  async function handleCopyAction(token: {
-    id: string
-    values: Data.Token<'pojo'>
-  }) {
+  async function handleCopyAction(token: TokenRow) {
     try {
-      await writeToClipboard(`${page.url.host}/signup?token=${token.id}`)
+      await writeToClipboard(`${page.url.origin}/signup?token=${token.id}`)
       alert.trigger('success', 'Token copied.')
     } catch {
       alert.trigger('error', 'Failed to copy token.')
-    }
-  }
-  async function handleDeleteAction(token: {
-    id: string
-    values: Data.Token<'pojo'>
-  }) {
-    try {
-      await tokenService.deleteToken(token.id)
-      await invalidate('app:tokens')
-      alert.trigger('success', 'Token deleted.')
-    } catch (err: any) {
-      alert.trigger('error', err.message)
     }
   }
 </script>
@@ -125,7 +162,8 @@
   <title>Tokens</title>
 </svelte:head>
 
-<div class="mb-4 flex flex-wrap items-center gap-4">
+<div class="mb-4 flex flex-wrap items-end gap-4">
+  <StatusFilter type="tokens" />
   <PerPageControl />
 </div>
 
@@ -137,96 +175,148 @@
           id="check-all"
           class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
           type="checkbox"
-          checked={checked.length === data.tokens.length && checked.length > 0}
+          checked={checkedTokens.length === data.tokens.length &&
+            checkedTokens.length > 0}
           oninput={handleCheckAll}
         />
-        <label for="check-all" class="sr-only">checkbox</label>
+        <label for="check-all" class="sr-only">Select all tokens</label>
       </div>
     </th>
-    <th scope="col" class="px-6 py-3">Expires</th>
-    <th scope="col" class="px-6 py-3">Token</th>
+    <th scope="col" class="px-6 py-3">Created</th>
+    <th scope="col" class="px-6 py-3">Purpose</th>
     <th scope="col" class="px-6 py-3">Role</th>
-    <th scope="col" class="px-6 py-3">Consumable</th>
-    <th scope="col" class="px-6 py-3">Consumers</th>
+    <th scope="col" class="px-6 py-3">Status</th>
+    <th scope="col" class="px-6 py-3">Expires</th>
+    <th scope="col" class="px-6 py-3">Signed up</th>
     <th scope="col" class="flex justify-end px-6 py-3">
       <Button
         class="flex size-10 items-center justify-center p-0"
         color="blue"
-        onclick={handleCreate}
-        disabled={disabled.create}
+        aria-label="Create token"
+        onclick={() => (create = true)}
       >
         <Icon src={Plus} class="size-5" />
       </Button>
     </th>
   {/snippet}
   {#snippet body()}
-    {#each data.tokens as token, i (token.id)}
-      <tr class="border-b bg-white">
+    {#each data.tokens as token (token.id)}
+      {@const status = statusOf(token)}
+      <tr class="border-b bg-white" data-token-id={token.id}>
         <td class="w-4 p-4">
           <div class="flex items-center">
             <input
-              id={`check-${i}`}
+              id={`check-${token.id}`}
               class="peer size-5 cursor-pointer appearance-none rounded-md border border-gray-400 checked:border-gray-600 checked:bg-gray-600 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:ring-offset-1 focus:outline-hidden disabled:cursor-default disabled:checked:border-gray-400 disabled:checked:bg-gray-400"
               type="checkbox"
-              checked={checked.includes(i)}
-              oninput={(e) => handleCheck(e, i)}
+              checked={checked.includes(token.id)}
+              oninput={(e) => handleCheck(e, token.id)}
             />
-            <label for="check-all" class="sr-only">checkbox</label>
+            <label for={`check-${token.id}`} class="sr-only">
+              Select token
+            </label>
           </div>
         </td>
-        <td class="px-6 py-4">
-          {#if token.values.expires < new Date()}
-            <span class="text-red-500">Expired</span>
-          {:else}
-            {format(token.values.expires, 'yyyy.MM.dd p')}
-          {/if}
+        <td class="px-6 py-4 whitespace-nowrap">
+          <div>{format(token.values.createdAt, 'yyyy.MM.dd p')}</div>
+          <div class="text-xs text-gray-500">
+            {token.createdByEmail ??
+              (token.values.createdBy ? 'deleted account' : 'unknown')}
+          </div>
         </td>
         <th
           scope="row"
-          class="px-6 py-4 font-medium whitespace-nowrap text-gray-900"
+          class="max-w-xs truncate px-6 py-4 font-medium text-gray-900"
+          title={token.values.purpose}
         >
-          {token.id}
+          {token.values.purpose || '—'}
         </th>
-        <td class="px-6 py-4 capitalize"> {token.values.role} </td>
-        <td class="px-6 py-4 capitalize">
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="capitalize">{token.values.role}</span>
           {#if token.values.consumable}
-            <Icon src={Check} class="size-5" />
-          {:else}
-            <Icon src={XMark} class="size-5" />
+            <span
+              class="ml-1 rounded-sm bg-blue-50 px-1.5 py-0.5 text-xs text-blue-800"
+              >one-time</span
+            >
           {/if}
         </td>
-        <td class="px-6 py-4"> {token.values.consumers.length} </td>
-        <td class="space-x-2 px-6 py-4 whitespace-nowrap">
-          <button
-            class="text-gray-700 transition-colors duration-300 hover:text-gray-500"
-            type="button"
-            onclick={() => handleCopyAction(token)}
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span
+            class={`rounded-sm px-2 py-0.5 text-xs font-semibold capitalize ${statusClass[status]}`}
+            data-testid="token-status">{status}</span
           >
-            Copy
-          </button>
-          <button
-            class="text-red-700 transition-colors duration-300 hover:text-red-500"
-            type="button"
-            onclick={() => handleDeleteAction(token)}
-          >
-            Delete
-          </button>
+          {#if status === 'revoked'}
+            <div class="mt-1 text-xs text-gray-500">
+              by {token.revokedByEmail ?? 'deleted account'}
+            </div>
+          {/if}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          {format(token.values.expires, 'yyyy.MM.dd p')}
+        </td>
+        <td class="px-6 py-4 text-xs">
+          {#if token.values.consumers.length === 0}
+            <span class="text-gray-500">No one</span>
+          {:else}
+            <ul>
+              {#each token.consumerEmails as email, j (token.values.consumers[j])}
+                <li>{email ?? 'deleted account'}</li>
+              {/each}
+            </ul>
+          {/if}
+        </td>
+        <td class="space-x-2 px-6 py-4 text-right whitespace-nowrap">
+          {#if status === 'active'}
+            <button
+              class="text-gray-700 transition-colors duration-300 hover:text-gray-500"
+              type="button"
+              onclick={() => handleCopyAction(token)}
+            >
+              Copy
+            </button>
+          {/if}
+          {#if status === 'active' || status === 'used'}
+            <button
+              class="text-red-700 transition-colors duration-300 hover:text-red-500"
+              type="button"
+              onclick={() =>
+                run(tokenService.revokeTokens, [token.id], 'Token revoked.')}
+            >
+              Revoke
+            </button>
+          {/if}
+          {#if token.values.consumers.length === 0}
+            <button
+              class="text-red-700 transition-colors duration-300 hover:text-red-500"
+              type="button"
+              onclick={() =>
+                run(tokenService.deleteTokens, [token.id], 'Token deleted.')}
+            >
+              Delete
+            </button>
+          {/if}
+        </td>
+      </tr>
+    {:else}
+      <tr class="bg-white">
+        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+          {data.status === 'active'
+            ? 'No active tokens. Choose "all" to see expired and revoked ones.'
+            : 'No tokens yet.'}
         </td>
       </tr>
     {/each}
   {/snippet}
 </Table>
 
-{#if data.tokens}
-  <div class="mt-4 flex justify-end gap-2">
-    {#if currentPage > 1}
-      <Button href={prevHref}>Previous</Button>
-    {/if}
-    {#if data.tokens.length >= currentLimit}
-      <Button href={nextHref}>Next</Button>
-    {/if}
-  </div>
-{/if}
+<div class="mt-4 flex justify-end gap-2">
+  {#if currentPage > 1}
+    <Button href={prevHref}>Previous</Button>
+  {/if}
+  {#if data.tokens.length >= currentLimit}
+    <Button href={nextHref}>Next</Button>
+  {/if}
+</div>
 
 {#if create}
   <Token

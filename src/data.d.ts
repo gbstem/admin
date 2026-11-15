@@ -14,7 +14,32 @@ declare global {
           ? ServerTimestamp
           : Date
       consumable: boolean
+      /** Uids of the accounts that signed up with this token. */
       consumers: Array<string>
+      /**
+       * Audit fields, written by admin's tokenService. Tokens made before
+       * they existed got `createdAt` from the document's create time and a
+       * null `createdBy` and empty `purpose` from
+       * scripts/backfill-token-audit-fields.ts.
+       */
+      createdAt: T extends 'client'
+        ? ClientTimestamp
+        : T extends 'server'
+          ? ServerTimestamp
+          : Date
+      /** Uid of the admin who created the token; null if unknown. */
+      createdBy: string | null
+      /** Why the token was made, 10-80 characters (tokenSchema). */
+      purpose: string
+      /** Set, with `expires` moved to the same moment, by a revoke. */
+      revokedAt:
+        | (T extends 'client'
+            ? ClientTimestamp
+            : T extends 'server'
+              ? ServerTimestamp
+              : Date)
+        | null
+      revokedBy: string | null
     }
 
     namespace User {

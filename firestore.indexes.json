@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "tokens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "expires", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "registrations",
       "queryScope": "COLLECTION",
       "fields": [

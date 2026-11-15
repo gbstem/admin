@@ -11,6 +11,7 @@ import {
   applicationSchema,
   classSchema,
   registrationSchema,
+  tokenSchema,
 } from '../src/lib/components/forms/schemas'
 import semesterDates from '../src/lib/data/semesterDates.json'
 import {
@@ -67,10 +68,10 @@ function validateClass(data: any, id: string) {
 
 function validateToken(data: any, id: string) {
   try {
-    z.object({
-      role: z.enum(['reviewer', 'admin']),
-      consumable: z.boolean(),
-    }).parse(data)
+    tokenSchema
+      .pick({ role: true, consumable: true, purpose: true })
+      .extend({ createdBy: z.string() })
+      .parse(data)
   } catch (err: any) {
     console.error(`\nValidation failed for token "${id}":`, err.errors || err)
     throw err
@@ -336,6 +337,11 @@ export async function seedEmulator(): Promise<void> {
         new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       ),
       role: role,
+      createdAt: admin.firestore.Timestamp.now(),
+      createdBy: adminUser.uid,
+      purpose: `Demo ${role} signups for local development`,
+      revokedAt: null,
+      revokedBy: null,
     }
     validateToken(demoToken, 'demo-' + role + '-token')
     await db
@@ -1338,6 +1344,14 @@ export async function seedEmulator(): Promise<void> {
         new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
       ),
       role: role,
+      // Staggered an hour apart, older than the demo tokens above.
+      createdAt: admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - (i + 1) * 60 * 60 * 1000),
+      ),
+      createdBy: adminUser.uid,
+      purpose: `Mock ${role} token ${i} for local development`,
+      revokedAt: null,
+      revokedBy: null,
     }
     validateToken(tokenData, id)
     await db.collection('tokens').doc(id).set(tokenData)

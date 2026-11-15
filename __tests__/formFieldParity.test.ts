@@ -413,9 +413,9 @@ describe.each([
     label: 'create token',
     schema: tokenSchema as unknown as z.ZodTypeAny,
     getDefaults: getCreateTokenFormDefaults,
-    expectedFields: ['role', 'consumable', 'expires'],
-    // Pre-populated, so the dialog opens ready to submit as-is.
-    expectedInvalidPaths: [] as string[],
+    expectedFields: ['role', 'consumable', 'expires', 'purpose'],
+    // Pre-populated except the purpose, which the admin has to write.
+    expectedInvalidPaths: ['purpose'],
   },
   {
     label: 'interview slot',

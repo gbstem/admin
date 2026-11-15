@@ -707,13 +707,47 @@ describe('announcements route', () => {
 })
 
 describe('tokens route', () => {
-  it('loads tokens for admin user', async () => {
+  // The collection mock's default docs are classes; a token page needs
+  // token-shaped ones (createdAt above all, which the query orders by).
+  const tokenDocs = {
+    docs: [
+      {
+        id: 'tok-1',
+        data: () => ({
+          role: 'reviewer',
+          consumable: false,
+          consumers: [],
+          expires: { toDate: () => new Date('2099-01-01') },
+          createdAt: { toDate: () => new Date('2026-11-01') },
+          createdBy: 'admin-1',
+          purpose: 'Reviewer access for fall interviews',
+          revokedAt: null,
+          revokedBy: null,
+        }),
+      },
+    ],
+  }
+  beforeEach(() => {
+    mockCollection.get.mockResolvedValueOnce(tokenDocs)
+  })
+
+  it('loads tokens for admin user, active by default', async () => {
     const res = await tokensLoad({
       depends: jest.fn(),
       locals: { user: { role: 'admin' } },
       url: new URL('http://localhost/'),
     } as any)
-    expect(res).toHaveProperty('tokens')
+    expect(res.tokens).toHaveLength(1)
+    expect(res.status).toBe('active')
+  })
+
+  it('passes ?filter=all through as the status', async () => {
+    const res = await tokensLoad({
+      depends: jest.fn(),
+      locals: { user: { role: 'admin' } },
+      url: new URL('http://localhost/?filter=all'),
+    } as any)
+    expect(res.status).toBe('all')
   })
 
   it('handles invalid or empty limit and page query parameters gracefully', async () => {
