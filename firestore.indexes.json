@@ -5,7 +5,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "createdAt", "order": "DESCENDING" },
-        { "fieldPath": "expires", "order": "ASCENDING" }
+        { "fieldPath": "expires", "order": "DESCENDING" }
       ]
     },
     {
