@@ -1,0 +1,12 @@
+{
+  "firestore": [
+    {
+      "database": "(default)",
+      "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "gbstem-testing",
+      "indexes": "firestore.indexes.json"
+    }
+  ]
+}

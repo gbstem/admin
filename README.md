@@ -225,8 +225,11 @@ Neither file ships with the app: Vercel deploys the code, and the rules and inde
 ```bash
 firebase login                                              # once per machine
 firebase firestore:indexes --project gbstem-core --pretty   # what production has now
-firebase deploy --only firestore:indexes --project gbstem-core
+firebase firestore:indexes --project gbstem-core --database gbstem-testing --pretty
+firebase deploy --config firebase.deploy.json --only firestore:indexes --project gbstem-core
 ```
+
+The deploy reads [`firebase.deploy.json`](firebase.deploy.json), not `firebase.json`. It sends the same index file to both of the project's databases: `(default)`, which is production, and `gbstem-testing`, which is used now and then for tests against real Cloud Firestore. `firebase.json` stays single-database on purpose. Given a list of databases, the emulator logs a warning, loads no rules at all and allows every read and write, which `yarn test:rules`, Cypress and CI depend on not happening. The deploy file lists no rules, so even `--only firestore` can't publish this file's rules without curriculum's (see above).
 
 Deploy indexes **before** the code that queries them: a query whose index doesn't exist yet fails outright until the index finishes building. If the CLI offers to delete indexes that production has but this file doesn't, decline unless you've confirmed nothing uses them — they may have been created in the console.
 
@@ -484,7 +487,8 @@ Below is an alphabetical list of the top-level directories and significant confi
 - **`cypress.config.ts`**: The configuration file for the Cypress e2e testing interface and environmental triggers.
 - **`eslint.config.js`**: ESLint configuration mapping coding rules and checks (replacing the legacy `.eslintrc.cjs`).
 - **`firebase.json`**: Defines local configurations for Firebase emulator environments and project builds.
-- **`firestore.indexes.json`**: Declarative composite index definitions for Cloud Firestore, deployed via `firebase deploy --only firestore:indexes`. Indexes are keyed by collection ID, so they cover every semester's subcollections automatically.
+- **`firebase.deploy.json`**: Deploy-only config that sends `firestore.indexes.json` to both of `gbstem-core`'s databases, `(default)` and `gbstem-testing`. Kept apart from `firebase.json` because the emulator ignores rules when given more than one database.
+- **`firestore.indexes.json`**: Declarative composite index definitions for Cloud Firestore, deployed to both databases via `firebase deploy --config firebase.deploy.json --only firestore:indexes` (see [Deploying rules and indexes](#deploying-rules-and-indexes)). Indexes are keyed by collection ID, so they cover every semester's subcollections automatically.
 - **`firestore.rules`**: Firebase security rules defining read/write permissions for the Cloud Firestore database. This is applied by the Firebase emulators for local testing, but needs to be manually pushed to production because it has to be merged with the `curriculum` repo version of this file in production (simple copy-and-paste). Covered by `yarn test:rules` — see [Roles and Authorization](#roles-and-authorization) before changing anything in it.
 - **`jest-transform-esm-to-cjs.cjs`**: Custom Jest transformer that transpiles ESM JavaScript files from `node_modules/svelte` into CommonJS for the Jest testing environment.
 - **`jest-transform-svelte-module.cjs`**: Custom Jest transformer for compiling Svelte 5 component modules for the Jest testing environment.
