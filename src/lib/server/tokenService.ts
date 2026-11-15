@@ -54,7 +54,10 @@ export const tokenService = {
       .collection(tokensCollection)
       .orderBy('createdAt', 'desc')
     if (status === 'active') {
-      // Needs the (createdAt desc, expires asc) index in firestore.indexes.json.
+      // Needs the (createdAt desc, expires desc) index in firestore.indexes.json.
+      // Both desc: Firestore orders by a range-filtered field implicitly, in
+      // the direction of the last orderBy. The emulator never checks indexes,
+      // so only production reports a mismatch.
       dbQuery = dbQuery.where('expires', '>', now)
     }
     const snapshot = await dbQuery.limit(limit).offset(offset).get()
