@@ -87,10 +87,12 @@
             class="inline-block border-b border-black text-black transition-colors duration-300 hover:border-gray-600 hover:text-gray-600 disabled:border-gray-600 disabled:text-gray-600"
             type="button"
             onclick={handleVerificationEmail}
-            {disabled}>Send verification email</button
-          >, then open the link in the message we send you (check your spam
-          folder too). If you've just signed up, an email is already on its way.
-          After opening the link, reload this page.
+            {disabled}
+          >
+            Send verification email
+          </button>, then open the link in the message we send you (check your
+          spam folder too). If you've just signed up, an email is already on its
+          way. After opening the link, reload this page.
         </div>
       </div>
     {/if}
@@ -124,8 +126,10 @@
           href="mailto:contact@gbstem.org"
           target="_blank"
           rel="noopener"
-          class="link">contact@gbstem.org</a
-        >.
+          class="link"
+        >
+          contact@gbstem.org
+        </a>.
       </div>
     </Card>
     <ChangeNameForm />

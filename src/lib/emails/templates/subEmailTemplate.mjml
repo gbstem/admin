@@ -40,11 +40,11 @@
             significantly help boost your application in future semesters. As a
             next step, please mark your calendar to attend our
             <strong>MANDATORY</strong> virtual instructor orientation for the
-            semester on <strong>{{ app.orientation }}</strong
-            >. Please email and let us know <strong>IMMEDIATELY</strong> if this
-            time does not work for you so we can schedule a makeup session. The
-            link to join is here: {{ app.orientationLink }}. Thank you for your
-            dedication to our program!
+            semester on <strong>{{ app.orientation }}</strong>. Please email and
+            let us know <strong>IMMEDIATELY</strong> if this time does not work
+            for you so we can schedule a makeup session. The link to join is
+            here: {{ app.orientationLink }}. Thank you for your dedication to
+            our program!
           </p>
           <p style="margin: 30px 0">
             If you have any questions or concerns, visit our FAQs, or you can

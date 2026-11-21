@@ -187,9 +187,9 @@
             {#if form?.error}{form.error}{/if}
           </p>
           <DialogActions>
-            <Button color="gray" onclick={() => (showErrorDialog = false)}
-              >Close</Button
-            >
+            <Button color="gray" onclick={() => (showErrorDialog = false)}>
+              Close
+            </Button>
           </DialogActions>
         </div>
       {/snippet}

@@ -162,8 +162,10 @@
           Wrong name or email? The applicant can update it at <a
             class="link"
             href="https://portal.gbstem.org/profile"
-            target="_blank">their portal profile</a
-          >.
+            target="_blank"
+          >
+            their portal profile
+          </a>.
         </div>
       </Card>
 
@@ -202,9 +204,9 @@
       </div>
 
       <div class="mt-4 grid gap-1">
-        <span class="text-sm font-semibold"
-          >Race / ethnicity (check all that apply)</span
-        >
+        <span class="text-sm font-semibold">
+          Race / ethnicity (check all that apply)
+        </span>
         <div class="grid grid-cols-2 gap-2">
           {#each raceJson as race (race.name)}
             <div class="flex items-center">
@@ -253,10 +255,10 @@
 
     <div class="grid gap-1">
       <div class="mt-3 grid gap-1">
-        <span class="text-sm font-bold text-gray-700"
-          >Which of the following courses are you comfortable teaching? Check
-          all that apply. Course descriptions are on our website.</span
-        >
+        <span class="text-sm font-bold text-gray-700">
+          Which of the following courses are you comfortable teaching? Check all
+          that apply. Course descriptions are on our website.
+        </span>
         <div class="mt-2 grid grid-cols-2 gap-2">
           {#each coursesJson as course (course.name)}
             <div class="flex items-center">

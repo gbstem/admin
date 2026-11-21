@@ -238,8 +238,10 @@
   <Button
     class="flex h-12 items-center"
     href={url.current}
-    download="registrations.csv">Download</Button
+    download="registrations.csv"
   >
+    Download
+  </Button>
 </div>
 
 <Table>
@@ -333,9 +335,9 @@
 </Table>
 
 <div class="mt-4 flex w-full justify-between">
-  <Button href={schoolsUrl.current} download="schools-list.txt"
-    >Download Schools List</Button
-  >
+  <Button href={schoolsUrl.current} download="schools-list.txt">
+    Download Schools List
+  </Button>
   {#if !data.query && data.registrations}
     <div class="flex gap-2">
       {#if currentPage > 1}

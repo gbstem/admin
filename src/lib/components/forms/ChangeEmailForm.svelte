@@ -69,9 +69,9 @@
 
     <div class="flex items-end gap-2">
       <div class="flex w-full flex-col gap-1.5">
-        <label class="text-sm font-bold" for="current-email"
-          >Current email</label
-        >
+        <label class="text-sm font-bold" for="current-email">
+          Current email
+        </label>
         <input
           id="current-email"
           type="email"
@@ -84,8 +84,10 @@
       <Button
         class="invisible h-12 shrink-0 select-none"
         type="button"
-        tabindex="-1">Update</Button
+        tabindex="-1"
       >
+        Update
+      </Button>
     </div>
 
     <div class="flex items-end gap-2">
@@ -122,8 +124,10 @@
           onclick={() => {
             handleCancel()
             showReauthDialog = false
-          }}>Cancel</Button
+          }}
         >
+          Cancel
+        </Button>
         <Button type="submit" color="blue">Reauthenticate</Button>
       </DialogActions>
     </ReauthenticateForm>

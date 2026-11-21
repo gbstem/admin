@@ -264,9 +264,9 @@
       </div>
 
       <div class="mt-4 grid gap-1">
-        <span class="text-sm font-semibold"
-          >Race / ethnicity (check all that apply)</span
-        >
+        <span class="text-sm font-semibold">
+          Race / ethnicity (check all that apply)
+        </span>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {#each raceJson as race (race.name)}
             <div class="flex items-center">
@@ -407,10 +407,10 @@
     {#if $form.program.inPerson}
       <div class="grid gap-1">
         <span class="text-lg font-bold">In Person</span>
-        <span class="mb-2 text-sm leading-tight text-gray-500"
-          >Hybrid classes meet once a week on weekend afternoons at the
-          Cambridge Public Library.</span
-        >
+        <span class="mb-2 text-sm leading-tight text-gray-500">
+          Hybrid classes meet once a week on weekend afternoons at the Cambridge
+          Public Library.
+        </span>
         <div class="grid gap-1 sm:grid-cols-2 sm:gap-3">
           <div class="mt-2 flex flex-col gap-1.5">
             <FormInput

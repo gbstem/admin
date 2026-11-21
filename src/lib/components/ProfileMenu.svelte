@@ -57,8 +57,10 @@
     >
       <a
         class="block w-full px-5 py-[0.65rem] transition-colors duration-300 hover:bg-gray-100"
-        href="/profile">Profile</a
+        href="/profile"
       >
+        Profile
+      </a>
       <button
         class="w-full px-5 py-[0.65rem] text-left transition-colors duration-300 hover:bg-gray-100"
         type="button"
@@ -71,8 +73,10 @@
   <div class="grid grid-cols-2 gap-3 text-center sm:hidden">
     <a
       class="block w-full rounded-md border border-gray-200 px-6 py-2 shadow-xs transition-colors duration-300 hover:bg-gray-100"
-      href="/profile">Profile</a
+      href="/profile"
     >
+      Profile
+    </a>
     <button
       class="w-full rounded-md border border-gray-200 px-6 py-2 shadow-xs transition-colors duration-300 hover:bg-gray-100"
       type="button"

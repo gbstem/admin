@@ -16,9 +16,9 @@
 
 <h1 class="mb-2 text-5xl font-bold md:text-6xl">Set Your Availability</h1>
 <p class="mb-8">
-  <a class="text-blue-600 hover:underline" href="/interviews"
-    >← Back to interview timeslots</a
-  >
+  <a class="text-blue-600 hover:underline" href="/interviews">
+    ← Back to interview timeslots
+  </a>
 </p>
 
 <div class="relative w-full">

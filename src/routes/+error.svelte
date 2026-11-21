@@ -54,9 +54,9 @@
         >
           Error Code
         </div>
-        <code class="mt-1 block font-mono text-xs text-red-900"
-          >{page.error.code}</code
-        >
+        <code class="mt-1 block font-mono text-xs text-red-900">
+          {page.error.code}
+        </code>
       {/if}
 
       {#if page.error?.errorId}
@@ -65,9 +65,9 @@
         >
           Error Reference
         </div>
-        <code class="mt-1 block font-mono text-xs break-all text-red-900"
-          >{page.error.errorId}</code
-        >
+        <code class="mt-1 block font-mono text-xs break-all text-red-900">
+          {page.error.errorId}
+        </code>
       {/if}
     </div>
 

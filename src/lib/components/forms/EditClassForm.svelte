@@ -151,11 +151,10 @@
     {/if}
 
     <div class="grid gap-1">
-      <span class="text-sm font-bold text-gray-700"
-        >Online classes meet twice weekly at consistent days and times
-        throughout the semester and run for 45-60 minutes each. In-person
-        classes meet once a week on a weekend afternoon at the Cambridge Public
-        Library.
+      <span class="text-sm font-bold text-gray-700">
+        Online classes meet twice weekly at consistent days and times throughout
+        the semester and run for 45-60 minutes each. In-person classes meet once
+        a week on a weekend afternoon at the Cambridge Public Library.
       </span>
 
       <div class="mt-2 grid gap-1 sm:grid-cols-3 sm:gap-3">
