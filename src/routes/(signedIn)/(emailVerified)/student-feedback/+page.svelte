@@ -74,8 +74,10 @@
   <Button
     class="flex h-12 items-center"
     href={url.current}
-    download="student-feedback.csv">Download</Button
+    download="student-feedback.csv"
   >
+    Download
+  </Button>
 </div>
 
 <Table>

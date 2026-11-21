@@ -136,8 +136,9 @@
     {#if label}
       <label for={id} class="text-sm font-bold">
         <span>
-          {label}<span class={cn('text-red-500', !required && 'hidden')}>*</span
-          >
+          {label}<span class={cn('text-red-500', !required && 'hidden')}>
+            *
+          </span>
         </span>
       </label>
     {/if}

@@ -104,8 +104,9 @@
       onclick={handleDeleteClick}
       disabled={checkingEligibility}
       class="rounded-md bg-red-100 px-4 py-2 text-red-900 shadow-xs transition-colors duration-300 hover:bg-red-200 disabled:bg-red-200 disabled:text-red-700"
-      >Delete account</button
     >
+      Delete account
+    </button>
   </div>
 </div>
 
@@ -117,9 +118,9 @@
     <div class="flex w-full flex-col items-center gap-4">
       <p class="text-center">{blockedReason}</p>
       <DialogActions>
-        <Button type="button" onclick={() => (showBlockedDialog = false)}
-          >Close</Button
-        >
+        <Button type="button" onclick={() => (showBlockedDialog = false)}>
+          Close
+        </Button>
       </DialogActions>
     </div>
   {/snippet}
@@ -170,10 +171,13 @@
               onclick={() => {
                 handleCancel()
                 showDeleteDialog = false
-              }}>Cancel</Button
+              }}
             >
-            <Button color="red" type="submit" disabled={$delayed}>Delete</Button
-            >
+              Cancel
+            </Button>
+            <Button color="red" type="submit" disabled={$delayed}>
+              Delete
+            </Button>
           </DialogActions>
         </fieldset>
       </form>

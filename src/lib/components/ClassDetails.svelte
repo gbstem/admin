@@ -143,12 +143,12 @@
       >
         {#if !disabled}
           <div class="flex flex-wrap gap-2">
-            <Button color="green" onclick={handleSaveChanges}
-              >Save changes</Button
-            >
-            <Button color="red" onclick={handleDeleteChanges}
-              >Cancel changes</Button
-            >
+            <Button color="green" onclick={handleSaveChanges}>
+              Save changes
+            </Button>
+            <Button color="red" onclick={handleDeleteChanges}>
+              Cancel changes
+            </Button>
           </div>
         {/if}
         <div class="flex flex-wrap gap-2">
@@ -166,8 +166,10 @@
                 otherInstructorUids: values.otherInstructorUids ?? [],
                 className: values.course,
                 nextMeetingTime: getNearestFutureClass(values.meetingTimes),
-              })}>Send Reminder To All Students</Button
+              })}
           >
+            Send Reminder To All Students
+          </Button>
           <Button
             color="blue"
             onclick={() =>
@@ -177,8 +179,10 @@
                 otherInstructorUids: values.otherInstructorUids ?? [],
                 className: values.course,
                 nextMeetingTime: getNearestFutureClass(values.meetingTimes),
-              })}>Send Instructor Reminder</Button
+              })}
           >
+            Send Instructor Reminder
+          </Button>
         </div>
       </Card>
       <div class="mt-4 flex justify-center">
@@ -219,28 +223,34 @@
                 <tr>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Student Name</th
                   >
+                    Student Name
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Email</th
                   >
+                    Email
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Secondary Email</th
                   >
+                    Secondary Email
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Phone</th
                   >
+                    Phone
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Grade</th
                   >
+                    Grade
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >School</th
                   >
+                    School
+                  </th>
                 </tr>
               </thead>
               <tbody>

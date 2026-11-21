@@ -75,20 +75,24 @@
                 <tr>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Course Name</th
                   >
+                    Course Name
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Class Number</th
                   >
+                    Class Number
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Instructor</th
                   >
+                    Instructor
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Feedback</th
                   >
+                    Feedback
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -112,23 +116,25 @@
                 <tr>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Student Name</th
                   >
+                    Student Name
+                  </th>
                   <th
                     style="white-space: nowrap; border-bottom: 1px solid #ccc; padding: 8px;"
-                    >Attendance</th
                   >
+                    Attendance
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {#each Object.keys(values.attendanceList) as attendance (attendance)}
                   <tr style="border-bottom: 1px solid #ccc;">
                     <td style="padding: 8px;">{attendance}</td>
-                    <td style="padding: 8px;"
-                      >{values.attendanceList[attendance]?.present
+                    <td style="padding: 8px;">
+                      {values.attendanceList[attendance]?.present
                         ? 'Yes'
-                        : 'No'}</td
-                    >
+                        : 'No'}
+                    </td>
                   </tr>
                 {/each}
               </tbody>

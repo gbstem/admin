@@ -92,8 +92,10 @@
   <Button
     class="flex h-12 items-center"
     href={url.current}
-    download="sub-requests.csv">Download</Button
+    download="sub-requests.csv"
   >
+    Download
+  </Button>
 </div>
 
 <div>
@@ -112,9 +114,9 @@
           {#snippet title()}
             <div class="flex items-center justify-between">
               Sub Request Notes
-              <Button color="red" onclick={() => (openStates[i] = false)}
-                >Close</Button
-              >
+              <Button color="red" onclick={() => (openStates[i] = false)}>
+                Close
+              </Button>
             </div>
           {/snippet}
           {#snippet description()}

@@ -235,9 +235,9 @@
       Drag across the times you're free, then repeat them over the weeks you
       choose. Each painted row becomes one open slot candidates can book. This
       adds to what you told us before; use the
-      <a class="text-blue-600 hover:underline" href="#your-slots"
-        >Your slots, week by week</a
-      > card to delete previously added slots.
+      <a class="text-blue-600 hover:underline" href="#your-slots">
+        Your slots, week by week
+      </a> card to delete previously added slots.
     </p>
 
     <div class="mb-4 grid gap-4 md:grid-cols-3">
@@ -304,12 +304,15 @@
         color="blue"
         disabled={saving || !patternDates.length}
         onclick={savePattern}
-        >Create {plural(patternDates.length, 'slot')}</Button
       >
+        Create {plural(patternDates.length, 'slot')}
+      </Button>
       <Button
         disabled={saving || !pattern.size}
-        onclick={() => (pattern = new Set())}>Clear</Button
+        onclick={() => (pattern = new Set())}
       >
+        Clear
+      </Button>
     </div>
   </Card>
 
@@ -322,26 +325,28 @@
       Painted cells are your open slots: un-paint one to delete it, or paint
       more to add them. Booked cells show the candidate and are locked; to
       cancel one, delete it from the slot list on the
-      <a class="text-blue-600 hover:underline" href="/interviews"
-        >Interviews page</a
-      >, which emails them.
+      <a class="text-blue-600 hover:underline" href="/interviews">
+        Interviews page
+      </a>, which emails them.
     </p>
 
     <div class="mb-3 flex flex-wrap items-center gap-2">
       <Button
         disabled={reviewIndex <= 0}
         onclick={() => (reviewIndex = Math.max(0, reviewIndex - 1))}
-        >← Previous week</Button
       >
-      <span class="font-semibold" data-testid="review-week"
-        >{reviewWeek ? weekLabel(reviewWeek) : ''}</span
-      >
+        ← Previous week
+      </Button>
+      <span class="font-semibold" data-testid="review-week">
+        {reviewWeek ? weekLabel(reviewWeek) : ''}
+      </span>
       <Button
         disabled={reviewIndex >= weeks.length - 1}
         onclick={() =>
           (reviewIndex = Math.min(weeks.length - 1, reviewIndex + 1))}
-        >Next week →</Button
       >
+        Next week →
+      </Button>
     </div>
 
     {#if reviewWeek && before}
@@ -373,11 +378,13 @@
       <Button
         color="blue"
         disabled={saving || (!changes.add.length && !changes.remove.length)}
-        onclick={saveWeek}>Save this week</Button
+        onclick={saveWeek}
       >
-      <Button disabled={saving || !edits} onclick={() => (edits = null)}
-        >Undo changes</Button
-      >
+        Save this week
+      </Button>
+      <Button disabled={saving || !edits} onclick={() => (edits = null)}>
+        Undo changes
+      </Button>
     </div>
   </Card>
 {/if}

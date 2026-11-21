@@ -233,8 +233,8 @@
                 onclick={() => handleLikelyDecision('likely yes')}
               >
                 <Icon src={CheckCircle} theme="mini" class="size-5" />
-                <span>Likely Yes</span></Button
-              >
+                <span>Likely Yes</span>
+              </Button>
               <Button
                 color={!loading &&
                 (interview.likelyDecision === null ||
@@ -245,8 +245,8 @@
                 onclick={() => handleLikelyDecision('likely waitlist')}
               >
                 <Icon src={ExclamationCircle} theme="mini" class="size-5" />
-                <span>Likely Waitlist</span></Button
-              >
+                <span>Likely Waitlist</span>
+              </Button>
               <Button
                 color={!loading &&
                 (interview.likelyDecision === null ||
@@ -257,16 +257,16 @@
                 onclick={() => handleLikelyDecision('likely no')}
               >
                 <Icon src={XCircle} theme="mini" class="size-5" />
-                <span>Likely No</span></Button
-              >
+                <span>Likely No</span>
+              </Button>
               <Button
                 color="gray"
                 class="flex items-center gap-1"
                 onclick={() => handleLikelyDecision(null)}
               >
                 <Icon src={XCircle} theme="mini" class="size-5" />
-                <span>Clear Likely Decision</span></Button
-              >
+                <span>Clear Likely Decision</span>
+              </Button>
               <Button
                 color={!loading &&
                 (decision === null || decision === 'interview')
@@ -276,8 +276,8 @@
                 onclick={() => handleDecision('interview')}
               >
                 <PersonIcon />
-                <span>Interview</span></Button
-              >
+                <span>Interview</span>
+              </Button>
               <Button
                 color={!loading &&
                 (decision === null || decision === 'accepted')
@@ -287,8 +287,8 @@
                 onclick={() => handleDecision('accepted')}
               >
                 <Icon src={CheckCircle} theme="mini" class="size-5" />
-                <span>Accept</span></Button
-              >
+                <span>Accept</span>
+              </Button>
               <Button
                 color={!loading &&
                 (decision === null || decision === 'substitute')
@@ -296,9 +296,10 @@
                   : 'gray'}
                 class="flex items-center gap-1"
                 onclick={() => handleDecision('substitute')}
-                ><Icon src={PlusCircle} theme="mini" class="size-5" />
-                <span>Substitute</span></Button
               >
+                <Icon src={PlusCircle} theme="mini" class="size-5" />
+                <span>Substitute</span>
+              </Button>
               <Button
                 color={!loading &&
                 (decision === null || decision === 'waitlisted')
@@ -308,8 +309,8 @@
                 onclick={() => handleDecision('waitlisted')}
               >
                 <Icon src={ExclamationCircle} theme="mini" class="size-5" />
-                <span>Waitlist</span></Button
-              >
+                <span>Waitlist</span>
+              </Button>
 
               <Button
                 color={!loading &&
@@ -320,25 +321,26 @@
                 onclick={() => handleDecision('rejected')}
               >
                 <Icon src={XCircle} theme="mini" class="size-5" />
-                <span>Reject</span></Button
-              >
+                <span>Reject</span>
+              </Button>
             {:else}
-              <Button color="green" onclick={handleSaveChanges}
-                >Save changes</Button
-              >
-              <Button color="red" onclick={handleDeleteChanges}
-                >Cancel changes</Button
-              >
+              <Button color="green" onclick={handleSaveChanges}>
+                Save changes
+              </Button>
+              <Button color="red" onclick={handleDeleteChanges}>
+                Cancel changes
+              </Button>
             {/if}
           </fieldset>
           <div class="flex flex-wrap items-center gap-2">
             <Button
               color="green"
               onclick={() => (showInterviewForm = !showInterviewForm)}
-              >{showInterviewForm
-                ? 'Close Interview Form'
-                : 'Show Interview Form'}</Button
             >
+              {showInterviewForm
+                ? 'Close Interview Form'
+                : 'Show Interview Form'}
+            </Button>
             {#if disabled && !showInterviewForm}
               <!-- Gated on the load: editing stale values would have them
                    overwritten when the fetch lands. -->
@@ -405,9 +407,9 @@
                     class="mt-1 block h-12 w-full rounded-md border border-gray-400 bg-white px-3 transition-colors focus:border-gray-600 focus:outline-hidden disabled:bg-white disabled:text-gray-400"
                   >
                     <option value="" disabled>Select an option</option>
-                    <option value="Null" disabled hidden
-                      >Select an option</option
-                    >
+                    <option value="Null" disabled hidden>
+                      Select an option
+                    </option>
                     {#each interviewAttendanceJson as option (option.name)}
                       <option value={option.name}>{option.name}</option>
                     {/each}
@@ -543,35 +545,47 @@
                   <div class="flex flex-wrap gap-4">
                     <Button
                       href="https://docs.google.com/presentation/d/1dtv0qWFLNg3pjnlPCkm8nKEkEU_m5-dcLVMNEJmwFjk/edit#slide=id.g11b679f5bf6_0_9"
-                      target="_blank">Math</Button
+                      target="_blank"
                     >
+                      Math
+                    </Button>
                     <Button
                       color="green"
                       href="https://docs.google.com/presentation/d/15aI-M8eEPKsFGpodmZ_oi4MWQKzTJ8Jrup4C7oFgSls/edit#slide=id.g2085bab7786_0_0"
-                      target="_blank">Environmental Science</Button
+                      target="_blank"
                     >
+                      Environmental Science
+                    </Button>
                     <Button
                       color="yellow"
                       href="https://docs.google.com/presentation/d/1yf3ZOVCFgwILyihaG_sJonevv3cIiUMNvDlwJVarCto/edit#slide=id.g2085d4bbb38_0_4125"
-                      target="_blank">Engineering</Button
+                      target="_blank"
                     >
+                      Engineering
+                    </Button>
                   </div>
                   <div class="mt-4 flex flex-wrap gap-4">
                     <Button
                       color="blue"
                       href="https://docs.google.com/document/d/1ruPmF-SRdWQ_LlilQz0PBFX1p7gDpfGZ1jVBmSpdgyI/edit#"
-                      target="_blank">Scratch</Button
+                      target="_blank"
                     >
+                      Scratch
+                    </Button>
                     <Button
                       color="blue"
                       href="https://docs.google.com/document/d/1-Q40jjtKjt1dvX09qndC1ZEA7amiieAQgXF8qPDEvOE/edit"
-                      target="_blank">Python 1</Button
+                      target="_blank"
                     >
+                      Python 1
+                    </Button>
                     <Button
                       color="blue"
                       href="https://docs.google.com/document/d/1LonFfZTQOwjz_QeZbRHb_RFVq_EntkVu64BBca2TVGw/edit"
-                      target="_blank">Web Dev</Button
+                      target="_blank"
                     >
+                      Web Dev
+                    </Button>
                   </div>
                 </div>
                 <NumberInput
@@ -672,8 +686,9 @@
                   <Button
                     color="red"
                     onclick={() => (showInterviewForm = false)}
-                    >Close Interview Form</Button
                   >
+                    Close Interview Form
+                  </Button>
                 </div>
               </fieldset>
             </Form>

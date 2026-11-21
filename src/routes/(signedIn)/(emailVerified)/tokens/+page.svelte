@@ -236,15 +236,18 @@
           {#if token.values.consumable}
             <span
               class="ml-1 rounded-sm bg-blue-50 px-1.5 py-0.5 text-xs text-blue-800"
-              >one-time</span
             >
+              one-time
+            </span>
           {/if}
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
           <span
             class={`rounded-sm px-2 py-0.5 text-xs font-semibold capitalize ${statusClass[status]}`}
-            data-testid="token-status">{status}</span
+            data-testid="token-status"
           >
+            {status}
+          </span>
           {#if status === 'revoked'}
             <div class="mt-1 text-xs text-gray-500">
               by {token.revokedByEmail ?? 'deleted account'}

@@ -7,7 +7,9 @@
     </a>
     <a
       class="rounded-md bg-blue-200 px-2 py-1 text-lg font-bold uppercase"
-      href="/">Admin</a
+      href="/"
     >
+      Admin
+    </a>
   </div>
 </div>

@@ -228,8 +228,9 @@
             title={info?.title}
             onpointerdown={(event) => startDrag(event, columnIndex, row)}
             onclick={(event) => keyToggle(event, columnIndex, key)}
-            >{info?.label ?? ''}</button
           >
+            {info?.label ?? ''}
+          </button>
         {:else if mode === 'pick' && info?.pickable && !off}
           <button
             type="button"
@@ -243,8 +244,10 @@
             aria-label={cellName(column, minute, key)}
             aria-pressed={picked === key}
             title={info.title}
-            onclick={() => onpick?.(key)}>{info.label ?? ''}</button
+            onclick={() => onpick?.(key)}
           >
+            {info.label ?? ''}
+          </button>
         {:else}
           <div
             data-cell={key}
@@ -256,9 +259,9 @@
             )}"
             title={info?.title}
           >
-            {#if info}<span class="sr-only"
-                >{cellName(column, minute, key)}</span
-              >{info.label ?? ''}{/if}
+            {#if info}<span class="sr-only">
+                {cellName(column, minute, key)}
+              </span>{info.label ?? ''}{/if}
           </div>
         {/if}
       {/each}

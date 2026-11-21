@@ -133,8 +133,10 @@
       <Button
         class="invisible h-12 shrink-0 select-none"
         type="button"
-        tabindex="-1">Update</Button
+        tabindex="-1"
       >
+        Update
+      </Button>
     </div>
 
     <div class="flex items-end gap-2">
@@ -171,8 +173,10 @@
           onclick={() => {
             handleCancel()
             showReauthDialog = false
-          }}>Cancel</Button
+          }}
         >
+          Cancel
+        </Button>
         <Button type="submit" color="blue">Reauthenticate</Button>
       </DialogActions>
     </ReauthenticateForm>

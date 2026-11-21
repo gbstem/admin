@@ -94,12 +94,12 @@
       >
         {#if !disabled}
           <div class="flex flex-wrap gap-2">
-            <Button color="green" onclick={handleSaveChanges}
-              >Save changes</Button
-            >
-            <Button color="red" onclick={handleDeleteChanges}
-              >Delete changes</Button
-            >
+            <Button color="green" onclick={handleSaveChanges}>
+              Save changes
+            </Button>
+            <Button color="red" onclick={handleDeleteChanges}>
+              Delete changes
+            </Button>
           </div>
         {/if}
         <div class="flex flex-wrap gap-2">

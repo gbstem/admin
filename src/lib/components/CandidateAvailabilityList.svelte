@@ -126,9 +126,9 @@
   >
     <p>
       <b>{intervieweeLabel(candidate.interviewee)}</b>
-      <span class="ml-2"
-        >{emails[candidate.interviewee.applicationId] ?? ''}</span
-      >
+      <span class="ml-2">
+        {emails[candidate.interviewee.applicationId] ?? ''}
+      </span>
     </p>
     <p class="text-sm text-gray-600">
       {candidate.times.length} time{candidate.times.length === 1 ? '' : 's'} offered.
@@ -140,8 +140,9 @@
         disabled={index <= 0}
         onclick={() =>
           (weekIndexes[candidate.interviewee.uid] = Math.max(0, index - 1))}
-        >← Previous</Button
       >
+        ← Previous
+      </Button>
       <span class="text-sm font-semibold">Week of {formatShortDay(week)}</span>
       <Button
         class="px-2 py-1"
@@ -150,8 +151,10 @@
           (weekIndexes[candidate.interviewee.uid] = Math.min(
             weeks.length - 1,
             index + 1,
-          ))}>Next →</Button
+          ))}
       >
+        Next →
+      </Button>
     </div>
     <AvailabilityGrid
       label="{intervieweeLabel(

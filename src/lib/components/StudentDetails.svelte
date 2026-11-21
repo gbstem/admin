@@ -261,27 +261,28 @@
                     <tr>
                       <th class="border-b p-2 whitespace-nowrap">Course</th>
                       <th class="border-b p-2 whitespace-nowrap">Instructor</th>
-                      <th class="border-b p-2 whitespace-nowrap"
-                        >Instructor Email</th
-                      >
-                      <th class="border-b p-2 whitespace-nowrap"
-                        >Meeting Link</th
-                      >
+                      <th class="border-b p-2 whitespace-nowrap">
+                        Instructor Email
+                      </th>
+                      <th class="border-b p-2 whitespace-nowrap">
+                        Meeting Link
+                      </th>
                       <th class="border-b p-2 whitespace-nowrap">Format</th>
-                      <th class="border-b p-2 whitespace-nowrap">Class Times</th
-                      >
+                      <th class="border-b p-2 whitespace-nowrap">
+                        Class Times
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr class="border-b">
                       <td class="p-2 whitespace-nowrap">{value.course}</td>
-                      <td class="p-2 whitespace-nowrap"
-                        >{value.instructorFirstName}
-                        {value.instructorLastName}</td
-                      >
-                      <td class="p-2 whitespace-nowrap"
-                        >{instructorEmails[value.id] ?? ''}</td
-                      >
+                      <td class="p-2 whitespace-nowrap">
+                        {value.instructorFirstName}
+                        {value.instructorLastName}
+                      </td>
+                      <td class="p-2 whitespace-nowrap">
+                        {instructorEmails[value.id] ?? ''}
+                      </td>
                       <td class="p-2 whitespace-nowrap">
                         {#if openableMeetingLink(value.meetingLink)}
                           <a
@@ -293,20 +294,20 @@
                             {value.meetingLink}
                           </a>
                         {:else if value.meetingLink}
-                          <span class="font-medium text-red-600"
-                            >Invalid meeting link</span
-                          >
+                          <span class="font-medium text-red-600">
+                            Invalid meeting link
+                          </span>
                         {/if}
                       </td>
-                      <td class="p-2 whitespace-nowrap"
-                        >{value.online ? 'Online' : 'In-Person'}</td
-                      >
-                      <td class="p-2 whitespace-nowrap"
-                        >{formatClassTimes(
+                      <td class="p-2 whitespace-nowrap">
+                        {value.online ? 'Online' : 'In-Person'}
+                      </td>
+                      <td class="p-2 whitespace-nowrap">
+                        {formatClassTimes(
                           [value.classDay1, value.classDay2],
                           [value.classTime1, value.classTime2],
-                        )}</td
-                      >
+                        )}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -316,9 +317,9 @@
                 <table class="w-full min-w-125 border-collapse text-left">
                   <thead>
                     <tr>
-                      <th class="border-b p-2 whitespace-nowrap"
-                        >Class Number</th
-                      >
+                      <th class="border-b p-2 whitespace-nowrap">
+                        Class Number
+                      </th>
                       <th class="border-b p-2 whitespace-nowrap">Date</th>
                       <th class="border-b p-2 whitespace-nowrap">Attended</th>
                       <th class="border-b p-2 whitespace-nowrap">Feedback</th>
@@ -328,15 +329,15 @@
                     {#if att.courseName === value.course && att.id.includes(value.id) && Object.keys(att.attendanceList).includes(studentData.name)}
                       <tbody>
                         <tr class="border-b">
-                          <td class="p-2 whitespace-nowrap"
-                            >{att.classNumber}</td
-                          >
+                          <td class="p-2 whitespace-nowrap">
+                            {att.classNumber}
+                          </td>
                           <td class="p-2 whitespace-nowrap">{att.date}</td>
-                          <td class="p-2 whitespace-nowrap"
-                            >{att.attendanceList[studentData.name]?.present
+                          <td class="p-2 whitespace-nowrap">
+                            {att.attendanceList[studentData.name]?.present
                               ? 'Yes'
-                              : 'No'}</td
-                          >
+                              : 'No'}
+                          </td>
                           <td class="p-2 whitespace-nowrap">{att.feedback}</td>
                         </tr>
                       </tbody>
@@ -377,9 +378,9 @@
               <tr class="border-b">
                 <td class="p-2 whitespace-nowrap">{studentData.name}</td>
                 <td class="p-2 whitespace-nowrap">{studentData.email}</td>
-                <td class="p-2 whitespace-nowrap"
-                  >{studentData.secondaryEmail}</td
-                >
+                <td class="p-2 whitespace-nowrap">
+                  {studentData.secondaryEmail}
+                </td>
                 <td class="p-2 whitespace-nowrap">{studentData.phone}</td>
                 <td class="p-2 whitespace-nowrap">{studentData.grade}</td>
                 <td class="p-2 whitespace-nowrap">{studentData.school}</td>
@@ -402,8 +403,10 @@
           <Button
             color="green"
             onclick={() => addClass(selectedAddClassData)}
-            class="mt-4">Add Class</Button
+            class="mt-4"
           >
+            Add Class
+          </Button>
           <div class="lg:w-1/2">
             <SearchableSelect
               bind:value={selectedDropClass}
@@ -418,8 +421,10 @@
           <Button
             color="red"
             onclick={() => dropClass(selectedDropClassData)}
-            class="mt-4">Drop Class</Button
+            class="mt-4"
           >
+            Drop Class
+          </Button>
         {:else}
           <div class="p-4 text-gray-500">Loading classes…</div>
         {/if}

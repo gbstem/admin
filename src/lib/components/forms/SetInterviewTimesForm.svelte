@@ -539,8 +539,10 @@
           <Button
             color="blue"
             class="mt-4 inline-block px-2 py-1"
-            href="/interviews/availability">Paint Availability</Button
+            href="/interviews/availability"
           >
+            Paint Availability
+          </Button>
         </Card>
         <form novalidate use:addEnhance class="w-full">
           <Card>
@@ -580,16 +582,20 @@
                 class="h-fit"
                 onclick={() => {
                   handleClear()
-                }}><Icon src={Trash} class="size-6" /></Button
+                }}
               >
+                <Icon src={Trash} class="size-6" />
+              </Button>
             </div>
             <div class="right-2 items-center">
               <Button
                 color="blue"
                 class="my-4 px-2 py-1"
                 type="submit"
-                disabled={$addDelayed}>Confirm Timeslot</Button
+                disabled={$addDelayed}
               >
+                Confirm Timeslot
+              </Button>
             </div>
           </Card>
         </form>
@@ -644,8 +650,10 @@
                         color="blue"
                         class="my-4 px-2 py-1"
                         type="submit"
-                        disabled={$editDelayed}>Save</Button
+                        disabled={$editDelayed}
                       >
+                        Save
+                      </Button>
                     </div>
                     <div class="right-2 items-center">
                       <Button
@@ -654,8 +662,10 @@
                         onclick={() => {
                           deleteTime(interview)
                           editSlot = ''
-                        }}>Delete</Button
+                        }}
                       >
+                        Delete
+                      </Button>
                     </div>
                     <div class="right-2 items-center">
                       <Button
@@ -664,8 +674,10 @@
                         type="button"
                         onclick={() => {
                           editSlot = ''
-                        }}>Close</Button
+                        }}
                       >
+                        Close
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -694,9 +706,9 @@
                   {interview.meetingLink}
                 </a>
               {:else if interview.meetingLink}
-                <span class="font-medium text-red-600"
-                  >Invalid meeting link</span
-                >
+                <span class="font-medium text-red-600">
+                  Invalid meeting link
+                </span>
               {:else}
                 <span class="text-gray-500">None</span>
               {/if}
@@ -738,8 +750,10 @@
                   <Button
                     color="blue"
                     class="px-2 py-1"
-                    onclick={() => openSlotForEdit(interview)}>Edit</Button
+                    onclick={() => openSlotForEdit(interview)}
                   >
+                    Edit
+                  </Button>
                 {/if}
                 {#if canMarkMissed && markingMissed !== interview.id}
                   <Button
@@ -747,8 +761,9 @@
                     class="px-2 py-1"
                     type="button"
                     onclick={() => (markingMissed = interview.id)}
-                    >Mark missed</Button
                   >
+                    Mark missed
+                  </Button>
                 {/if}
               </div>
             {/if}
@@ -767,21 +782,25 @@
                     class="px-2 py-1"
                     type="button"
                     onclick={() => markMissed(interview, 'interviewer')}
-                    >The interviewer couldn't make it</Button
                   >
+                    The interviewer couldn't make it
+                  </Button>
                   <Button
                     color="blue"
                     class="px-2 py-1"
                     type="button"
                     onclick={() => markMissed(interview, 'interviewee')}
-                    >The applicant didn't attend</Button
                   >
+                    The applicant didn't attend
+                  </Button>
                   <Button
                     color="gray"
                     class="px-2 py-1"
                     type="button"
-                    onclick={() => (markingMissed = '')}>Cancel</Button
+                    onclick={() => (markingMissed = '')}
                   >
+                    Cancel
+                  </Button>
                 </div>
               </div>
             {/if}

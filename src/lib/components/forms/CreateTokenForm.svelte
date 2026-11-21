@@ -127,9 +127,9 @@
             type="number"
             bind:value={$form.expires}
           />
-          <span class="text-xs font-semibold text-gray-500"
-            >Maximum is 48 hours.</span
-          >
+          <span class="text-xs font-semibold text-gray-500">
+            Maximum is 48 hours.
+          </span>
         </div>
       </div>
     </div>

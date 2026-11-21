@@ -259,8 +259,10 @@
   <Button
     class="flex h-12 items-center"
     href={url.current}
-    download="applications.csv">Download</Button
+    download="applications.csv"
   >
+    Download
+  </Button>
 </div>
 
 <Table>

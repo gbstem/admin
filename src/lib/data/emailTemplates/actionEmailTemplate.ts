@@ -291,8 +291,7 @@ export const actionEmailTemplate = `<!doctype html>
               rel="noopener noreferrer"
               style="color: darkblue"
               href="{{url action.link}}"
-              >{{ action.link }}</a
-            >.
+              >{{ action.link }}</a>.
           </p>
           <p style="margin: 30px 0">
             For any questions or concerns, visit our FAQs or reach us at

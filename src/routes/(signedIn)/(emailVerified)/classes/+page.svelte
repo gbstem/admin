@@ -106,8 +106,10 @@
     color="blue"
     class="flex h-12 items-center"
     href={url.current}
-    download="classes.csv">Download</Button
+    download="classes.csv"
   >
+    Download
+  </Button>
   <Button
     onclick={() =>
       copyEmails(data.classes.map((instructor) => instructor.email))}

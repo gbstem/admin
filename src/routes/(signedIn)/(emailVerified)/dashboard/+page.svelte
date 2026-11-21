@@ -152,13 +152,13 @@
           {/if}
         </ol>
         {#if !isReviewer}
-          <Button onclick={() => copyEmails(uncompletedRegistrationsEmails)}
-            >Copy Emails for Uncompleted Registrations</Button
-          >
+          <Button onclick={() => copyEmails(uncompletedRegistrationsEmails)}>
+            Copy Emails for Uncompleted Registrations
+          </Button>
         {/if}
-        <Button onclick={() => copyEmails(uncompletedApplicationsEmails)}
-          >Copy Emails for Uncompleted Applications</Button
-        >
+        <Button onclick={() => copyEmails(uncompletedApplicationsEmails)}>
+          Copy Emails for Uncompleted Applications
+        </Button>
       </Card>
       {#if !isReviewer}
         <Card class="space-y-2">
