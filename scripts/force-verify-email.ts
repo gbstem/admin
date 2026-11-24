@@ -37,7 +37,8 @@
 // (signedIn)/(emailVerified)/+layout.svelte can't do it for them - that layout never
 // mounts, since its own +layout.server.ts redirects them away first. A fresh sign-in is
 // the reliable fix.
-import admin from 'firebase-admin'
+import { cert, initializeApp } from 'firebase-admin/app'
+import { getAuth, type UserRecord } from 'firebase-admin/auth'
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -78,10 +79,10 @@ if (isProduction) {
     `Connecting to PRODUCTION Firebase Auth project ` +
       `"${process.env.FIREBASE_PROJECT_ID ?? '(resolved via GOOGLE_APPLICATION_CREDENTIALS)'}"...`,
   )
-  admin.initializeApp(
+  initializeApp(
     hasCertCreds
       ? {
-          credential: admin.credential.cert({
+          credential: cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY,
@@ -96,13 +97,13 @@ if (isProduction) {
   console.log('Connecting to the Firebase Auth emulator at:')
   console.log(`- Auth: ${process.env.FIREBASE_AUTH_EMULATOR_HOST}`)
   console.log(`- Project ID: ${process.env.GCLOUD_PROJECT}\n`)
-  admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
+  initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const auth = admin.auth()
+const auth = getAuth()
 
 async function verifyOne(identifier: string) {
-  let user: admin.auth.UserRecord
+  let user: UserRecord
   try {
     user = byUid
       ? await auth.getUser(identifier)

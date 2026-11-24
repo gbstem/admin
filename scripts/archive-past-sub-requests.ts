@@ -30,7 +30,8 @@
 // Idempotent: a re-run finds nothing left to move. Re-run it after every
 // semester rollover, once the new `suffix` is deployed, to archive the
 // semester that just ended.
-import admin from 'firebase-admin'
+import { cert, initializeApp } from 'firebase-admin/app'
+import { getFirestore, type DocumentReference } from 'firebase-admin/firestore'
 import { isEqual } from 'lodash-es'
 import {
   currentSemester,
@@ -75,10 +76,10 @@ if (isProduction) {
     `Connecting to PRODUCTION Firestore project ` +
       `"${process.env.FIREBASE_PROJECT_ID ?? '(resolved via GOOGLE_APPLICATION_CREDENTIALS)'}"...`,
   )
-  admin.initializeApp(
+  initializeApp(
     hasCertCreds
       ? {
-          credential: admin.credential.cert({
+          credential: cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -94,10 +95,10 @@ if (isProduction) {
     `Connecting to the Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST} ` +
       `(project ${process.env.GCLOUD_PROJECT})`,
   )
-  admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
+  initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const db = admin.firestore()
+const db = getFirestore()
 const verb = isDryRun ? 'would move' : 'moved'
 
 type Outcome = 'moved' | 'finished' | 'conflict' | 'gone'
@@ -107,7 +108,7 @@ type Outcome = 'moved' | 'finished' | 'conflict' | 'gone'
  * documents so a request changed since the scan is moved as it is now.
  */
 async function archive(
-  source: admin.firestore.DocumentReference,
+  source: DocumentReference,
   targetPath: string,
   semester: string,
 ): Promise<Outcome> {

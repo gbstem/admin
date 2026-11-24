@@ -21,7 +21,8 @@
 //
 // Idempotent: a token that already has `createdAt` is left alone, so
 // re-running after a partial failure is safe.
-import admin from 'firebase-admin'
+import { cert, initializeApp } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
 
 const args = process.argv.slice(2)
 const isDryRun = args.includes('--dry-run')
@@ -56,10 +57,10 @@ if (isProduction) {
     `Connecting to PRODUCTION Firestore project ` +
       `"${process.env.FIREBASE_PROJECT_ID ?? '(resolved via GOOGLE_APPLICATION_CREDENTIALS)'}"...`,
   )
-  admin.initializeApp(
+  initializeApp(
     hasCertCreds
       ? {
-          credential: admin.credential.cert({
+          credential: cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -75,10 +76,10 @@ if (isProduction) {
     `Connecting to the Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST} ` +
       `(project ${process.env.GCLOUD_PROJECT})`,
   )
-  admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
+  initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const db = admin.firestore()
+const db = getFirestore()
 const verb = isDryRun ? 'would update' : 'updated'
 
 /** Firestore's limit on writes per batch. */

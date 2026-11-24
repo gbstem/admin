@@ -37,7 +37,12 @@
 //
 // Idempotent: a document already in its target state is left alone, so
 // re-running after a partial failure is safe.
-import admin from 'firebase-admin'
+import { cert, initializeApp } from 'firebase-admin/app'
+import {
+  Timestamp,
+  getFirestore,
+  type DocumentReference,
+} from 'firebase-admin/firestore'
 import type {} from '../src/data.d.ts'
 import {
   applicationsCollection,
@@ -97,10 +102,10 @@ if (isProduction) {
     `Connecting to PRODUCTION Firestore project ` +
       `"${process.env.FIREBASE_PROJECT_ID ?? '(resolved via GOOGLE_APPLICATION_CREDENTIALS)'}"...`,
   )
-  admin.initializeApp(
+  initializeApp(
     hasCertCreds
       ? {
-          credential: admin.credential.cert({
+          credential: cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -116,10 +121,10 @@ if (isProduction) {
     `Connecting to the Firestore emulator at ${process.env.FIRESTORE_EMULATOR_HOST} ` +
       `(project ${process.env.GCLOUD_PROJECT})`,
   )
-  admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT })
+  initializeApp({ projectId: process.env.GCLOUD_PROJECT })
 }
 
-const db = admin.firestore()
+const db = getFirestore()
 const verb = isDryRun ? 'would' : 'did'
 
 /** When this cycle's applications opened; a request before it is stale. */
@@ -140,7 +145,7 @@ async function moveRequests() {
   let alreadyCopied = 0
   let stale = 0
   let unresolved = 0
-  const deletable: admin.firestore.DocumentReference[] = []
+  const deletable: DocumentReference[] = []
 
   for (const snap of root.docs) {
     const data = snap.data()
@@ -164,7 +169,7 @@ async function moveRequests() {
       uid,
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
-      date: admin.firestore.Timestamp.fromDate(date),
+      date: Timestamp.fromDate(date),
     }
     const existing = await target.get()
     if (existing.exists && existing.data()?.uid === uid) {

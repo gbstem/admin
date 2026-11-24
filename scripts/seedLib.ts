@@ -5,7 +5,14 @@
 // testing both the admin and portal sites in development, validated against
 // our Zod schemas to ensure all required data is specified and all fields
 // match the required types and format.
-import admin from 'firebase-admin'
+import { getApps, initializeApp } from 'firebase-admin/app'
+import { getAuth, type Auth, type CreateRequest } from 'firebase-admin/auth'
+import {
+  FieldValue,
+  Timestamp,
+  getFirestore,
+  type Firestore,
+} from 'firebase-admin/firestore'
 import { z } from 'zod'
 import {
   applicationSchema,
@@ -110,8 +117,8 @@ const currentSemesterName =
 
 // Set by seedEmulator() once the Admin SDK is confirmed initialized - shared
 // by it and the helpers below.
-let auth: admin.auth.Auth
-let db: admin.firestore.Firestore
+let auth: Auth
+let db: Firestore
 
 async function createOrUpdateUser(
   uid: string | null,
@@ -135,7 +142,7 @@ async function createOrUpdateUser(
   } catch (err: any) {
     if (err.code === 'auth/user-not-found') {
       console.log(`User does not exist. Creating new user ${email}...`)
-      const options: admin.auth.CreateRequest = {
+      const options: CreateRequest = {
         email: email,
         password: password,
         displayName: displayName,
@@ -169,13 +176,13 @@ async function deleteCollection(collectionPath: string) {
 }
 
 export async function seedEmulator(): Promise<void> {
-  if (admin.apps.length === 0) {
-    admin.initializeApp({
+  if (getApps().length === 0) {
+    initializeApp({
       projectId: 'demo-gbstem',
     })
   }
-  auth = admin.auth()
-  db = admin.firestore()
+  auth = getAuth()
+  db = getFirestore()
 
   console.log('Clearing old accounts from emulator Auth...')
   try {
@@ -333,11 +340,11 @@ export async function seedEmulator(): Promise<void> {
     const demoToken = {
       consumable: false,
       consumers: [],
-      expires: admin.firestore.Timestamp.fromDate(
+      expires: Timestamp.fromDate(
         new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       ),
       role: role,
-      createdAt: admin.firestore.Timestamp.now(),
+      createdAt: Timestamp.now(),
       createdBy: adminUser.uid,
       purpose: `Demo ${role} signups for local development`,
       revokedAt: null,
@@ -376,10 +383,8 @@ export async function seedEmulator(): Promise<void> {
     // request and feedback tests need a future session. Dated from
     // classesStart, it went into the past partway through the semester.
     meetingTimes: [
-      admin.firestore.Timestamp.fromDate(new Date()),
-      admin.firestore.Timestamp.fromDate(
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      ),
+      Timestamp.fromDate(new Date()),
+      Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
     ],
     completedClassDates: [],
     classStatuses: ['ClassUpcomingSoon', 'ClassInFuture'],
@@ -403,10 +408,8 @@ export async function seedEmulator(): Promise<void> {
     instructorLastName: 'Jones',
     meetingLink: 'https://zoom.us/j/987654321',
     meetingTimes: [
-      admin.firestore.Timestamp.fromDate(new Date()),
-      admin.firestore.Timestamp.fromDate(
-        new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
-      ),
+      Timestamp.fromDate(new Date()),
+      Timestamp.fromDate(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000)),
     ],
     completedClassDates: [],
     classStatuses: ['FeedbackIncomplete', 'ClassInFuture'],
@@ -484,8 +487,8 @@ export async function seedEmulator(): Promise<void> {
       submitted: true,
     },
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regCharlie, 'reg-charlie')
@@ -538,8 +541,8 @@ export async function seedEmulator(): Promise<void> {
     },
     enrolled: true,
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regSally, 'reg-sally')
@@ -591,8 +594,8 @@ export async function seedEmulator(): Promise<void> {
     enrolled: true,
     classes: ['class-python1'],
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regStudentDemo, 'student-demo-uid-1')
@@ -649,8 +652,8 @@ export async function seedEmulator(): Promise<void> {
     enrolled: true,
     classes: ['class-python1'],
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regStudent1, 'student1')
@@ -701,8 +704,8 @@ export async function seedEmulator(): Promise<void> {
     enrolled: true,
     classes: ['class-python1'],
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regStudent2, 'student2')
@@ -753,8 +756,8 @@ export async function seedEmulator(): Promise<void> {
     enrolled: true,
     classes: ['class-scratch'],
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateRegistration(regStudent3, 'student3')
@@ -907,8 +910,8 @@ export async function seedEmulator(): Promise<void> {
         submitted: submitted,
       },
       timestamps: {
-        created: admin.firestore.Timestamp.fromDate(createdDate),
-        updated: admin.firestore.Timestamp.fromDate(createdDate),
+        created: Timestamp.fromDate(createdDate),
+        updated: Timestamp.fromDate(createdDate),
       },
     }
 
@@ -977,8 +980,8 @@ export async function seedEmulator(): Promise<void> {
       decided: false,
     },
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateApplication(appDavid, 'app-david')
@@ -1028,8 +1031,8 @@ export async function seedEmulator(): Promise<void> {
       decisionType: 'accepted',
     },
     timestamps: {
-      created: admin.firestore.FieldValue.serverTimestamp(),
-      updated: admin.firestore.FieldValue.serverTimestamp(),
+      created: FieldValue.serverTimestamp(),
+      updated: FieldValue.serverTimestamp(),
     },
   }
   validateApplication(appInstructorDemo, 'instructor-demo-uid')
@@ -1244,8 +1247,8 @@ export async function seedEmulator(): Promise<void> {
         decisionType: isDecided ? decision : null,
       },
       timestamps: {
-        created: admin.firestore.Timestamp.fromDate(createdDate),
-        updated: admin.firestore.Timestamp.fromDate(createdDate),
+        created: Timestamp.fromDate(createdDate),
+        updated: Timestamp.fromDate(createdDate),
       },
     }
 
@@ -1273,25 +1276,21 @@ export async function seedEmulator(): Promise<void> {
     const course = courses[i % courses.length]
 
     let meetingTimes = [
-      admin.firestore.Timestamp.fromDate(new Date('2026-03-02T16:00:00Z')),
-      admin.firestore.Timestamp.fromDate(new Date('2026-03-04T16:00:00Z')),
+      Timestamp.fromDate(new Date('2026-03-02T16:00:00Z')),
+      Timestamp.fromDate(new Date('2026-03-04T16:00:00Z')),
     ]
     let classStatuses = ['scheduled', 'scheduled']
 
     if (i === 0) {
       meetingTimes = [
-        admin.firestore.Timestamp.fromDate(new Date()),
-        admin.firestore.Timestamp.fromDate(
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        ),
+        Timestamp.fromDate(new Date()),
+        Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
       ]
       classStatuses = ['ClassNotHeld', 'ClassInFuture']
     } else if (i === 1) {
       meetingTimes = [
-        admin.firestore.Timestamp.fromDate(new Date()),
-        admin.firestore.Timestamp.fromDate(
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        ),
+        Timestamp.fromDate(new Date()),
+        Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
       ]
       classStatuses = ['EverythingComplete', 'ClassInFuture']
     }
@@ -1340,12 +1339,12 @@ export async function seedEmulator(): Promise<void> {
     const tokenData = {
       consumable: i % 3 === 0,
       consumers: [],
-      expires: admin.firestore.Timestamp.fromDate(
+      expires: Timestamp.fromDate(
         new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000),
       ),
       role: role,
       // Staggered an hour apart, older than the demo tokens above.
-      createdAt: admin.firestore.Timestamp.fromDate(
+      createdAt: Timestamp.fromDate(
         new Date(Date.now() - (i + 1) * 60 * 60 * 1000),
       ),
       createdBy: adminUser.uid,
@@ -1389,7 +1388,7 @@ export async function seedEmulator(): Promise<void> {
       .set({
         classNumber: (i % 4) + 1,
         course: courses[i % courses.length],
-        dateOfClass: admin.firestore.Timestamp.fromDate(
+        dateOfClass: Timestamp.fromDate(
           new Date(newestSubRequestTime - (30 - i) * 24 * 60 * 60 * 1000),
         ),
         // Both instructors are named by uid alone; claiming a request and
@@ -1418,7 +1417,7 @@ export async function seedEmulator(): Promise<void> {
     .collection(interviewTimesCollection)
     .doc('slot-1')
     .set({
-      date: admin.firestore.Timestamp.fromDate(dynamicFutureDate),
+      date: Timestamp.fromDate(dynamicFutureDate),
       id: 'slot-1',
       interviewerName: 'Demo Admin',
       intervieweeFirstName: 'David',
@@ -1436,7 +1435,7 @@ export async function seedEmulator(): Promise<void> {
     await db.collection('announcements').add({
       title: `Welcome to gbSTEM ${currentSemesterName}! (Update #${i})`,
       content: `Our semester begins soon. Make sure to verify your schedules and log in. Announcement #${i}.`,
-      timestamp: admin.firestore.Timestamp.fromDate(
+      timestamp: Timestamp.fromDate(
         new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000),
       ),
     })
