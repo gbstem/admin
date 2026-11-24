@@ -1,4 +1,3 @@
-import '#lib/server/runtimeDiag.js'
 import { redirect } from '@sveltejs/kit'
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks'
 import { adminAuth } from '#lib/server/firebase.js'

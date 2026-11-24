@@ -10,6 +10,13 @@ import {
 import { tokenRejection } from '#lib/helpers/signupTokens.js'
 import { cleanEnvVar } from '#lib/utils.js'
 
+// TODO: package.json pins jwks-rsa to ^3 (jose 4, which has a CJS build) via
+// "resolutions". firebase-admin 14 asks for jwks-rsa 4, which requires the
+// ESM-only jose 6, and Vercel's Node launcher (/opt/rust/nodejs.js) rejects
+// that require() with ERR_REQUIRE_ESM even on Node 26 (found on a preview
+// deployment, 2026-11-24). Try removing the resolution after a Vercel runtime
+// update, and verify on a preview deployment, since local Node loads it fine.
+
 // Copy and clean emulator environment variables to process.env so firebase-admin can detect them
 const authHost = cleanEnvVar(
   FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST,

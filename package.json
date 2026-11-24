@@ -116,5 +116,8 @@
   "imports": {
     "#lib": "./src/lib/index.js",
     "#lib/*": "./src/lib/*"
+  },
+  "resolutions": {
+    "jwks-rsa": "^3.2.2"
   }
 }
