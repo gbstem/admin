@@ -31,7 +31,7 @@ if (storageHost) {
   process.env.STORAGE_EMULATOR_HOST = storageHost
 }
 
-import firebase from 'firebase-admin'
+import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth, type Auth } from 'firebase-admin/auth'
 import {
   CollectionReference,
@@ -97,21 +97,21 @@ export let adminDb: Firestore
 
 if (!building) {
   try {
-    if ((firebase.apps || []).length === 0) {
+    if (getApps().length === 0) {
       if (
         FIREBASE_PRIVATE_KEY &&
         FIREBASE_PRIVATE_KEY.includes('-----BEGIN PRIVATE KEY-----') &&
         !FIREBASE_PRIVATE_KEY.includes('...')
       ) {
-        firebase.initializeApp({
-          credential: firebase.credential.cert({
+        initializeApp({
+          credential: cert({
             projectId: FIREBASE_PROJECT_ID,
             clientEmail: FIREBASE_CLIENT_EMAIL,
             privateKey: FIREBASE_PRIVATE_KEY,
           }),
         })
       } else {
-        firebase.initializeApp({
+        initializeApp({
           projectId: FIREBASE_PROJECT_ID || 'demo-gbstem',
         })
       }
