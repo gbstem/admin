@@ -66,11 +66,10 @@ jest.mock('firebase-admin/firestore', () => {
 // Mock firebase-admin
 const mockInitializeApp = jest.fn()
 const mockCert = jest.fn()
-jest.mock('firebase-admin', () => ({
+jest.mock('firebase-admin/app', () => ({
+  getApps: () => [],
   initializeApp: (...args: any[]) => mockInitializeApp(...args),
-  credential: {
-    cert: (...args: any[]) => mockCert(...args),
-  },
+  cert: (...args: any[]) => mockCert(...args),
 }))
 
 // Import the module under test for static tests
