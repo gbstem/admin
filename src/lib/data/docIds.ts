@@ -116,21 +116,6 @@ export function parseSubRequestDocId(
   return match ? { classId: match[1], sessionNumber: Number(match[2]) } : null
 }
 
-// -------------------------------------------------- interview time requests
-
-// Retired: candidates' painted availability, keyed by uid, replaced them.
-// Past semesters' requests are still keyed `${uid}-${YYYY-MM-DDTHH:mm}`.
-
-/**
- * The applicant who filed an interview time request, or null for an id in
- * another shape. Every request carries its own `uid` field, which is what to
- * read; this is for scripts/backfill-interview-scheduling.ts, which fills
- * that field in on requests written before it existed.
- */
-export function slotRequestUid(id: string): string | null {
-  return id.match(/^(.+?)-\d{4}-\d{2}-\d{2}/)?.[1] ?? null
-}
-
 // ---------------------------------------------------------- interview slots
 
 /**

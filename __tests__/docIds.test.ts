@@ -8,7 +8,6 @@ import {
   parseSubRequestDocId,
   registrationDocId,
   registrationParentUid,
-  slotRequestUid,
   subRequestDocId,
 } from '#lib/data/docIds.js'
 
@@ -86,17 +85,6 @@ describe('sub request ids', () => {
   test('an id in another shape parses to null', () => {
     expect(parseSubRequestDocId(classDocId(UID, 2))).toBeNull()
     expect(parseSubRequestDocId(`${UID}---`)).toBeNull()
-  })
-})
-
-describe('interview time request ids', () => {
-  // Retired, but past semesters' ids are still parsed by the backfill.
-  test.each([UID, 'app-david'])('parses the uid out of %s', (uid) => {
-    expect(slotRequestUid(`${uid}-2030-01-15T10:00`)).toBe(uid)
-  })
-
-  test('an id in another shape parses to null', () => {
-    expect(slotRequestUid(UID)).toBeNull()
   })
 })
 
